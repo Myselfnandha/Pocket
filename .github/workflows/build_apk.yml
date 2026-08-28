@@ -37,19 +37,12 @@ jobs:
       - name: Extract Version Info
         id: versioning
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version_name }}" != "" ]]; then
-            VERSION_NAME="${{ github.event.inputs.version_name }}"
-            BUILD_NUMBER="${{ github.event.inputs.build_number }}"
-            echo "VERSION_TAG=v${VERSION_NAME}" >> $GITHUB_OUTPUT
-            echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
-            echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-          else
-            VERSION_NAME="1.0.0"
-            BUILD_NUMBER="${{ github.run_number }}"
-            echo "VERSION_TAG=v1.0.0" >> $GITHUB_OUTPUT
-            echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
-            echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-          fi
+          VERSION_NAME=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
+          BUILD_NUMBER="${{ github.run_number }}"
+          VERSION_TAG="v${VERSION_NAME}"
+          echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
           echo "Building Version: $VERSION_NAME+$BUILD_NUMBER ($VERSION_TAG)"
 
       - name: Set up Java JDK 17
