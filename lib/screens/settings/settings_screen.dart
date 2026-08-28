@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
@@ -93,33 +92,64 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 2. Section: Appearance
-          _buildSectionHeader('APPEARANCE'),
+          // 2. Section: Theme & Appearance
+          _buildSectionHeader('THEME & APPEARANCE'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
               ListTile(
                 leading: const Icon(Icons.palette_outlined, color: AppColors.primaryGreenLight),
                 title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(_getThemeSubtitle(settings.themePreference)),
+                subtitle: Text(
+                  settings.themeMode == AppThemeMode.autoTime
+                      ? 'Auto Mode (Switches Light/Dark based on time of day)'
+                      : 'Manual: ${settings.manualThemeStyle == ManualThemeStyle.light ? 'Light' : (settings.manualThemeStyle == ManualThemeStyle.pureBlack ? 'Pure Black AMOLED' : 'Dark')}',
+                ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.dark_mode_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Pure Black AMOLED', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('True pure black background (#000000) for OLED screens'),
+                value: settings.isPureBlackEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(
+                          isPureBlackEnabled: val,
+                          manualThemeStyle: val ? ManualThemeStyle.pureBlack : ManualThemeStyle.dark,
+                        ),
+                      );
+                },
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // 3. Section: General
-          _buildSectionHeader('GENERAL'),
+          // 3. Section: Categories & General
+          _buildSectionHeader('CATEGORIES & CURRENCY'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
               ListTile(
                 leading: const Icon(Icons.category_outlined, color: AppColors.infoBlue),
-                title: const Text('Categories', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${categories.length} categories configured'),
+                title: const Text('Manage Categories', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${categories.length} categories available'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showCategoriesManager(context, ref, categories),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.label_outline_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Category Tags on Items', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Show or hide category badge tags on transaction rows'),
+                value: settings.showCategoryTags,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).toggleCategoryTags(val);
+                },
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
@@ -133,56 +163,15 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 4. Section: Security
-          _buildSectionHeader('SECURITY'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.fingerprint_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Biometric / PIN Lock', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Require authentication to open Pocket'),
-                value: settings.biometricEnabled,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  if (val && settings.pinCode == null) {
-                    _showSetPinDialog(context, ref, settings);
-                  } else {
-                    ref.read(settingsProvider.notifier).updateSettings(
-                          settings.copyWith(biometricEnabled: val, pinLockEnabled: val),
-                        );
-                  }
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.pin_outlined, color: AppColors.accentOrange),
-                title: const Text('Change 4-Digit PIN', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(settings.pinCode != null ? 'PIN is configured (••••)' : 'Default PIN: 1234'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showSetPinDialog(context, ref, settings),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 5. Section: About
+          // 4. Section: About
           _buildSectionHeader('ABOUT'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
-              ListTile(
-                leading: const Icon(Icons.slideshow_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Replay Onboarding Tour', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('View the welcome guide and feature tour'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/onboarding'),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               const ListTile(
-                leading: Icon(Icons.info_outline_rounded, color: AppColors.infoBlue),
+                leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.0 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.0.1 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -207,10 +196,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingsGroup({
-    required bool isDark,
-    required List<Widget> children,
-  }) {
+  Widget _buildSettingsGroup({required bool isDark, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
@@ -223,17 +209,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _getThemeSubtitle(AppThemePreference pref) {
-    switch (pref) {
-      case AppThemePreference.autoTime:
-        return 'Auto (Time-based: Dark at night)';
-      case AppThemePreference.darkAmoled:
-        return 'Pure Black (AMOLED)';
-      case AppThemePreference.light:
-        return 'Light Mode';
-    }
-  }
-
   void _showThemePicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
     showModalBottomSheet(
       context: context,
@@ -242,65 +217,85 @@ class SettingsScreen extends ConsumerWidget {
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Text('Select Theme', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('Select Theme Mode', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.auto_mode_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Auto Mode (Time-Based)'),
+                subtitle: const Text('Automatically switches to Light (6AM-6PM) & Dark (6PM-6AM)'),
+                trailing: settings.themeMode == AppThemeMode.autoTime
+                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(themeMode: AppThemeMode.autoTime),
+                      );
+                  Navigator.pop(ctx);
+                },
               ),
-              _buildThemeOptionTile(
-                ctx,
-                ref,
-                title: 'Auto (Time-based)',
-                subtitle: 'Dark mode after 6 PM, Light during day',
-                preference: AppThemePreference.autoTime,
-                isSelected: settings.themePreference == AppThemePreference.autoTime,
+              ListTile(
+                leading: const Icon(Icons.light_mode_rounded, color: AppColors.accentOrange),
+                title: const Text('Manual: Light Mode'),
+                subtitle: const Text('Crisp paper light theme'),
+                trailing: (settings.themeMode == AppThemeMode.manual && settings.manualThemeStyle == ManualThemeStyle.light)
+                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(
+                          themeMode: AppThemeMode.manual,
+                          manualThemeStyle: ManualThemeStyle.light,
+                          isPureBlackEnabled: false,
+                        ),
+                      );
+                  Navigator.pop(ctx);
+                },
               ),
-              _buildThemeOptionTile(
-                ctx,
-                ref,
-                title: 'Pure Black (AMOLED)',
-                subtitle: 'True #000000 black background',
-                preference: AppThemePreference.darkAmoled,
-                isSelected: settings.themePreference == AppThemePreference.darkAmoled,
+              ListTile(
+                leading: const Icon(Icons.dark_mode_rounded, color: AppColors.infoBlue),
+                title: const Text('Manual: Dark Mode (Charcoal)'),
+                subtitle: const Text('Standard dark gray interface (#131313)'),
+                trailing: (settings.themeMode == AppThemeMode.manual && settings.manualThemeStyle == ManualThemeStyle.dark && !settings.isPureBlackEnabled)
+                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(
+                          themeMode: AppThemeMode.manual,
+                          manualThemeStyle: ManualThemeStyle.dark,
+                          isPureBlackEnabled: false,
+                        ),
+                      );
+                  Navigator.pop(ctx);
+                },
               ),
-              _buildThemeOptionTile(
-                ctx,
-                ref,
-                title: 'Light Mode',
-                subtitle: 'Clean bright theme',
-                preference: AppThemePreference.light,
-                isSelected: settings.themePreference == AppThemePreference.light,
+              ListTile(
+                leading: const Icon(Icons.brightness_2_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Manual: Pure Black AMOLED'),
+                subtitle: const Text('Deep OLED true black (#000000) for battery saving'),
+                trailing: (settings.themeMode == AppThemeMode.manual && (settings.manualThemeStyle == ManualThemeStyle.pureBlack || settings.isPureBlackEnabled))
+                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(
+                          themeMode: AppThemeMode.manual,
+                          manualThemeStyle: ManualThemeStyle.pureBlack,
+                          isPureBlackEnabled: true,
+                        ),
+                      );
+                  Navigator.pop(ctx);
+                },
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildThemeOptionTile(
-    BuildContext ctx,
-    WidgetRef ref, {
-    required String title,
-    required String subtitle,
-    required AppThemePreference preference,
-    required bool isSelected,
-  }) {
-    return ListTile(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      trailing: Icon(
-        isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-        color: isSelected ? AppColors.primaryGreenLight : Colors.grey,
-      ),
-      onTap: () {
-        ref.read(settingsProvider.notifier).setThemePreference(preference);
-        Navigator.pop(ctx);
-      },
     );
   }
 
@@ -311,6 +306,8 @@ class SettingsScreen extends ConsumerWidget {
       {'symbol': '€', 'code': 'EUR', 'name': 'Euro'},
       {'symbol': '£', 'code': 'GBP', 'name': 'British Pound'},
       {'symbol': '¥', 'code': 'JPY', 'name': 'Japanese Yen'},
+      {'symbol': 'AED', 'code': 'AED', 'name': 'UAE Dirham'},
+      {'symbol': 'C\$', 'code': 'CAD', 'name': 'Canadian Dollar'},
       {'symbol': 'A\$', 'code': 'AUD', 'name': 'Australian Dollar'},
     ];
 
@@ -321,21 +318,22 @@ class SettingsScreen extends ConsumerWidget {
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Text('Select Currency', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+              const Text('Select Currency', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
               ...currencies.map((c) {
                 final isSel = settings.currencyCode == c['code'];
                 return ListTile(
                   leading: Text(c['symbol']!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  title: Text('${c['name']} (${c['code']})'),
-                  trailing: isSel ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight) : null,
+                  title: Text(c['name']!),
+                  subtitle: Text(c['code']!),
+                  trailing: isSel
+                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
+                      : null,
                   onTap: () {
                     ref.read(settingsProvider.notifier).setCurrency(c['symbol']!, c['code']!);
                     Navigator.pop(ctx);
@@ -350,22 +348,23 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _editProfileDialog(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
-    final controller = TextEditingController(text: settings.userName);
+    final nameCtrl = TextEditingController(text: settings.userName);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Name'),
         content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Your Name'),
+          controller: nameCtrl,
+          decoration: const InputDecoration(hintText: 'Enter your name'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                ref.read(settingsProvider.notifier).setUserName(name);
+              final newName = nameCtrl.text.trim();
+              if (newName.isNotEmpty) {
+                ref.read(settingsProvider.notifier).setUserName(newName);
               }
               Navigator.pop(ctx);
             },
@@ -388,7 +387,7 @@ class SettingsScreen extends ConsumerWidget {
         maxChildSize: 0.9,
         minChildSize: 0.5,
         expand: false,
-        builder: (ctx, scrollController) => Padding(
+        builder: (ctx, scrollCtrl) => Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,33 +398,26 @@ class SettingsScreen extends ConsumerWidget {
                   const Text('Manage Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   IconButton(
                     icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _showAddCategoryDialog(context, ref);
-                    },
+                    onPressed: () => _showAddCategoryDialog(context, ref),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
-                  controller: scrollController,
+                  controller: scrollCtrl,
                   itemCount: categories.length,
-                  separatorBuilder: (ctx, index) => const Divider(height: 1),
-                  itemBuilder: (ctx, i) {
-                    final cat = categories[i];
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
                     return ListTile(
                       leading: Text(cat.icon, style: const TextStyle(fontSize: 22)),
-                      title: Text(cat.name),
+                      title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(cat.type == TransactionType.income ? 'Income' : 'Expense'),
-                      trailing: cat.isDefault
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.delete_outline, color: AppColors.expenseRed),
-                              onPressed: () {
-                                ref.read(categoriesProvider.notifier).deleteCategory(cat.id);
-                              },
-                            ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.expenseRed),
+                        onPressed: () => ref.read(categoriesProvider.notifier).deleteCategory(cat.id),
+                      ),
                     );
                   },
                 ),
@@ -438,30 +430,60 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showAddCategoryDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
+    final nameCtrl = TextEditingController();
     String icon = '🏷️';
     TransactionType type = TransactionType.expense;
+
+    final icons = ['🍔', '🚗', '🏠', '🛒', '💊', '🎬', '👕', '📱', '⚡', '📚', '✈️', '🎁', '💇', '🔧', '💰', '💼', '📈', '💵', '📦'];
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Add Custom Category'),
+          title: const Text('New Category'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Category Name'),
+                controller: nameCtrl,
+                decoration: const InputDecoration(hintText: 'Category Name'),
               ),
-              const SizedBox(height: 12),
-              SegmentedButton<TransactionType>(
-                segments: const [
-                  ButtonSegment(value: TransactionType.expense, label: Text('Expense')),
-                  ButtonSegment(value: TransactionType.income, label: Text('Income')),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Expense'),
+                    selected: type == TransactionType.expense,
+                    onSelected: (_) => setDialogState(() => type = TransactionType.expense),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Income'),
+                    selected: type == TransactionType.income,
+                    onSelected: (_) => setDialogState(() => type = TransactionType.income),
+                  ),
                 ],
-                selected: {type},
-                onSelectionChanged: (val) => setDialogState(() => type = val.first),
+              ),
+              const SizedBox(height: 14),
+              const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: icons.map((ic) {
+                  final isSel = icon == ic;
+                  return InkWell(
+                    onTap: () => setDialogState(() => icon = ic),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isSel ? AppColors.primaryGreenLight.withValues(alpha: 0.3) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(ic, style: const TextStyle(fontSize: 20)),
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -469,100 +491,23 @@ class SettingsScreen extends ConsumerWidget {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
-                final name = nameController.text.trim();
+                final name = nameCtrl.text.trim();
                 if (name.isNotEmpty) {
-                  ref.read(categoriesProvider.notifier).addCategory(
-                        CategoryModel(
-                          id: const Uuid().v4(),
-                          name: name,
-                          icon: icon,
-                          colorValue: 0xFF4CAF50,
-                          type: type,
-                          isDefault: false,
-                        ),
-                      );
+                  final newCat = CategoryModel(
+                    id: const Uuid().v4(),
+                    name: name,
+                    icon: icon,
+                    colorValue: 0xFF4CAF50,
+                    type: type,
+                  );
+                  ref.read(categoriesProvider.notifier).addCategory(newCat);
                 }
                 Navigator.pop(ctx);
               },
-              child: const Text('Add'),
+              child: const Text('Save'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showSetPinDialog(
-    BuildContext context,
-    WidgetRef ref,
-    UserSettingsModel settings,
-  ) {
-    final pinController = TextEditingController(text: settings.pinCode ?? '1234');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Set 4-Digit Security PIN'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter a 4-digit PIN to secure your transaction and wallet data:',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              obscureText: true,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 24,
-                letterSpacing: 12,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: const InputDecoration(
-                hintText: '••••',
-                counterText: '',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final pin = pinController.text.trim();
-              if (pin.length == 4 && int.tryParse(pin) != null) {
-                ref.read(settingsProvider.notifier).updateSettings(
-                      settings.copyWith(
-                        pinCode: pin,
-                        biometricEnabled: true,
-                        pinLockEnabled: true,
-                      ),
-                    );
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Security PIN saved successfully ✓'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid 4-digit numeric PIN'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save PIN'),
-          ),
-        ],
       ),
     );
   }

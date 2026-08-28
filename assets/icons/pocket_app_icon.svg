@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#131313" />
+      <stop offset="100%" stop-color="#0E0E0E" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4CAF50" />
+      <stop offset="50%" stop-color="#2E7D32" />
+      <stop offset="100%" stop-color="#1B5E20" />
+    </linearGradient>
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB74D" />
+      <stop offset="100%" stop-color="#FF9800" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="#2E7D32" stroke-width="3" stroke-opacity="0.4" />
+
+  <!-- Outer Wallet Card Body -->
+  <rect x="96" y="140" width="320" height="232" rx="36" fill="url(#emeraldGrad)" filter="url(#glow)" />
+  
+  <!-- Subtle card top flap highlight -->
+  <path d="M 96 176 C 96 156.1 112.1 140 132 140 L 380 140 C 399.9 140 416 156.1 416 176 L 416 200 L 96 200 Z" fill="#FFFFFF" fill-opacity="0.12" />
+
+  <!-- Card Pocket Slot Cutout -->
+  <path d="M 96 230 C 160 270 352 270 416 230 L 416 336 C 416 355.9 399.9 372 380 372 L 132 372 C 112.1 372 96 355.9 96 336 Z" fill="#131313" fill-opacity="0.3" />
+
+  <!-- Amber Coin / Accent Token Badge -->
+  <circle cx="348" cy="256" r="28" fill="url(#amberGrad)" />
+  <circle cx="348" cy="256" r="22" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-opacity="0.8" />
+  <path d="M 348 243 L 348 269 M 341 249 C 341 249 344 246 348 246 C 352 246 355 248 355 251 C 355 254 352 256 348 256 C 344 256 341 258 341 261 C 341 264 344 266 348 266 C 352 266 355 263 355 263" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+
+  <!-- Sprout / Growth Leaf Motif on Left -->
+  <path d="M 176 270 C 160 240 180 210 216 216 C 220 248 196 272 176 270 Z" fill="#88D982" />
+  <path d="M 216 216 C 240 230 244 260 220 276 C 205 255 210 230 216 216 Z" fill="#A3F69C" />
+</svg>

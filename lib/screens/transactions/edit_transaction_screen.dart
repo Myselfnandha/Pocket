@@ -78,7 +78,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Updated "${updatedTx.title}" ✓'),
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

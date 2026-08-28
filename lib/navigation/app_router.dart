@@ -33,6 +33,20 @@ GoRouter createRouter(bool isOnboarded) {
         builder: (context, state) => const AddTransactionScreen(),
       ),
 
+      // Full Transactions List (Dedicated Screen)
+      GoRoute(
+        path: '/transactions',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const TransactionsListScreen(),
+      ),
+
+      // Settings (Dedicated Screen)
+      GoRoute(
+        path: '/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
+      ),
+
       // Transaction Detail
       GoRoute(
         path: '/transaction-detail',
@@ -43,7 +57,7 @@ GoRouter createRouter(bool isOnboarded) {
         },
       ),
 
-      // 5-Tab Navigation Shell
+      // 3-Tab Navigation Shell: Home, Analytics, Wallets
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppScaffold(navigationShell: navigationShell);
@@ -59,17 +73,7 @@ GoRouter createRouter(bool isOnboarded) {
             ],
           ),
 
-          // Tab 2: Transactions
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/transactions',
-                builder: (context, state) => const TransactionsListScreen(),
-              ),
-            ],
-          ),
-
-          // Tab 3: Analytics
+          // Tab 2: Analytics
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -79,22 +83,12 @@ GoRouter createRouter(bool isOnboarded) {
             ],
           ),
 
-          // Tab 4: Wallets
+          // Tab 3: Wallets
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/wallets',
                 builder: (context, state) => const WalletsScreen(),
-              ),
-            ],
-          ),
-
-          // Tab 5: Settings
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/settings',
-                builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),

@@ -147,10 +147,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (!mounted) return;
     context.pop();
 
+    final settings = ref.read(settingsProvider);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Saved "$title" (${_type == TransactionType.income ? '+' : '-'}₹${amount.toStringAsFixed(2)}) ✓'),
-        duration: const Duration(seconds: 3),
+        content: Text('Saved "$title" (${_type == TransactionType.income ? '+' : '-'}${settings.currencySymbol}${amount.toStringAsFixed(2)}) ✓'),
+        duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Undo',
           textColor: AppColors.primaryGreenLight,

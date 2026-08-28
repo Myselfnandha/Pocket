@@ -26,8 +26,13 @@ class WalletsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz_rounded, color: AppColors.primaryGreenLight),
-            tooltip: 'Transfer Money',
+            tooltip: 'Transfer Funds',
             onPressed: () => _showTransferDialog(context, ref, wallets, settings.currencySymbol),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
+            tooltip: 'Add Wallet',
+            onPressed: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
           ),
           const SizedBox(width: 8),
         ],
@@ -36,42 +41,65 @@ class WalletsScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           children: [
-            // Total Balance Header Card
+            // Pro Total Balance Header Card (Enlarged to fill grid)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  Text(
-                    'Net Liquid Balance',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.account_balance_wallet_rounded, size: 16, color: AppColors.primaryGreenLight),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Net Liquid Balance',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     '${settings.currencySymbol}${currencyFormat.format(totalBalance)}',
                     style: const TextStyle(
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: AppColors.primaryGreenLight,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Across ${wallets.length} active wallets',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${wallets.length} Active Accounts Available',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryGreenLight,
+                      ),
                     ),
                   ),
                 ],
@@ -96,12 +124,13 @@ class WalletsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                     ),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
@@ -109,8 +138,8 @@ class WalletsScreen extends ConsumerWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: wallet.color.withValues(alpha: isDark ? 0.25 : 0.15),
-                              shape: BoxShape.circle,
+                              color: wallet.color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
                             child: Text(wallet.icon, style: const TextStyle(fontSize: 22)),
@@ -125,19 +154,15 @@ class WalletsScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? AppColors.darkTextPrimary
-                                        : AppColors.lightTextPrimary,
+                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '$txCount transactions',
+                                  '$txCount transactions • ${wallet.walletType.name.toUpperCase()}',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? AppColors.darkTextSecondary
-                                        : AppColors.lightTextSecondary,
+                                    fontSize: 11,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                                   ),
                                 ),
                               ],
@@ -147,7 +172,7 @@ class WalletsScreen extends ConsumerWidget {
                             '${settings.currencySymbol}${currencyFormat.format(wallet.currentBalance)}',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               color: wallet.currentBalance >= 0
                                   ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
                                   : AppColors.expenseRed,
@@ -160,201 +185,188 @@ class WalletsScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: percentage,
-                          backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0),
+                          minHeight: 5,
+                          backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFEEEEEE),
                           valueColor: AlwaysStoppedAnimation<Color>(wallet.color),
-                          minHeight: 4,
                         ),
                       ),
+                      if (wallet.spendingLimit != null && wallet.spendingLimit! > 0) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Limit: ${settings.currencySymbol}${currencyFormat.format(wallet.spendingLimit!)}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );
               },
             ),
-            const SizedBox(height: 16),
-
-            // Add Wallet Button
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                side: const BorderSide(
-                  color: AppColors.primaryGreenLight,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              icon: const Icon(Icons.add_rounded, color: AppColors.primaryGreenLight),
-              label: const Text(
-                'Add New Wallet',
-                style: TextStyle(
-                  color: AppColors.primaryGreenLight,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onPressed: () => _showAddWalletDialog(context, ref),
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 80), // space for FAB
           ],
         ),
       ),
     );
   }
 
-  void _showAddWalletDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    final balanceController = TextEditingController();
+  void _showAddWalletDialog(BuildContext context, WidgetRef ref, String currencySymbol) {
+    final nameCtrl = TextEditingController();
+    final balanceCtrl = TextEditingController();
+    final limitCtrl = TextEditingController();
+    WalletType selectedType = WalletType.bank;
     String selectedIcon = '🏦';
-    int selectedColor = 0xFF4CAF50;
+    bool enableLimit = false;
 
-    final icons = ['💵', '🏦', '💳', '📱', '💰', '🎯', '🏪', '✈️'];
-    final colors = [
-      0xFF4CAF50,
-      0xFF2196F3,
-      0xFFFF9800,
-      0xFF9C27B0,
-      0xFFE91E63,
-      0xFF00BCD4,
-      0xFF795548,
-    ];
+    final icons = ['💵', '🏦', '📱', '💳', '💰', '🪙', '💼'];
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Create New Wallet',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              // Name Field
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Wallet Name',
-                  hintText: 'e.g. Savings Account, Paytm',
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Setup New Wallet'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Wallet Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: WalletType.values.map((type) {
+                    final isSel = selectedType == type;
+                    return ChoiceChip(
+                      label: Text(type.name.toUpperCase()),
+                      selected: isSel,
+                      onSelected: (_) {
+                        setDialogState(() {
+                          selectedType = type;
+                          if (type == WalletType.cash) selectedIcon = '💵';
+                          if (type == WalletType.bank) selectedIcon = '🏦';
+                          if (type == WalletType.upi) selectedIcon = '📱';
+                          if (type == WalletType.creditCard) selectedIcon = '💳';
+                          if (type == WalletType.savings) selectedIcon = '💰';
+                        });
+                      },
+                    );
+                  }).toList(),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Initial Balance Field
-              TextField(
-                controller: balanceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Initial Balance',
-                  prefixText: '₹ ',
+                const SizedBox(height: 14),
+                const Text('Wallet Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(hintText: 'e.g. HDFC Salary Bank'),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Icon Selector
-              const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: icons.map((icon) {
-                  final isSel = selectedIcon == icon;
-                  return InkWell(
-                    onTap: () => setDialogState(() => selectedIcon = icon),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isSel ? AppColors.primaryGreenLight.withValues(alpha: 0.2) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                        border: isSel ? Border.all(color: AppColors.primaryGreenLight, width: 1.5) : null,
-                      ),
-                      child: Text(icon, style: const TextStyle(fontSize: 22)),
+                const SizedBox(height: 14),
+                Text('Starting Balance ($currencySymbol)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: balanceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    prefixText: '$currencySymbol ',
+                    hintText: '0.00',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Set Spending Limit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Switch(
+                      value: enableLimit,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) => setDialogState(() => enableLimit = val),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-
-              // Color Selector
-              const Text('Select Color', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: colors.map((c) {
-                  final isSel = selectedColor == c;
-                  return InkWell(
-                    onTap: () => setDialogState(() => selectedColor = c),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Color(c),
-                        shape: BoxShape.circle,
-                        border: isSel ? Border.all(color: Colors.white, width: 2.5) : null,
-                      ),
-                      child: isSel ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
-
-              // Create Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    final initialBal = double.tryParse(balanceController.text.trim()) ?? 0.0;
-
-                    ref.read(walletsProvider.notifier).addWallet(
-                          WalletModel(
-                            id: const Uuid().v4(),
-                            name: name,
-                            icon: selectedIcon,
-                            colorValue: selectedColor,
-                            initialBalance: initialBal,
-                            currentBalance: initialBal,
-                          ),
-                        );
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Create Wallet'),
+                  ],
                 ),
-              ),
-            ],
+                if (enableLimit) ...[
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: limitCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      prefixText: '$currencySymbol ',
+                      hintText: 'Monthly limit (e.g. 50000)',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                const Text('Choose Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 10,
+                  children: icons.map((icon) {
+                    final isSel = selectedIcon == icon;
+                    return InkWell(
+                      onTap: () => setDialogState(() => selectedIcon = icon),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isSel ? AppColors.primaryGreenLight.withValues(alpha: 0.25) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isSel ? Border.all(color: AppColors.primaryGreenLight) : null,
+                        ),
+                        child: Text(icon, style: const TextStyle(fontSize: 22)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+
+                final startBal = double.tryParse(balanceCtrl.text.trim()) ?? 0.0;
+                final limit = enableLimit ? double.tryParse(limitCtrl.text.trim()) : null;
+
+                final newWallet = WalletModel(
+                  id: const Uuid().v4(),
+                  name: name,
+                  icon: selectedIcon,
+                  colorValue: 0xFF2E7D32,
+                  initialBalance: startBal,
+                  currentBalance: startBal,
+                  walletType: selectedType,
+                  spendingLimit: limit,
+                );
+
+                await ref.read(walletsProvider.notifier).addWallet(newWallet);
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Wallet "$name" added ✓'), duration: const Duration(seconds: 4)),
+                );
+              },
+              child: const Text('Save Wallet'),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showTransferDialog(
-    BuildContext context,
-    WidgetRef ref,
-    List<WalletModel> wallets,
-    String currencySymbol,
-  ) {
+  void _showTransferDialog(BuildContext context, WidgetRef ref, List<WalletModel> wallets, String currencySymbol) {
     if (wallets.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You need at least 2 wallets to transfer funds.')),
+        const SnackBar(content: Text('At least 2 wallets are required to transfer funds'), duration: Duration(seconds: 4)),
       );
       return;
     }
 
-    String fromWalletId = wallets[0].id;
+    String fromWalletId = wallets.first.id;
     String toWalletId = wallets[1].id;
     final amountController = TextEditingController();
 
@@ -423,7 +435,7 @@ class WalletsScreen extends ConsumerWidget {
                 final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                 if (amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid amount')),
+                    const SnackBar(content: Text('Please enter a valid amount'), duration: Duration(seconds: 4)),
                   );
                   return;
                 }
@@ -460,7 +472,7 @@ class WalletsScreen extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Transferred $currencySymbol${amount.toStringAsFixed(2)} from ${fromWallet.name} to ${toWallet.name} ✓'),
-                    duration: const Duration(seconds: 3),
+                    duration: const Duration(seconds: 4),
                   ),
                 );
               },

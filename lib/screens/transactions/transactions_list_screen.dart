@@ -67,12 +67,17 @@ class _TransactionsListScreenState
       grouped.putIfAbsent(key, () => []).add(tx);
     }
 
+    final selectedCategory = categories.firstWhere(
+      (c) => c.id == _categoryFilter,
+      orElse: () => const CategoryModel(id: '', name: 'All Categories', icon: '📂', colorValue: 0),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded),
+            icon: const Icon(Icons.add_rounded, size: 26),
             color: AppColors.primaryGreenLight,
             tooltip: 'Add Transaction',
             onPressed: () => context.push('/add-transaction'),
@@ -107,27 +112,24 @@ class _TransactionsListScreenState
             ),
           ),
 
-          // 2. Filter Chips
-          SizedBox(
-            height: 38,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          // 2. Filter Row (All, Expense, Income + Category Dropdown)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
               children: [
-                FilterChip(
+                // Type Filter: All
+                ChoiceChip(
                   label: const Text('All'),
-                  selected: _typeFilter == null && _categoryFilter == null,
-                  onSelected: (_) {
-                    setState(() {
-                      _typeFilter = null;
-                      _categoryFilter = null;
-                    });
-                  },
+                  selected: _typeFilter == null,
+                  onSelected: (_) => setState(() => _typeFilter = null),
                 ),
-                const SizedBox(width: 8),
-                FilterChip(
+                const SizedBox(width: 6),
+
+                // Type Filter: Expense
+                ChoiceChip(
                   label: const Text('Expense'),
                   selected: _typeFilter == TransactionType.expense,
+                  selectedColor: AppColors.expenseRed.withValues(alpha: 0.25),
                   onSelected: (_) {
                     setState(() {
                       _typeFilter = _typeFilter == TransactionType.expense
@@ -136,10 +138,13 @@ class _TransactionsListScreenState
                     });
                   },
                 ),
-                const SizedBox(width: 8),
-                FilterChip(
+                const SizedBox(width: 6),
+
+                // Type Filter: Income
+                ChoiceChip(
                   label: const Text('Income'),
                   selected: _typeFilter == TransactionType.income,
+                  selectedColor: AppColors.incomeGreen.withValues(alpha: 0.25),
                   onSelected: (_) {
                     setState(() {
                       _typeFilter = _typeFilter == TransactionType.income
@@ -148,23 +153,73 @@ class _TransactionsListScreenState
                     });
                   },
                 ),
-                const SizedBox(width: 8),
-                ...categories.take(6).map((cat) {
-                  final isSel = _categoryFilter == cat.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      avatar: Text(cat.icon, style: const TextStyle(fontSize: 12)),
-                      label: Text(cat.name),
-                      selected: isSel,
-                      onSelected: (_) {
-                        setState(() {
-                          _categoryFilter = isSel ? null : cat.id;
-                        });
-                      },
+                const Spacer(),
+
+                // Category Dropdown Filter
+                PopupMenuButton<String?>(
+                  tooltip: 'Filter Category',
+                  initialValue: _categoryFilter,
+                  onSelected: (val) => setState(() => _categoryFilter = val),
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem<String?>(
+                      value: null,
+                      child: Row(
+                        children: [
+                          Text('📂', style: TextStyle(fontSize: 16)),
+                          SizedBox(width: 10),
+                          Text('All Categories', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
-                  );
-                }),
+                    const PopupMenuDivider(),
+                    ...categories.map((c) {
+                      return PopupMenuItem<String?>(
+                        value: c.id,
+                        child: Row(
+                          children: [
+                            Text(c.icon, style: const TextStyle(fontSize: 16)),
+                            const SizedBox(width: 10),
+                            Text(c.name),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _categoryFilter != null
+                          ? AppColors.primaryGreenLight.withValues(alpha: 0.2)
+                          : (isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _categoryFilter != null
+                            ? AppColors.primaryGreenLight
+                            : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _categoryFilter != null ? selectedCategory.icon : '🏷️',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _categoryFilter != null ? selectedCategory.name : 'Category',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.arrow_drop_down_rounded, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -183,7 +238,7 @@ class _TransactionsListScreenState
                           'No transactions found',
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: isDark
                                 ? AppColors.darkTextPrimary
                                 : AppColors.lightTextPrimary,

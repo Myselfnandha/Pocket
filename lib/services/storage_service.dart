@@ -148,91 +148,9 @@ class StorageService {
   // --- Seed Initial Mock Data for First Launch Experience ---
 
   Future<void> _seedInitialDataIfNeeded() async {
-    if (_prefs.containsKey(_kTransactions)) return;
+    if (_prefs.containsKey(_kCategories)) return;
 
-    final now = DateTime.now();
-
-    final mockTransactions = [
-      TransactionModel(
-        id: 'tx-1',
-        title: 'Monthly Salary',
-        amount: 45000.0,
-        type: TransactionType.income,
-        categoryId: 'salary',
-        walletId: 'bank',
-        date: DateTime(now.year, now.month, 1),
-        note: 'Direct deposit',
-        createdAt: DateTime(now.year, now.month, 1),
-      ),
-      TransactionModel(
-        id: 'tx-2',
-        title: 'Freelance Design Project',
-        amount: 15000.0,
-        type: TransactionType.income,
-        categoryId: 'freelance',
-        walletId: 'bank',
-        date: DateTime(now.year, now.month, 5),
-        note: 'Landing page revamp',
-        createdAt: DateTime(now.year, now.month, 5),
-      ),
-      TransactionModel(
-        id: 'tx-3',
-        title: 'Apartment Rent',
-        amount: 12000.0,
-        type: TransactionType.expense,
-        categoryId: 'rent',
-        walletId: 'bank',
-        date: DateTime(now.year, now.month, 3),
-        note: 'August rent',
-        createdAt: DateTime(now.year, now.month, 3),
-      ),
-      TransactionModel(
-        id: 'tx-4',
-        title: 'Supermarket Grocery Run',
-        amount: 3450.0,
-        type: TransactionType.expense,
-        categoryId: 'groceries',
-        walletId: 'cash',
-        date: DateTime(now.year, now.month, now.day - 3),
-        note: 'Weekly essentials',
-        createdAt: DateTime(now.year, now.month, now.day - 3),
-      ),
-      TransactionModel(
-        id: 'tx-5',
-        title: 'Lunch at Zomato',
-        amount: 420.0,
-        type: TransactionType.expense,
-        categoryId: 'food',
-        walletId: 'upi',
-        date: DateTime(now.year, now.month, now.day - 1, 13, 30),
-        note: 'Team meal',
-        createdAt: DateTime(now.year, now.month, now.day - 1, 13, 30),
-      ),
-      TransactionModel(
-        id: 'tx-6',
-        title: 'Uber Ride to Office',
-        amount: 280.0,
-        type: TransactionType.expense,
-        categoryId: 'transport',
-        walletId: 'upi',
-        date: DateTime(now.year, now.month, now.day, 9, 15),
-        note: 'Morning commute',
-        createdAt: DateTime(now.year, now.month, now.day, 9, 15),
-      ),
-      TransactionModel(
-        id: 'tx-7',
-        title: 'Starbucks Coffee',
-        amount: 350.0,
-        type: TransactionType.expense,
-        categoryId: 'food',
-        walletId: 'upi',
-        date: DateTime(now.year, now.month, now.day, 16, 45),
-        note: 'Iced caramel macchiato',
-        createdAt: DateTime(now.year, now.month, now.day, 16, 45),
-      ),
-    ];
-
-    await saveTransactions(mockTransactions);
+    await saveTransactions([]);
     await saveCategories(defaultCategories);
     await saveWallets(defaultWallets);
     await saveSettings(const UserSettingsModel());

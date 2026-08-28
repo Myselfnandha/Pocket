@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket/models/category_model.dart';
+import 'package:pocket/models/settings_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,12 +14,12 @@ void main() {
       storage = await StorageService.init();
     });
 
-    test('Initial seeded data loads correctly', () {
+    test('Initial seeded clean data loads correctly', () {
       final txs = storage.getTransactions();
       final wallets = storage.getWallets();
       final categories = storage.getCategories();
 
-      expect(txs.isNotEmpty, isTrue);
+      expect(txs.isEmpty, isTrue); // Clean initial state with 0 dummy data
       expect(wallets.isNotEmpty, isTrue);
       expect(categories.isNotEmpty, isTrue);
       expect(wallets.any((w) => w.id == 'cash'), isTrue);
@@ -93,32 +94,44 @@ void main() {
     });
 
     test('Updating existing transaction updates values properly', () async {
-      final initialTx = storage.getTransactions().first;
-      final modifiedTx = initialTx.copyWith(title: 'Modified Title', amount: 1999.0);
+      final newTx = TransactionModel(
+        id: 'tx-1',
+        title: 'Initial Title',
+        amount: 500.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'cash',
+        date: DateTime.now(),
+        createdAt: DateTime.now(),
+      );
+      await storage.saveTransactions([newTx]);
 
+      final modifiedTx = newTx.copyWith(title: 'Modified Title', amount: 1999.0);
       final currentList = storage.getTransactions();
       final updatedList = currentList.map((t) => t.id == modifiedTx.id ? modifiedTx : t).toList();
       await storage.saveTransactions(updatedList);
 
-      final reloaded = storage.getTransactions().firstWhere((t) => t.id == initialTx.id);
+      final reloaded = storage.getTransactions().firstWhere((t) => t.id == newTx.id);
       expect(reloaded.title, equals('Modified Title'));
       expect(reloaded.amount, equals(1999.0));
     });
 
-    test('User Settings save and load with PIN configuration', () async {
+    test('User Settings save and load with Theme Mode configuration', () async {
       final initialSettings = storage.getSettings();
       final newSettings = initialSettings.copyWith(
-        pinCode: '4321',
-        pinLockEnabled: true,
-        biometricEnabled: true,
+        themeMode: AppThemeMode.manual,
+        manualThemeStyle: ManualThemeStyle.pureBlack,
+        isPureBlackEnabled: true,
+        showCategoryTags: false,
       );
 
       await storage.saveSettings(newSettings);
       final reloadedSettings = storage.getSettings();
 
-      expect(reloadedSettings.pinCode, equals('4321'));
-      expect(reloadedSettings.pinLockEnabled, isTrue);
-      expect(reloadedSettings.biometricEnabled, isTrue);
+      expect(reloadedSettings.themeMode, equals(AppThemeMode.manual));
+      expect(reloadedSettings.manualThemeStyle, equals(ManualThemeStyle.pureBlack));
+      expect(reloadedSettings.isPureBlackEnabled, isTrue);
+      expect(reloadedSettings.showCategoryTags, isFalse);
     });
   });
 }

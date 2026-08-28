@@ -14,11 +14,12 @@ class AppColors {
   static const Color warningAmber = Color(0xFFFFB300);
   static const Color infoBlue = Color(0xFF29B6F6);
 
-  // Dark Theme (Pure AMOLED)
-  static const Color darkBackground = Color(0xFF000000);
-  static const Color darkSurface = Color(0xFF121212);
-  static const Color darkSurfaceVariant = Color(0xFF1E1E1E);
-  static const Color darkCardBorder = Color(0xFF2C2C2C);
+  // Dark Theme (Pure AMOLED vs Standard Dark)
+  static const Color pureBlackBackground = Color(0xFF000000);
+  static const Color darkBackground = Color(0xFF131313);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkSurfaceVariant = Color(0xFF282828);
+  static const Color darkCardBorder = Color(0xFF2F2F2F);
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF9E9E9E);
   static const Color darkTextTertiary = Color(0xFF616161);
@@ -34,25 +35,29 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get darkTheme {
+  static ThemeData getDarkTheme({bool isPureBlack = true}) {
     final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
+    final bgColor = isPureBlack ? AppColors.pureBlackBackground : AppColors.darkBackground;
+    final surfaceColor = isPureBlack ? const Color(0xFF121212) : AppColors.darkSurface;
+    final surfaceVariant = isPureBlack ? const Color(0xFF1C1C1C) : AppColors.darkSurfaceVariant;
+    final borderColor = isPureBlack ? const Color(0xFF242424) : AppColors.darkCardBorder;
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.darkBackground,
-      colorScheme: const ColorScheme.dark(
+      scaffoldBackgroundColor: bgColor,
+      colorScheme: ColorScheme.dark(
         primary: AppColors.primaryGreenLight,
         onPrimary: Colors.black,
-        primaryContainer: Color(0xFF1B5E20),
+        primaryContainer: const Color(0xFF1B5E20),
         onPrimaryContainer: Colors.white,
         secondary: AppColors.accentOrangeLight,
         onSecondary: Colors.black,
-        surface: AppColors.darkSurface,
+        surface: surfaceColor,
         onSurface: AppColors.darkTextPrimary,
-        surfaceContainerHighest: AppColors.darkSurfaceVariant,
+        surfaceContainerHighest: surfaceVariant,
         error: AppColors.expenseRed,
-        outline: AppColors.darkCardBorder,
+        outline: borderColor,
       ),
       textTheme: baseTextTheme.copyWith(
         displayLarge: baseTextTheme.displayLarge?.copyWith(
@@ -81,23 +86,23 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkBackground,
+      appBarTheme: AppBarTheme(
+        backgroundColor: bgColor,
         foregroundColor: AppColors.darkTextPrimary,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkSurfaceVariant,
+        color: surfaceVariant,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.darkCardBorder, width: 1),
+          side: BorderSide(color: borderColor, width: 1),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: surfaceColor,
         selectedItemColor: AppColors.primaryGreenLight,
         unselectedItemColor: AppColors.darkTextSecondary,
         type: BottomNavigationBarType.fixed,
@@ -105,14 +110,14 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkSurfaceVariant,
+        fillColor: surfaceVariant,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkCardBorder),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkCardBorder),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -136,13 +141,16 @@ class AppTheme {
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.darkSurfaceVariant,
+        backgroundColor: surfaceVariant,
         contentTextStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
+
+  static ThemeData get darkTheme => getDarkTheme(isPureBlack: false);
+  static ThemeData get pureBlackTheme => getDarkTheme(isPureBlack: true);
 
   static ThemeData get lightTheme {
     final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.light().textTheme);
@@ -195,7 +203,7 @@ class AppTheme {
         backgroundColor: AppColors.lightBackground,
         foregroundColor: AppColors.lightTextPrimary,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(

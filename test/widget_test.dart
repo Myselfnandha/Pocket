@@ -13,7 +13,7 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('BalanceCard renders total balance label', (WidgetTester tester) async {
+  testWidgets('BalanceCard renders total balance and metric labels', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final storage = await StorageService.init();
 
@@ -33,7 +33,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Total Balance'), findsOneWidget);
     expect(find.text('Income'), findsOneWidget);
-    expect(find.text('Expenses'), findsOneWidget);
+    expect(find.text('Expense'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
   });
 
   testWidgets('OnboardingScreen renders welcome slide and buttons', (WidgetTester tester) async {

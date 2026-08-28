@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum WalletType { cash, bank, upi, creditCard, savings }
+
 class WalletModel {
   final String id;
   final String name;
@@ -7,6 +9,8 @@ class WalletModel {
   final int colorValue;
   final double initialBalance;
   final double currentBalance;
+  final WalletType walletType;
+  final double? spendingLimit;
   final bool isDefault;
 
   const WalletModel({
@@ -16,6 +20,8 @@ class WalletModel {
     required this.colorValue,
     this.initialBalance = 0.0,
     this.currentBalance = 0.0,
+    this.walletType = WalletType.bank,
+    this.spendingLimit,
     this.isDefault = false,
   });
 
@@ -28,6 +34,8 @@ class WalletModel {
     int? colorValue,
     double? initialBalance,
     double? currentBalance,
+    WalletType? walletType,
+    double? spendingLimit,
     bool? isDefault,
   }) {
     return WalletModel(
@@ -37,6 +45,8 @@ class WalletModel {
       colorValue: colorValue ?? this.colorValue,
       initialBalance: initialBalance ?? this.initialBalance,
       currentBalance: currentBalance ?? this.currentBalance,
+      walletType: walletType ?? this.walletType,
+      spendingLimit: spendingLimit ?? this.spendingLimit,
       isDefault: isDefault ?? this.isDefault,
     );
   }
@@ -48,6 +58,8 @@ class WalletModel {
         'colorValue': colorValue,
         'initialBalance': initialBalance,
         'currentBalance': currentBalance,
+        'walletType': walletType.name,
+        'spendingLimit': spendingLimit,
         'isDefault': isDefault,
       };
 
@@ -58,6 +70,10 @@ class WalletModel {
         colorValue: json['colorValue'] as int,
         initialBalance: (json['initialBalance'] as num?)?.toDouble() ?? 0.0,
         currentBalance: (json['currentBalance'] as num?)?.toDouble() ?? 0.0,
+        walletType: WalletType.values.byName(
+          json['walletType'] as String? ?? 'bank',
+        ),
+        spendingLimit: (json['spendingLimit'] as num?)?.toDouble(),
         isDefault: json['isDefault'] as bool? ?? false,
       );
 }
@@ -68,8 +84,9 @@ final List<WalletModel> defaultWallets = [
     name: 'Cash',
     icon: '💵',
     colorValue: 0xFF4CAF50,
-    initialBalance: 2500.0,
-    currentBalance: 2500.0,
+    initialBalance: 0.0,
+    currentBalance: 0.0,
+    walletType: WalletType.cash,
     isDefault: true,
   ),
   const WalletModel(
@@ -77,15 +94,17 @@ final List<WalletModel> defaultWallets = [
     name: 'Bank Account',
     icon: '🏦',
     colorValue: 0xFF2196F3,
-    initialBalance: 25000.0,
-    currentBalance: 25000.0,
+    initialBalance: 0.0,
+    currentBalance: 0.0,
+    walletType: WalletType.bank,
   ),
   const WalletModel(
     id: 'upi',
     name: 'UPI / Online',
     icon: '📱',
     colorValue: 0xFF9C27B0,
-    initialBalance: 5000.0,
-    currentBalance: 5000.0,
+    initialBalance: 0.0,
+    currentBalance: 0.0,
+    walletType: WalletType.upi,
   ),
 ];

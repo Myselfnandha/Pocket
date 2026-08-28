@@ -78,6 +78,7 @@ class TransactionTile extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Deleted "${transaction.title}"'),
+            duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Undo',
               textColor: AppColors.primaryGreenLight,
@@ -139,24 +140,27 @@ class TransactionTile extends ConsumerWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        Text(
-                          category.name,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
+                        if (settings.showCategoryTags) ...[
+                          Text(
+                            category.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
                           ),
-                        ),
-                        Text(
-                          ' • ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? AppColors.darkTextTertiary
-                                : AppColors.lightTextTertiary,
+                          Text(
+                            ' • ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextTertiary
+                                  : AppColors.lightTextTertiary,
+                            ),
                           ),
-                        ),
+                        ],
                         Text(
                           '${wallet.icon} ${wallet.name}',
                           style: TextStyle(

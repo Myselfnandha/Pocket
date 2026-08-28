@@ -25,74 +25,70 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 20,
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [AppColors.primaryGreen, AppColors.primaryGreenLight],
+        titleSpacing: 16,
+        title: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+          builder: (context, val, child) {
+            return Opacity(
+              opacity: val,
+              child: Transform.translate(
+                offset: Offset(0, (1 - val) * 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [AppColors.primaryGreen, AppColors.primaryGreenLight],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        settings.userName.isNotEmpty
+                            ? settings.userName[0].toUpperCase()
+                            : 'N',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Hi, ${settings.userName} 👋',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                settings.userName.isNotEmpty
-                    ? settings.userName[0].toUpperCase()
-                    : 'P',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hi, ${settings.userName} 👋',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.lightTextPrimary,
-                  ),
-                ),
-                Text(
-                  'Welcome to Pocket',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            );
+          },
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
-            tooltip: 'Add Transaction',
-            color: AppColors.primaryGreenLight,
-            onPressed: () => context.push('/add-transaction'),
+            icon: const Icon(Icons.settings_outlined, size: 24),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // Trigger any refresh if needed
-        },
+        onRefresh: () async {},
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -100,7 +96,7 @@ class HomeScreen extends ConsumerWidget {
               const BalanceCard(),
               const SizedBox(height: 16),
 
-              // 2. Quick Stats Row (Daily Average & This Month)
+              // 2. Quick Stats Row (Daily Average & Monthly Savings)
               Row(
                 children: [
                   Expanded(
@@ -145,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => context.go('/transactions'),
+                    onPressed: () => context.push('/transactions'),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -174,12 +170,12 @@ class HomeScreen extends ConsumerWidget {
               if (todayTxs.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
                   decoration: BoxDecoration(
                     color: isDark
                         ? AppColors.darkSurfaceVariant
                         : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isDark
                           ? AppColors.darkCardBorder
@@ -190,14 +186,14 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       const Text(
                         '🌿',
-                        style: TextStyle(fontSize: 40),
+                        style: TextStyle(fontSize: 42),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'No transactions today',
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: isDark
                               ? AppColors.darkTextPrimary
                               : AppColors.lightTextPrimary,
@@ -205,7 +201,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tap the + button above to log an expense or income',
+                        'Tap the + button to log an expense or income',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -253,7 +249,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 80), // bottom space for FAB
             ],
           ),
         ),
@@ -285,7 +281,7 @@ class _QuickStatCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
         ),
@@ -301,7 +297,7 @@ class _QuickStatCard extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: isDark
                       ? AppColors.darkTextSecondary
                       : AppColors.lightTextSecondary,
@@ -315,8 +311,8 @@ class _QuickStatCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
               color: valueColor,
             ),
           ),

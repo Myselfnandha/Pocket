@@ -20,7 +20,7 @@ class BalanceCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -64,7 +64,7 @@ class BalanceCard extends ConsumerWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -77,56 +77,41 @@ class BalanceCard extends ConsumerWidget {
             '${settings.currencySymbol}${currencyFormat.format(totalBalance)}',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: 34,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 20),
 
-          // Divider
-          Container(
-            height: 1,
-            color: Colors.white.withValues(alpha: 0.15),
-          ),
-          const SizedBox(height: 16),
-
-          // 3 Columns: Income | Expense | Today
+          // 3 Pro Columns Grid: Income | Expense | Today (Enlarged & Professional)
           Row(
             children: [
               // Income
               Expanded(
-                child: _StatColumn(
+                child: _MetricPill(
                   label: 'Income',
-                  amount: '${settings.currencySymbol}${compactFormat.format(monthlyStats.totalIncome)}',
+                  amount: '+${settings.currencySymbol}${compactFormat.format(monthlyStats.totalIncome)}',
                   icon: Icons.arrow_upward_rounded,
                   iconColor: const Color(0xFFA5D6A7),
                 ),
               ),
-              Container(
-                width: 1,
-                height: 32,
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
+              const SizedBox(width: 8),
 
               // Expense
               Expanded(
-                child: _StatColumn(
-                  label: 'Expenses',
-                  amount: '${settings.currencySymbol}${compactFormat.format(monthlyStats.totalExpense)}',
+                child: _MetricPill(
+                  label: 'Expense',
+                  amount: '-${settings.currencySymbol}${compactFormat.format(monthlyStats.totalExpense)}',
                   icon: Icons.arrow_downward_rounded,
                   iconColor: const Color(0xFFFFAB91),
                 ),
               ),
-              Container(
-                width: 1,
-                height: 32,
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
+              const SizedBox(width: 8),
 
               // Today
               Expanded(
-                child: _StatColumn(
+                child: _MetricPill(
                   label: 'Today',
                   amount: '${settings.currencySymbol}${compactFormat.format(monthlyStats.todayExpense)}',
                   icon: Icons.today_rounded,
@@ -141,13 +126,13 @@ class BalanceCard extends ConsumerWidget {
   }
 }
 
-class _StatColumn extends StatelessWidget {
+class _MetricPill extends StatelessWidget {
   final String label;
   final String amount;
   final IconData icon;
   final Color iconColor;
 
-  const _StatColumn({
+  const _MetricPill({
     required this.label,
     required this.amount,
     required this.icon,
@@ -156,33 +141,46 @@ class _StatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 13, color: iconColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              amount,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          amount,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

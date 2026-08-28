@@ -6,6 +6,7 @@ import '../models/wallet_model.dart';
 import '../models/transaction_model.dart';
 import '../models/settings_model.dart';
 import '../services/storage_service.dart';
+import '../theme/app_theme.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be overridden in main()');
@@ -23,10 +24,6 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await _storage.saveSettings(newSettings);
   }
 
-  Future<void> setThemePreference(AppThemePreference pref) async {
-    await updateSettings(state.copyWith(themePreference: pref));
-  }
-
   Future<void> setCurrency(String symbol, String code) async {
     await updateSettings(
       state.copyWith(currencySymbol: symbol, currencyCode: code),
@@ -40,6 +37,10 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
   Future<void> completeOnboarding() async {
     await updateSettings(state.copyWith(isOnboarded: true));
   }
+
+  Future<void> toggleCategoryTags(bool value) async {
+    await updateSettings(state.copyWith(showCategoryTags: value));
+  }
 }
 
 final settingsProvider =
@@ -48,23 +49,35 @@ final settingsProvider =
   return SettingsNotifier(storage);
 });
 
-// --- Theme Mode Calculation ---
+// --- Theme Mode & Data Calculation ---
 
 final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
   final settings = ref.watch(settingsProvider);
-  switch (settings.themePreference) {
-    case AppThemePreference.darkAmoled:
+  if (settings.themeMode == AppThemeMode.autoTime) {
+    final hour = DateTime.now().hour;
+    // Dark between 6 PM (18) and 6 AM (6)
+    if (hour >= 18 || hour < 6) {
       return ThemeMode.dark;
-    case AppThemePreference.light:
-      return ThemeMode.light;
-    case AppThemePreference.autoTime:
-      final hour = DateTime.now().hour;
-      // Dark between 6 PM (18) and 6 AM (6)
-      if (hour >= 18 || hour < 6) {
-        return ThemeMode.dark;
-      }
-      return ThemeMode.light;
+    }
+    return ThemeMode.light;
   }
+
+  // Manual mode
+  switch (settings.manualThemeStyle) {
+    case ManualThemeStyle.light:
+      return ThemeMode.light;
+    case ManualThemeStyle.dark:
+    case ManualThemeStyle.pureBlack:
+      return ThemeMode.dark;
+  }
+});
+
+final activeDarkThemeProvider = Provider<ThemeData>((ref) {
+  final settings = ref.watch(settingsProvider);
+  final isAmoled = settings.isPureBlackEnabled ||
+      (settings.themeMode == AppThemeMode.manual &&
+          settings.manualThemeStyle == ManualThemeStyle.pureBlack);
+  return AppTheme.getDarkTheme(isPureBlack: isAmoled);
 });
 
 // --- Categories Provider ---
