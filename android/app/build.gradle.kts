@@ -26,7 +26,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -43,7 +43,10 @@ android {
                 keyAlias = keystoreProperties.getProperty("keyAlias") ?: "pocket_key"
                 keyPassword = keystoreProperties.getProperty("keyPassword") ?: "pocketrelease2026"
                 val storePath = keystoreProperties.getProperty("storeFile") ?: "pocket-release-key.jks"
-                storeFile = file(storePath)
+                val targetFile = rootProject.file(storePath).takeIf { it.exists() }
+                    ?: file(storePath).takeIf { it.exists() }
+                    ?: file("pocket-release-key.jks")
+                storeFile = targetFile
                 storePassword = keystoreProperties.getProperty("storePassword") ?: "pocketrelease2026"
             } else if (file("pocket-release-key.jks").exists()) {
                 keyAlias = "pocket_key"
@@ -51,7 +54,7 @@ android {
                 storeFile = file("pocket-release-key.jks")
                 storePassword = "pocketrelease2026"
             } else {
-                signingConfig = signingConfigs.getByName("debug")
+                initWith(getByName("debug"))
             }
         }
     }

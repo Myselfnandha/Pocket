@@ -100,6 +100,12 @@ jobs:
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/pocket-release-key.jks
           fi
+          if [ ! -f android/app/pocket-release-key.jks ]; then
+            keytool -genkeypair -v -keystore android/app/pocket-release-key.jks \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -alias pocket_key -dname "CN=Pocket, OU=Mobile, O=PocketApp, L=Bangalore, S=KA, C=IN" \
+              -storepass pocketrelease2026 -keypass pocketrelease2026
+          fi
           if [ ! -f android/key.properties ]; then
             echo "storePassword=${{ secrets.STORE_PASSWORD || 'pocketrelease2026' }}" > android/key.properties
             echo "keyPassword=${{ secrets.KEY_PASSWORD || 'pocketrelease2026' }}" >> android/key.properties
