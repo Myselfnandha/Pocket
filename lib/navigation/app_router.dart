@@ -11,6 +11,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/settings/recurring_rules_screen.dart';
 import '../screens/settings/data_management_screen.dart';
 import '../screens/notifications/notification_center_screen.dart';
+import '../screens/debts/debts_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import 'app_scaffold.dart';
 
@@ -69,6 +70,13 @@ GoRouter createRouter(bool isOnboarded) {
         path: '/data-management',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const DataManagementScreen(),
+      ),
+
+      // Debts & Loans (Dedicated Screen)
+      GoRoute(
+        path: '/debts',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DebtsScreen(),
       ),
 
       // Transaction Detail

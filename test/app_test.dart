@@ -3,6 +3,7 @@ import 'package:pocket/models/category_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/recurring_model.dart';
 import 'package:pocket/models/notification_model.dart';
+import 'package:pocket/models/debt_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:pocket/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,6 +87,7 @@ void main() {
         categoryId: 'shopping',
         walletId: 'bank',
         date: DateTime.now(),
+        receiptImagePath: '/data/user/0/com.pocket/app_flutter/receipts/receipt_1.jpg',
         createdAt: DateTime.now(),
       );
 
@@ -95,6 +97,7 @@ void main() {
       expect(updated.length, equals(initialCount + 1));
       expect(updated.first.id, equals('new-123'));
       expect(updated.first.amount, equals(899.0));
+      expect(updated.first.receiptImagePath, contains('receipt_1.jpg'));
     });
 
     test('Updating existing transaction updates values properly', () async {
@@ -188,6 +191,39 @@ void main() {
       final list = storage.getNotifications();
       expect(list.length, equals(1));
       expect(list.first.isRead, isFalse);
+    });
+
+    test('DebtModel handles partial repayments and full settlement properly', () async {
+      final debt = DebtModel(
+        id: 'debt-1',
+        personName: 'Rahul',
+        phoneNumber: '+91 9876543210',
+        totalAmount: 5000.0,
+        remainingAmount: 5000.0,
+        type: DebtType.lent,
+        createdAt: DateTime.now(),
+      );
+
+      expect(debt.isSettled, isFalse);
+
+      // Record partial payment of 2000
+      final partial = debt.recordPayment(paymentAmount: 2000.0, note: 'GPay payment');
+      expect(partial.remainingAmount, equals(3000.0));
+      expect(partial.isSettled, isFalse);
+      expect(partial.payments.length, equals(1));
+
+      // Record final payment of 3000
+      final settled = partial.recordPayment(paymentAmount: 3000.0, note: 'Cash');
+      expect(settled.remainingAmount, equals(0.0));
+      expect(settled.isSettled, isTrue);
+      expect(settled.payments.length, equals(2));
+
+      // Persist to storage
+      await storage.saveDebts([settled]);
+      final loaded = storage.getDebts();
+      expect(loaded.length, equals(1));
+      expect(loaded.first.personName, equals('Rahul'));
+      expect(loaded.first.isSettled, isTrue);
     });
   });
 }

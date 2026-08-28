@@ -94,8 +94,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 2. Section: Automated Recurring Expenses
-          _buildSectionHeader('AUTOMATION'),
+          // 2. Section: Automated Recurring Expenses & Debts
+          _buildSectionHeader('FINANCIAL TOOLS & AUTOMATION'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
@@ -105,6 +105,14 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: Text('${recurring.where((r) => r.isActive).length} active rules (Rent, EMI, OTT...)'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push('/recurring-rules'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.handshake_outlined, color: AppColors.infoBlue),
+                title: const Text('Lend & Borrow / Debt Tracker', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Track money given or owed to contacts with settlements'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/debts'),
               ),
             ],
           ),
@@ -221,7 +229,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.4 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.0.5 • Material 3 Transaction Tracker'),
               ),
             ],
           ),

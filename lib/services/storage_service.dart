@@ -7,6 +7,7 @@ import '../models/transaction_model.dart';
 import '../models/settings_model.dart';
 import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
+import '../models/debt_model.dart';
 
 class StorageService {
   static const _kTransactions = 'pocket_transactions';
@@ -15,6 +16,7 @@ class StorageService {
   static const _kSettings = 'pocket_settings';
   static const _kRecurringRules = 'pocket_recurring_rules';
   static const _kNotifications = 'pocket_notifications';
+  static const _kDebts = 'pocket_debts';
 
   final SharedPreferences _prefs;
 
@@ -141,6 +143,24 @@ class StorageService {
     await saveNotifications(updated);
   }
 
+  // --- Debts & Loans (Lend & Borrow) ---
+
+  List<DebtModel> getDebts() {
+    final raw = _prefs.getString(_kDebts);
+    if (raw == null) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.map((e) => DebtModel.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveDebts(List<DebtModel> list) async {
+    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    await _prefs.setString(_kDebts, raw);
+  }
+
   // --- Process Due Recurring Rules ---
 
   Future<int> processDueRecurringRules() async {
@@ -223,6 +243,7 @@ class StorageService {
     await _prefs.remove(_kSettings);
     await _prefs.remove(_kRecurringRules);
     await _prefs.remove(_kNotifications);
+    await _prefs.remove(_kDebts);
     await _seedInitialDataIfNeeded();
   }
 
@@ -288,5 +309,6 @@ class StorageService {
     await saveSettings(const UserSettingsModel());
     await saveRecurringRules([]);
     await saveNotifications([]);
+    await saveDebts([]);
   }
 }

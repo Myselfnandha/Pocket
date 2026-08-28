@@ -1,76 +1,74 @@
+# 💳 Pocket — Next-Gen Personal Finance & Wealth Matrix
+
 <div align="center">
 
 ```
-  ____   ___   ____ _  _______ _____ 
- |  _ \ / _ \ / ___| |/ / ____|_   _|
- | |_) | | | | |   | ' /|  _|   | |  
- |  __/| |_| | |___| . \| |___  | |  
- |_|    \___/ \____|_|\_\_____| |_|  
+  ██████╗  ██████╗  ██████╗██╗  ██╗███████╗████████╗
+  ██╔══██╗██╔═══██╗██╔════╝██║ ██╔╝██╔════╝╚══██╔══╝
+  ██████╔╝██║   ██║██║     █████╔╝ █████╗     ██║   
+  ██╔═══╝ ██║   ██║██║     ██╔═██╗ ██╔══╝     ██║   
+  ██║     ╚██████╔╝╚██████╗██║  ██╗███████╗   ██║   
+  ╚═╝      ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   
 ```
 
-### **The Intelligent, Privacy-First Personal Ledger**
-*Autonomous Expense Tracking • Next-Gen Financial Clarity • 100% Offline & Private*
+**An intelligent, offline-first personal financial management suite engineered with Flutter, Material 3, and AMOLED Pure Black aesthetics.**
 
-<br/>
+---
 
-[![Build Universal APK](https://github.com/Myselfnandha/Pocket/actions/workflows/build_apk.yml/badge.svg)](https://github.com/Myselfnandha/Pocket/actions/workflows/build_apk.yml)
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Riverpod](https://img.shields.io/badge/State-Riverpod%202.6-00D2B8?style=for-the-badge&logo=dart&logoColor=white)](https://pub.dev/packages/flutter_riverpod)
-[![Material 3](https://img.shields.io/badge/Design-Material%203-7D5260?style=for-the-badge&logo=materialdesign&logoColor=white)](https://m3.material.io)
-[![AMOLED Ready](https://img.shields.io/badge/Theme-AMOLED%20Pure%20Black-000000?style=for-the-badge&logo=shadow&logoColor=white)](https://github.com/Myselfnandha/Pocket)
-[![License](https://img.shields.io/badge/License-MIT-4CAF50?style=for-the-badge)](LICENSE)
-
-<br/>
+[![CI/CD Release](https://github.com/Myselfnandha/Pocket/actions/workflows/build_apk.yml/badge.svg)](https://github.com/Myselfnandha/Pocket/actions)
+[![Latest Release](https://img.shields.io/github/v/release/Myselfnandha/Pocket?color=00D09C&label=Version)](https://github.com/Myselfnandha/Pocket/releases)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
+[![Riverpod](https://img.shields.io/badge/State-Riverpod%202.6-blueviolet)](https://riverpod.dev)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Theme](https://img.shields.io/badge/Theme-AMOLED%20Pure%20Black-000000)](https://material.io)
 
 </div>
 
 ---
 
-## 🌟 Executive Summary
+## ⚡ Core Capabilities & Intelligent Modules
 
-**Pocket** is an ultra-modern, privacy-first personal finance tracking powerhouse engineered with Flutter and Dart. Designed with a pure dark AMOLED aesthetic and high-performance reactive architecture, Pocket eliminates bloated cloud dependencies and delivers lightning-fast transaction logging, automated recurring expense resolution, predictive category matching, and actionable financial analytics.
+### 1. ⌨️ Tactile Fast-Entry & Predictive Numpad
+- **Integrated Calculator Numpad**: Perform real-time math operations (`+`, `-`, `.`) directly inside the transaction amount display.
+- **Smart Dynamic Focus**: Automatically hides the numpad when typing custom notes/tags and restores seamlessly when tapping amounts or blank space.
+- **Context-Aware Category Auto-Suggester**: Learns from transaction descriptions and auto-selects categories via heuristics and past habits.
 
----
+### 2. 📸 Private Receipt & Bill Photo Attachments
+- **Zero-Leak Sandboxed Storage**: All receipt photos taken with the camera or selected from files are saved strictly inside the app's internal documents directory with a `.nomedia` file to prevent device gallery indexing.
+- **Interactive Zoom Viewer**: Inspect captured receipts with multi-touch pinch-to-zoom (`InteractiveViewer`) and full-screen preview.
 
-## ⚡ Core Innovations & Capabilities
+### 3. 🤝 Lend & Borrow / Personal Debt Tracker
+- **Ledger Cards**: Visual split between **"You are owed" (Lent - Green)** and **"You owe" (Borrowed - Red)** with net position indicator.
+- **Phonebook Contact Picker**: Select contacts directly from your device address book (`flutter_contacts`) or use instant name autocomplete.
+- **Settlements & Partial Payments**: Record repayments with progress bars and one-tap **"Settle Up"** with optional automatic wallet synchronization.
 
-### 1. ⚡ Tactile Fast-Entry & Predictive Numpad
-- **Embedded Calculator Keyboard**: Instant calculation (`+`, `-`, `.`, `00`) with haptic feedback and dynamic show/hide transition when entering custom notes.
-- **Smart Category Auto-Suggestion**: High-speed heuristic prediction engine that matches past spending patterns and title keywords to automatically select the optimal category.
-- **4-Second Non-Blocking Undo**: Instant feedback on transaction recording with quick-rollback capability.
+### 4. 🔄 Autonomous Recurring Expenses Subsystem
+- **Automated Lifecycle Processing**: Automatically evaluates and executes due recurring commitments on app startup.
+- **Preset Domain Templates**: Instant configuration for **Rent (`🏠`)**, **Loan EMI (`💳`)**, **OTT Subscriptions (`🎬`)**, **Electricity (`⚡`)**, **Phone Bill (`📱`)**, **Insurance (`🛡️`)**, and **Subscriptions (`📦`)**.
+- **Configurable Cadence**: Supports `Monthly`, `Weekly`, and `Yearly` execution cycles with custom due-day offsets.
 
-### 2. 🔄 Autonomous Recurring Expenses Subsystem
-- **Automated Due Date Resolution**: Automatically evaluates and creates transactions on their due dates upon app launch with zero manual friction.
-- **Preset Templates**: One-tap configuration for **Rent (`🏠`)**, **Loan EMI (`💳`)**, **OTT Streaming (`🎬`)**, **Electricity (`⚡`)**, **Phone & Internet (`📱`)**, **Insurance (`🛡️`)**, and **Subscriptions (`📦`)**.
-- **Flexible Recurrence**: Full support for **Monthly**, **Weekly**, and **Yearly** cycles with automatic forward date calculation.
-- **Dual Management**: Easily toggle recurrence inside the Add Transaction flow or manage rules via the dedicated **Recurring Rules Center** in Settings.
+### 5. 🔔 Intelligent Notification & Alert Center
+- **In-App Notification Hub**: Real-time unread counter badge on the Home AppBar leading to an in-app alert drawer.
+- **Proactive Budget Threshold Warnings**: System notifications trigger automatically at 80% (approaching limit) and 100% (exceeded limit).
+- **Daily Spending Check-in**: Scheduled daily reminder at user-selected times.
 
-### 3. 🔔 Intelligent Notification & Alert Engine
-- **In-App Notification Center**: Centralized alert drawer with real-time unread badges on the dashboard header.
-- **Proactive Budget Warnings**: Automatic notifications at **80% wallet capacity** and instant alerts when spending exceeds **100% of limits**.
-- **Automated Daily Spending Check-In**: Scheduled local system reminder (customizable time picker, e.g., 8:00 PM) to ensure consistency.
-- **Monthly Summary Digest**: Proactive financial scorecards delivered on the 1st of every month.
+### 6. 📊 Next-Gen Analytics & Outflow Breakdown
+- **Top Spending Category Hero**: Dynamic badge highlighting top monthly outflow category, total spent, and share percentage.
+- **Day-of-Week Cash Outflow Matrix**: Mon–Sun cash outflow bar chart highlighting peak spending days in vibrant amber.
+- **Monthly Savings Rate**: Live tracking of net savings and savings efficiency percentage.
 
-### 4. 📊 Next-Gen Analytics & Day-of-Week Cash Outflow Matrix
-- **Top Spending Category Hero**: Identifies and spotlights the #1 expense category of the month, its share percentage, and total outflow.
-- **Day-of-Week Outflow Breakdown**: High-resolution bar chart analyzing spending behavior across **Mon, Tue, Wed, Thu, Fri, Sat, Sun** with peak spending day detection.
-- **Category Donut Visualization**: Dynamic interactive pie chart distribution with custom color palettes.
-- **Multi-Format Export**: One-tap export to structured **CSV** spreadsheets and formatted **PDF** financial ledger statements.
+### 7. 💳 Dynamic Multi-Account & Wallet Architecture
+- **Multi-Wallet Support**: Manage Cash, Bank Accounts, Digital Wallets, and Credit Lines.
+- **Real-Time Reactive Balances**: Instant calculation across all accounts with custom icons and color tokens.
 
-### 5. 💳 Dynamic Multi-Account / Wallet Architecture
-- **Unified Net Balance**: Real-time aggregation of balances across **Cash, Bank, UPI, Credit Cards, and Savings accounts**.
-- **Custom Spending Limits**: Set monthly spending limits per account with real-time depletion monitoring.
-- **Custom Wallet Creation**: Interactive modal with custom icons, initial balances, and categorization.
+### 8. 🔐 Zero-Knowledge Data & Local Database Backup
+- **Offline-First Security**: Zero telemetry, zero analytics tracking, and zero remote cloud dependencies.
+- **Full JSON Schema Backup & Restore**: One-tap export and restore of the entire database.
+- **CSV Import & Export**: Import spreadsheet transaction records and export CSV files.
 
-### 6. 🔐 Zero-Knowledge Data & Complete Backup/Restore
-- **100% Local Encrypted Storage**: All data stays strictly on your physical device — no external tracking or third-party servers.
-- **Full JSON Database Backup**: Complete backup export containing all transactions, wallets, recurring rules, and preferences in an interoperable `.json` format.
-- **One-Tap Database Restore**: Restore full state with automatic schema validation.
-- **CSV Data Import/Export**: Seamlessly import external spreadsheets or export complete transaction history.
-
-### 7. 🌌 AMOLED Pure Black & Auto Adaptive Theme
-- **True AMOLED Black (`#000000`)**: Maximizes battery efficiency on OLED/AMOLED displays with minimal power consumption.
-- **Time-Based Auto Theme**: Automatically transitions between crisp daylight mode (6:00 AM – 6:00 PM) and deep dark mode (6:00 PM – 6:00 AM).
+### 9. 🌌 AMOLED Pure Black & Auto Adaptive Theme
+- **True AMOLED Black (`#000000`)**: Maximizes battery efficiency on OLED/AMOLED displays.
+- **Time-Based Auto Theme**: Transitions smoothly between daylight mode (6:00 AM – 6:00 PM) and deep dark mode (6:00 PM – 6:00 AM).
 
 ---
 
@@ -87,14 +85,14 @@
                       │ (Reactive Notifiers & Derived Selectors)│
                       └────────────────────┬────────────────────┘
                                            │
-         ┌─────────────────────────────────┼─────────────────────────────────┐
-         │                                 │                                 │
-┌────────▼────────┐               ┌────────▼────────┐               ┌────────▼────────┐
-│ Recurring Engine│               │ Notification Hub│               │ Backup / Export │
-│ (Auto Executor) │               │(System & In-App)│               │  (JSON / CSV)   │
-└────────┬────────┘               └────────┬────────┘               └────────┬────────┘
-         │                                 │                                 │
-         └─────────────────────────────────┼─────────────────────────────────┘
+         ┌──────────────────┬──────────────┴───────┬──────────────────┐
+         │                  │                      │                  │
+┌────────▼────────┐┌────────▼────────┐   ┌─────────▼────────┐┌────────▼────────┐
+│ Recurring Engine││ Notification Hub│   │   Debt Ledger    ││ Private Receipts│
+│ (Auto Executor) ││(System & In-App)│   │ (Lend & Borrow)  ││   (.nomedia)    │
+└────────┬────────┘└────────┬────────┘   └─────────┬────────┘└────────┬────────┘
+         │                  │                      │                  │
+         └──────────────────┴──────────────┬───────┴──────────────────┘
                                            │
                       ┌────────────────────▼────────────────────┐
                       │    Local Encrypted Storage (SharedPreferences) │
@@ -108,6 +106,7 @@
 | **Routing & Navigation** | GoRouter | `^14.8.1` (StatefulShellRoute with Branching) |
 | **Graphics & Charts** | FL Chart | `^0.70.2` (Custom Bar and Donut Charts) |
 | **Notifications** | Flutter Local Notifications | `^18.0.1` + `timezone` |
+| **Contacts & Media** | Flutter Contacts & Image Picker | `^1.1.9+2` / `^1.1.2` |
 | **File & Data Ops** | File Picker & Share Plus | `^8.1.7` / `^10.1.4` |
 | **Document Generation** | PDF & Printing & CSV | `^3.11.2` / `^5.14.2` / `^6.0.0` |
 | **Typography** | Google Fonts | Inter Typography Engine |
@@ -122,9 +121,10 @@ lib/
 ├── models/
 │   ├── category_model.dart               # Category definitions & transaction types
 │   ├── wallet_model.dart                 # Multi-wallet account schemas
-│   ├── transaction_model.dart            # Transaction entities & metadata
+│   ├── transaction_model.dart            # Transaction entities & receipt paths
 │   ├── recurring_model.dart              # Automated recurring rule models & presets
 │   ├── notification_model.dart           # In-app notification entities & alert types
+│   ├── debt_model.dart                   # Lend & Borrow debt ledger schemas & payments
 │   └── settings_model.dart               # User preferences & notification thresholds
 ├── navigation/
 │   ├── app_router.dart                   # GoRouter navigation paths & deep routes
@@ -133,80 +133,73 @@ lib/
 │   └── app_providers.dart                # Riverpod StateNotifiers & reactive selectors
 ├── screens/
 │   ├── home/
-│   │   └── home_screen.dart              # Dashboard, hero balance, quick stats & FAB
+│   │   └── home_screen.dart              # Dashboard, hero balance, quick stats & Quick Hub
 │   ├── transactions/
-│   │   ├── add_transaction_screen.dart   # Centered entry modal, recurring toggle & calculator
+│   │   ├── add_transaction_screen.dart   # Centered entry modal, receipt capture & calculator
 │   │   ├── transactions_list_screen.dart # Filterable, searchable transaction history
-│   │   └── transaction_detail_screen.dart# Transaction inspection & deletion
+│   │   └── transaction_detail_screen.dart# Transaction inspection, receipt zoom & deletion
+│   ├── debts/
+│   │   └── debts_screen.dart             # Lend & Borrow tracker, contact picker & settlements
 │   ├── analytics/
-│   │   └── analytics_screen.dart         # Top spending category, day-of-week matrix & reports
+│   │   └── analytics_screen.dart         # Category breakdown & day-of-week outflow chart
 │   ├── wallets/
-│   │   └── wallets_screen.dart           # Multi-wallet balance manager & creator
-│   ├── settings/
-│   │   ├── settings_screen.dart          # Master settings & theme preferences
-│   │   ├── recurring_rules_screen.dart   # Dedicated recurring expense manager
-│   │   └── data_management_screen.dart   # Backup, restore, CSV import/export & database reset
+│   │   └── wallets_screen.dart           # Account balances, wallet creation & limits
 │   ├── notifications/
-│   │   └── notification_center_screen.dart # In-app notification center & alerts
+│   │   └── notification_center_screen.dart # In-app notification drawer & action center
+│   ├── settings/
+│   │   ├── settings_screen.dart          # Master preferences & configuration hub
+│   │   ├── recurring_rules_screen.dart   # Recurring expense rule manager
+│   │   └── data_management_screen.dart   # Full JSON backup, restore, CSV & database reset
 │   └── onboarding/
-│       └── onboarding_screen.dart        # 3-step setup, mandatory wallet & permission prompt
+│       └── onboarding_screen.dart        # Clean 3-step setup, wallet creation & permissions
 ├── services/
-│   ├── storage_service.dart              # Persistent local storage & recurring auto-processor
-│   ├── backup_service.dart               # JSON database export/restore & CSV parser
-│   └── notification_service.dart         # Local system notifications & threshold monitors
-├── theme/
-│   └── app_theme.dart                    # Material 3 Pure Black AMOLED & Light theme tokens
-└── widgets/
-    ├── balance_card.dart                 # Hero balance container with quick inflow/outflow
-    ├── numpad.dart                       # Tight tactile calculator keypad
-    └── transaction_tile.dart             # Responsive transaction list item
+│   ├── storage_service.dart              # Local JSON serialization & state persistence
+│   ├── notification_service.dart         # System local notifications & threshold dispatcher
+│   ├── backup_service.dart               # Database backup, restore, and CSV parser
+│   └── receipt_service.dart              # Sandboxed receipt photo capture & .nomedia privacy
+└── theme/
+    └── app_theme.dart                    # Material 3 color system & AMOLED Pure Black styles
 ```
 
 ---
 
-## 🚀 Installation & Local Development
+## 🚀 Quick Start Guide
 
-### 1. Prerequisites
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (`^3.11.3` or newer)
-- Android Studio / VS Code / Antigravity IDE
-- Android device or emulator with Developer Mode enabled
+### Prerequisites
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (`>= 3.11.3`)
+- Android Studio / VS Code with Flutter Extension
+- Android SDK (API 34 / Java 17)
 
-### 2. Quick Start
+### Local Setup
 ```bash
 # Clone the repository
 git clone https://github.com/Myselfnandha/Pocket.git
 cd Pocket
 
-# Install Flutter dependencies
+# Install dependencies
 flutter pub get
 
-# Run the test suite
+# Run static analysis and unit tests
+flutter analyze
 flutter test
 
-# Launch in debug mode
+# Launch on connected device / emulator
 flutter run
 ```
 
 ---
 
-## 📦 Automated Release & CI/CD Pipeline
+## 🔄 Automated CI/CD Release Pipeline
 
-Pocket features a continuous delivery GitHub Actions pipeline ([`.github/workflows/build_apk.yml`](.github/workflows/build_apk.yml)) that compiles optimized universal APKs:
+Pocket uses GitHub Actions to build and distribute standalone Universal Release APKs on version tag pushes:
 
-- **Automatic Releases on Version Tag**:
-  ```bash
-  git tag -a v1.0.3 -m "Release v1.0.3"
-  git push origin v1.0.3
-  ```
-  Triggers automatic compilation of `Pocket-v1.0.3-universal.apk` and publishes a GitHub Release with download assets.
-- **Manual Trigger**: Execute workflows on-demand via the **Actions** tab with custom version tags.
+```bash
+# To trigger an automated release build:
+git tag -a v1.0.5 -m "Release v1.0.5"
+git push origin v1.0.5
+```
 
----
-
-## 📄 License & Attribution
-
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete terms.
-
-<div align="center">
-  <sub>Built with ❤️ by <b>Nandha</b> & pair-programmed with <b>Google Antigravity</b></sub>
-</div>
+The GitHub Actions workflow will:
+1. Validate code via `flutter analyze` & `flutter test`.
+2. Compile universal release APK (`flutter build apk --release`).
+3. Publish a new GitHub Release with the downloadable asset `Pocket-v1.0.5-universal.apk`.

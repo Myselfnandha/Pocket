@@ -170,7 +170,61 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+
+              // 2.5 Quick Hub Row: Recurring & Debts
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => context.push('/recurring-rules'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.autorenew_rounded, size: 18, color: AppColors.primaryGreenLight),
+                            SizedBox(width: 8),
+                            Text('Recurring Dues', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => context.push('/debts'),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.handshake_outlined, size: 18, color: AppColors.infoBlue),
+                            SizedBox(width: 8),
+                            Text('Debts & Loans', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
               // 3. Section Header
               Row(

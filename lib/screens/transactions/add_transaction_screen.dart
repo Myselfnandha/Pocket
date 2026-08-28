@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
@@ -8,6 +10,7 @@ import '../../models/wallet_model.dart';
 import '../../models/recurring_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
+import '../../services/receipt_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/numpad.dart';
 
@@ -34,6 +37,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   // Recurring options
   bool _isRecurring = false;
   RecurringFrequency _recurringFrequency = RecurringFrequency.monthly;
+
+  // Receipt image
+  File? _receiptFile;
 
   @override
   void initState() {
@@ -82,9 +88,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           _amountStr = key;
         }
       } else {
-        // Prevent duplicate decimals
         if (key == '.' && _amountStr.contains('.')) return;
-        // Limit total length to 10 digits
         if (_amountStr.length >= 10) return;
         _amountStr += key;
       }
@@ -159,7 +163,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ? categories.firstWhere((c) => c.id == catId, orElse: () => const CategoryModel(id: '', name: 'Untitled', icon: '📝', colorValue: 0)).name
         : _titleController.text.trim();
 
-    // 1. Save Transaction
+    // 1. Save Transaction with receipt path
     await ref.read(transactionsProvider.notifier).addTransaction(
           title: title,
           amount: amount,
@@ -167,6 +171,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           categoryId: catId,
           walletId: wId,
           date: _selectedDate,
+          receiptImagePath: _receiptFile?.path,
         );
 
     // 2. Save as Recurring Rule if toggled
@@ -294,7 +299,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Expense Option
                             InkWell(
                               onTap: () {
                                 setState(() {
@@ -332,7 +336,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 ),
                               ),
                             ),
-                            // Income Option
                             InkWell(
                               onTap: () {
                                 setState(() {
@@ -492,7 +495,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     // 5. Account/Wallet & Date Pickers
                     Row(
                       children: [
-                        // Wallet selector
                         Expanded(
                           child: InkWell(
                             onTap: () {
@@ -532,8 +534,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-
-                        // Date picker
                         Expanded(
                           child: InkWell(
                             onTap: () {
@@ -574,7 +574,73 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 6. Make Recurring Toggle Box
+                    // 6. Attach Private Receipt / Bill Photo
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                        ),
+                      ),
+                      child: _receiptFile == null
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.receipt_long_rounded, size: 20, color: AppColors.primaryGreenLight),
+                                    SizedBox(width: 8),
+                                    Text('Attach Bill / Receipt', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primaryGreenLight, size: 22),
+                                      tooltip: 'Take Photo',
+                                      onPressed: () => _pickReceipt(ImageSource.camera),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.photo_library_outlined, color: AppColors.primaryGreenLight, size: 22),
+                                      tooltip: 'Choose Image',
+                                      onPressed: () => _pickReceipt(ImageSource.gallery),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _showZoomableImage(context, _receiptFile!),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(_receiptFile!, width: 48, height: 48, fit: BoxFit.cover),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Receipt Attached ✓', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.incomeGreen)),
+                                      const SizedBox(height: 2),
+                                      Text('Stored privately (hidden from gallery)', style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close_rounded, color: AppColors.expenseRed, size: 20),
+                                  onPressed: () => setState(() => _receiptFile = null),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 7. Make Recurring Toggle Box
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
@@ -636,7 +702,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ),
             ),
 
-            // Calculator Numpad at the bottom (Smoothly toggled)
             if (_showNumpad)
               CalculatorNumpad(
                 onKeyPress: _handleNumpadPress,
@@ -673,6 +738,43 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (picked != null) {
       setState(() => _selectedDate = picked);
     }
+  }
+
+  Future<void> _pickReceipt(ImageSource source) async {
+    _titleFocus.unfocus();
+    final file = await ReceiptService().pickOrCaptureReceipt(source: source);
+    if (file != null) {
+      setState(() => _receiptFile = file);
+    }
+  }
+
+  void _showZoomableImage(BuildContext context, File file) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.file(file),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showWalletPicker(List<WalletModel> wallets) {

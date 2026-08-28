@@ -9,6 +9,7 @@ class TransactionModel {
   final String walletId;
   final DateTime date;
   final String? note;
+  final String? receiptImagePath;
   final DateTime createdAt;
 
   const TransactionModel({
@@ -20,6 +21,7 @@ class TransactionModel {
     required this.walletId,
     required this.date,
     this.note,
+    this.receiptImagePath,
     required this.createdAt,
   });
 
@@ -32,6 +34,7 @@ class TransactionModel {
     String? walletId,
     DateTime? date,
     String? note,
+    String? receiptImagePath,
     DateTime? createdAt,
   }) {
     return TransactionModel(
@@ -43,6 +46,7 @@ class TransactionModel {
       walletId: walletId ?? this.walletId,
       date: date ?? this.date,
       note: note ?? this.note,
+      receiptImagePath: receiptImagePath ?? this.receiptImagePath,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -56,6 +60,7 @@ class TransactionModel {
         'walletId': walletId,
         'date': date.toIso8601String(),
         'note': note,
+        'receiptImagePath': receiptImagePath,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -70,6 +75,7 @@ class TransactionModel {
         walletId: json['walletId'] as String,
         date: DateTime.parse(json['date'] as String),
         note: json['note'] as String?,
+        receiptImagePath: json['receiptImagePath'] as String?,
         createdAt: DateTime.parse(
           json['createdAt'] as String? ?? json['date'] as String,
         ),
