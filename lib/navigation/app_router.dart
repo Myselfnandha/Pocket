@@ -8,6 +8,9 @@ import '../screens/transactions/transaction_detail_screen.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/wallets/wallets_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/recurring_rules_screen.dart';
+import '../screens/settings/data_management_screen.dart';
+import '../screens/notifications/notification_center_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import 'app_scaffold.dart';
 
@@ -45,6 +48,27 @@ GoRouter createRouter(bool isOnboarded) {
         path: '/settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+
+      // Recurring Rules (Dedicated Screen)
+      GoRoute(
+        path: '/recurring-rules',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const RecurringRulesScreen(),
+      ),
+
+      // Notification Center (Dedicated Screen)
+      GoRoute(
+        path: '/notifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationCenterScreen(),
+      ),
+
+      // Data & Account Management (Dedicated Screen)
+      GoRoute(
+        path: '/data-management',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DataManagementScreen(),
       ),
 
       // Transaction Detail

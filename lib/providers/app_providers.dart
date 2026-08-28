@@ -5,11 +5,20 @@ import '../models/category_model.dart';
 import '../models/wallet_model.dart';
 import '../models/transaction_model.dart';
 import '../models/settings_model.dart';
+import '../models/recurring_model.dart';
+import '../models/notification_model.dart';
 import '../services/storage_service.dart';
+import '../services/backup_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be overridden in main()');
+});
+
+final backupServiceProvider = Provider<BackupService>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return BackupService(storage);
 });
 
 // --- Settings Provider ---
@@ -22,6 +31,13 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
   Future<void> updateSettings(UserSettingsModel newSettings) async {
     state = newSettings;
     await _storage.saveSettings(newSettings);
+
+    // Update scheduled daily reminder if changed
+    await NotificationService().scheduleDailyReminder(
+      hour: newSettings.dailyReminderHour,
+      minute: newSettings.dailyReminderMinute,
+      enabled: newSettings.dailyReminderEnabled,
+    );
   }
 
   Future<void> setCurrency(String symbol, String code) async {
@@ -215,6 +231,98 @@ final transactionsProvider =
     StateNotifierProvider<TransactionsNotifier, List<TransactionModel>>((ref) {
   final storage = ref.watch(storageServiceProvider);
   return TransactionsNotifier(storage);
+});
+
+// --- Recurring Rules Provider ---
+
+class RecurringRulesNotifier extends StateNotifier<List<RecurringRuleModel>> {
+  final StorageService _storage;
+
+  RecurringRulesNotifier(this._storage) : super(_storage.getRecurringRules());
+
+  Future<void> addRule(RecurringRuleModel rule) async {
+    state = [...state, rule];
+    await _storage.saveRecurringRules(state);
+  }
+
+  Future<void> updateRule(RecurringRuleModel rule) async {
+    state = [
+      for (final r in state)
+        if (r.id == rule.id) rule else r,
+    ];
+    await _storage.saveRecurringRules(state);
+  }
+
+  Future<void> toggleRuleActive(String id) async {
+    state = [
+      for (final r in state)
+        if (r.id == id) r.copyWith(isActive: !r.isActive) else r,
+    ];
+    await _storage.saveRecurringRules(state);
+  }
+
+  Future<void> deleteRule(String id) async {
+    state = state.where((r) => r.id != id).toList();
+    await _storage.saveRecurringRules(state);
+  }
+
+  Future<int> processDueRules() async {
+    final generatedCount = await _storage.processDueRecurringRules();
+    if (generatedCount > 0) {
+      state = _storage.getRecurringRules();
+    }
+    return generatedCount;
+  }
+}
+
+final recurringRulesProvider =
+    StateNotifierProvider<RecurringRulesNotifier, List<RecurringRuleModel>>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return RecurringRulesNotifier(storage);
+});
+
+// --- In-App Notifications Provider ---
+
+class NotificationsNotifier extends StateNotifier<List<AppNotificationModel>> {
+  final StorageService _storage;
+
+  NotificationsNotifier(this._storage) : super(_storage.getNotifications());
+
+  Future<void> addNotification(AppNotificationModel notif) async {
+    state = [notif, ...state];
+    await _storage.saveNotifications(state);
+  }
+
+  Future<void> markAsRead(String id) async {
+    state = [
+      for (final n in state)
+        if (n.id == id) n.copyWith(isRead: true) else n,
+    ];
+    await _storage.saveNotifications(state);
+  }
+
+  Future<void> markAllAsRead() async {
+    state = [
+      for (final n in state) n.copyWith(isRead: true),
+    ];
+    await _storage.saveNotifications(state);
+  }
+
+  Future<void> clearAll() async {
+    state = [];
+    await _storage.saveNotifications([]);
+  }
+}
+
+final notificationsProvider =
+    StateNotifierProvider<NotificationsNotifier, List<AppNotificationModel>>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return NotificationsNotifier(storage);
+});
+
+final unreadNotificationsCountProvider = Provider<int>((ref) {
+  final notifs = ref.watch(notificationsProvider);
+  return notifs.where((n) => !n.isRead).length;
 });
 
 // --- Derived Stats & Selectors ---

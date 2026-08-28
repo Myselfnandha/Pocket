@@ -23,7 +23,6 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  int? _touchedBarIndex;
 
   void _previousMonth(DateTime minDate) {
     final prev = DateTime(_currentMonth.year, _currentMonth.month - 1);
@@ -46,7 +45,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final settings = ref.watch(settingsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Determine min and max month boundary based on transactions
     final now = DateTime.now();
     DateTime minDate = DateTime(now.year, now.month);
     DateTime maxDate = DateTime(now.year, now.month);
@@ -81,24 +79,52 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
     final netSavings = totalIncome - totalExpense;
     final savingsRate = totalIncome > 0 ? (netSavings / totalIncome * 100).clamp(0.0, 100.0) : 0.0;
-
-    // Calculate daily spending points for the bar chart
-    final daysInMonth = DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month);
-    final Map<int, double> dailySpending = {};
-    for (int i = 1; i <= daysInMonth; i++) {
-      dailySpending[i] = 0;
-    }
-    for (final tx in monthTxs) {
-      if (tx.type == TransactionType.expense) {
-        dailySpending[tx.date.day] = (dailySpending[tx.date.day] ?? 0) + tx.amount;
-      }
-    }
-
     final monthExpenses = monthTxs.where((tx) => tx.type == TransactionType.expense).toList();
     final currencyFormat = NumberFormat('#,##0.00');
 
-    final maxSpend = dailySpending.values.fold(0.0, (m, v) => v > m ? v : m);
-    final maxY = maxSpend > 0 ? (maxSpend * 1.25) : 1000.0;
+    // Calculate top spending category
+    final Map<String, double> catExpenseTotals = {};
+    final Map<String, int> catExpenseCounts = {};
+    for (final tx in monthExpenses) {
+      catExpenseTotals[tx.categoryId] = (catExpenseTotals[tx.categoryId] ?? 0) + tx.amount;
+      catExpenseCounts[tx.categoryId] = (catExpenseCounts[tx.categoryId] ?? 0) + 1;
+    }
+
+    String? topCatId;
+    double topCatSpend = 0;
+    for (final entry in catExpenseTotals.entries) {
+      if (entry.value > topCatSpend) {
+        topCatSpend = entry.value;
+        topCatId = entry.key;
+      }
+    }
+
+    final topCategory = categories.firstWhere(
+      (c) => c.id == topCatId,
+      orElse: () => const CategoryModel(id: '', name: 'None', icon: '🏷️', colorValue: 0xFF2E7D32),
+    );
+
+    // Calculate Day-of-Week spending distribution (Mon = 1, Sun = 7)
+    final Map<int, double> dayOfWeekSpending = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    for (final tx in monthExpenses) {
+      final weekday = tx.date.weekday;
+      dayOfWeekSpending[weekday] = (dayOfWeekSpending[weekday] ?? 0) + tx.amount;
+    }
+
+    int peakWeekday = 1;
+    double peakWeekdaySpend = 0;
+    for (final entry in dayOfWeekSpending.entries) {
+      if (entry.value > peakWeekdaySpend) {
+        peakWeekdaySpend = entry.value;
+        peakWeekday = entry.key;
+      }
+    }
+
+    final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final peakDayName = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][peakWeekday - 1];
+
+    final maxDaySpend = dayOfWeekSpending.values.fold(0.0, (m, v) => v > m ? v : m);
+    final maxBarY = maxDaySpend > 0 ? (maxDaySpend * 1.25) : 1000.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,7 +143,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Month Selector Bar (Constrained to transaction dates)
+            // Month Selector Bar (Constrained)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -153,7 +179,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Top Summary Grid: Income | Expenses | Net Savings (Enlarged to fill grid)
+            // Top Summary Grid: Income | Expenses | Net Savings
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -250,9 +276,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Daily Cash Flow Bar Chart (Replacement for trend line chart)
+            // Top Spending Category & Day-of-Week Breakdown Card
             Text(
-              'Daily Cash Flow Breakdown',
+              'Most Spending Category & Day-of-Week',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -260,136 +286,255 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Container(
-              height: 230,
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+
+            if (monthExpenses.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
                 ),
-              ),
-              child: monthExpenses.isEmpty
-                  ? Center(
+                child: Column(
+                  children: [
+                    const Text('📊', style: TextStyle(fontSize: 36)),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No expense records for this month',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Log transactions to see category & day-of-week spending patterns',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              // Top Category Hero Badge
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF1B3B22), const Color(0xFF131313)]
+                        : [const Color(0xFFE8F5E9), Colors.white],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppColors.primaryGreenLight.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreenLight.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(topCategory.icon, style: const TextStyle(fontSize: 26)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('📊', style: TextStyle(fontSize: 32)),
-                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentOrange.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  '🔥 #1 TOP CATEGORY',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.accentOrange,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Text(
-                            'No expenses logged this month',
+                            topCategory.name,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          Text(
+                            '${catExpenseCounts[topCatId] ?? 0} transactions • ${(totalExpense > 0 ? (topCatSpend / totalExpense * 100) : 0).toStringAsFixed(1)}% of total expenses',
+                            style: TextStyle(
+                              fontSize: 11,
                               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : BarChart(
-                      BarChartData(
-                        maxY: maxY,
-                        barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final day = group.x + 1;
-                              final val = rod.toY;
-                              return BarTooltipItem(
-                                'Day $day\n${settings.currencySymbol}${currencyFormat.format(val)}',
-                                const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                ),
-                              );
-                            },
-                          ),
-                          touchCallback: (event, response) {
-                            if (response?.spot != null) {
-                              setState(() {
-                                _touchedBarIndex = response!.spot!.touchedBarGroupIndex;
-                              });
-                            } else {
-                              setState(() => _touchedBarIndex = null);
-                            }
-                          },
-                        ),
-                        titlesData: FlTitlesData(
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 42,
-                              getTitlesWidget: (val, meta) {
-                                if (val == 0 || val == maxY) return const SizedBox.shrink();
-                                return Text(
-                                  NumberFormat.compact().format(val),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              interval: (daysInMonth / 6).floorToDouble(),
-                              getTitlesWidget: (val, meta) {
-                                final day = val.toInt() + 1;
-                                if (day <= 0 || day > daysInMonth) return const SizedBox.shrink();
-                                return Text(
-                                  'D$day',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: maxY / 4,
-                          getDrawingHorizontalLine: (val) => FlLine(
-                            color: (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder).withValues(alpha: 0.5),
-                            strokeWidth: 1,
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        barGroups: List.generate(daysInMonth, (index) {
-                          final spend = dailySpending[index + 1] ?? 0;
-                          final isPeak = maxSpend > 0 && spend == maxSpend;
-                          final isTouched = _touchedBarIndex == index;
-
-                          return BarChartGroupData(
-                            x: index,
-                            barRods: [
-                              BarChartRodData(
-                                toY: spend,
-                                color: isPeak
-                                    ? AppColors.accentOrange
-                                    : (isTouched
-                                        ? AppColors.primaryGreen
-                                        : AppColors.primaryGreenLight),
-                                width: daysInMonth > 28 ? 6 : 8,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ],
-                          );
-                        }),
+                    ),
+                    Text(
+                      '${settings.currencySymbol}${currencyFormat.format(topCatSpend)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.expenseRed,
                       ),
                     ),
-            ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Day of Week Distribution Chart
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Day-of-Week Cash Outflow',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                        if (peakWeekdaySpend > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentOrange.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Peak: $peakDayName',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.accentOrange,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 160,
+                      child: BarChart(
+                        BarChartData(
+                          maxY: maxBarY,
+                          barTouchData: BarTouchData(
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                final dayName = dayNames[group.x];
+                                final val = rod.toY;
+                                return BarTooltipItem(
+                                  '$dayName\n${settings.currencySymbol}${currencyFormat.format(val)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (val, meta) {
+                                  final idx = val.toInt();
+                                  if (idx < 0 || idx >= 7) return const SizedBox.shrink();
+                                  final isPeak = (idx + 1) == peakWeekday && peakWeekdaySpend > 0;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      dayNames[idx],
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: isPeak ? FontWeight.w800 : FontWeight.w600,
+                                        color: isPeak
+                                            ? AppColors.accentOrange
+                                            : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          gridData: FlGridData(show: false),
+                          borderData: FlBorderData(show: false),
+                          barGroups: List.generate(7, (index) {
+                            final spend = dayOfWeekSpending[index + 1] ?? 0;
+                            final isPeak = (index + 1) == peakWeekday && spend > 0;
+
+                            return BarChartGroupData(
+                              x: index,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: spend,
+                                  color: isPeak
+                                      ? AppColors.accentOrange
+                                      : AppColors.primaryGreenLight,
+                                  width: 22,
+                                  borderRadius: BorderRadius.circular(6),
+                                  backDrawRodData: BackgroundBarChartRodData(
+                                    show: true,
+                                    toY: maxBarY,
+                                    color: (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0)),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
-            // Category Breakdown (Donut Chart)
+            // Category Breakdown Donut Chart
             if (monthExpenses.isNotEmpty) ...[
               Text(
                 'Spending by Category',
@@ -429,7 +574,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ],
             const SizedBox(height: 24),
 
-            // Export Financial Data Row (Fixed currency & clear icons)
+            // Export Financial Data
             Text(
               'Export Financial Data',
               style: TextStyle(

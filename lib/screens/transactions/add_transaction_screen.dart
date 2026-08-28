@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
+import '../../models/recurring_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/numpad.dart';
 
@@ -25,12 +28,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   String? _selectedWalletId;
   DateTime _selectedDate = DateTime.now();
 
+  bool _showNumpad = true;
   String? _suggestedCategoryId;
+
+  // Recurring options
+  bool _isRecurring = false;
+  RecurringFrequency _recurringFrequency = RecurringFrequency.monthly;
 
   @override
   void initState() {
     super.initState();
     _titleController.addListener(_onTitleChanged);
+    _titleFocus.addListener(() {
+      if (_titleFocus.hasFocus) {
+        setState(() => _showNumpad = false);
+      }
+    });
   }
 
   @override
@@ -51,7 +64,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (suggested != null && suggested != _suggestedCategoryId) {
       setState(() {
         _suggestedCategoryId = suggested;
-        // Auto-select suggested category if user hasn't explicitly picked one
         _selectedCategoryId = suggested;
       });
     }
@@ -91,17 +103,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   double _parseAmount() {
     try {
-      // Evaluate simple addition/subtraction if entered
       if (_amountStr.contains('+')) {
         final parts = _amountStr.split('+');
         return parts.fold(0.0, (sum, p) => sum + (double.tryParse(p.trim()) ?? 0));
       }
       if (_amountStr.contains('-')) {
         final parts = _amountStr.split('-');
-        if (parts.length == 2) {
+        if (parts.length >= 2) {
           final first = double.tryParse(parts[0].trim()) ?? 0;
-          final second = double.tryParse(parts[1].trim()) ?? 0;
-          return first - second;
+          final rest = parts.sublist(1).fold(0.0, (sum, p) => sum + (double.tryParse(p.trim()) ?? 0));
+          return first - rest;
         }
       }
       return double.tryParse(_amountStr) ?? 0.0;
@@ -114,13 +125,26 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final amount = _parseAmount();
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(
+          content: Text('Please enter a valid amount greater than 0'),
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
 
     final categories = ref.read(categoriesProvider);
     final wallets = ref.read(walletsProvider);
+
+    if (wallets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please create a wallet first in Wallets screen'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
 
     final catId = _selectedCategoryId ??
         categories
@@ -132,9 +156,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final wId = _selectedWalletId ?? wallets.first.id;
     final title = _titleController.text.trim().isEmpty
-        ? categories.firstWhere((c) => c.id == catId).name
+        ? categories.firstWhere((c) => c.id == catId, orElse: () => const CategoryModel(id: '', name: 'Untitled', icon: '📝', colorValue: 0)).name
         : _titleController.text.trim();
 
+    // 1. Save Transaction
     await ref.read(transactionsProvider.notifier).addTransaction(
           title: title,
           amount: amount,
@@ -143,6 +168,43 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           walletId: wId,
           date: _selectedDate,
         );
+
+    // 2. Save as Recurring Rule if toggled
+    if (_isRecurring) {
+      final now = DateTime.now();
+      int dueMonth = now.month + 1;
+      int dueYear = now.year;
+      if (dueMonth > 12) {
+        dueMonth = 1;
+        dueYear++;
+      }
+      final nextDue = DateTime(dueYear, dueMonth, _selectedDate.day.clamp(1, 28));
+
+      final newRule = RecurringRuleModel(
+        id: const Uuid().v4(),
+        title: title,
+        amount: amount,
+        type: _type,
+        categoryId: catId,
+        walletId: wId,
+        frequency: _recurringFrequency,
+        dueDay: _selectedDate.day.clamp(1, 28),
+        nextDueDate: nextDue,
+        templatePreset: RecurringTemplatePreset.custom,
+        createdAt: now,
+      );
+
+      await ref.read(recurringRulesProvider.notifier).addRule(newRule);
+    }
+
+    // 3. Trigger Budget threshold checks
+    final storage = ref.read(storageServiceProvider);
+    final stats = ref.read(monthlyStatsProvider);
+    NotificationService().checkBudgetThresholds(
+      storage: storage,
+      totalExpenseThisMonth: stats.totalExpense + (_type == TransactionType.expense ? amount : 0),
+      totalIncomeThisMonth: stats.totalIncome + (_type == TransactionType.income ? amount : 0),
+    );
 
     if (!mounted) return;
     context.pop();
@@ -156,7 +218,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           label: 'Undo',
           textColor: AppColors.primaryGreenLight,
           onPressed: () {
-            // Delete the last added transaction
             final allTxs = ref.read(transactionsProvider);
             if (allTxs.isNotEmpty) {
               ref.read(transactionsProvider.notifier).deleteTransaction(allTxs.first.id);
@@ -182,163 +243,263 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _selectedWalletId = wallets.first.id;
     }
 
+    final selectedWallet = wallets.firstWhere(
+      (w) => w.id == _selectedWalletId,
+      orElse: () => wallets.isNotEmpty ? wallets.first : defaultWallets.first,
+    );
+
+    final isIncome = _type == TransactionType.income;
+    final activeColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
+
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Add Transaction'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.pop(),
         ),
-        title: SegmentedButton<TransactionType>(
-          segments: const [
-            ButtonSegment(
-              value: TransactionType.expense,
-              label: Text('Expense'),
-              icon: Icon(Icons.arrow_downward_rounded, size: 16),
-            ),
-            ButtonSegment(
-              value: TransactionType.income,
-              label: Text('Income'),
-              icon: Icon(Icons.arrow_upward_rounded, size: 16),
-            ),
-          ],
-          selected: {_type},
-          style: SegmentedButton.styleFrom(
-            selectedBackgroundColor: _type == TransactionType.expense
-                ? AppColors.expenseRed.withValues(alpha: 0.2)
-                : AppColors.incomeGreen.withValues(alpha: 0.2),
-            selectedForegroundColor: _type == TransactionType.expense
-                ? AppColors.expenseRed
-                : AppColors.incomeGreen,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check_rounded, color: AppColors.primaryGreenLight, size: 28),
+            onPressed: _saveTransaction,
           ),
-          onSelectionChanged: (newSelection) {
-            setState(() {
-              _type = newSelection.first;
-              _selectedCategoryId = null;
-            });
-          },
-        ),
+          const SizedBox(width: 8),
+        ],
       ),
-      body: SafeArea(
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _titleFocus.unfocus();
+          setState(() => _showNumpad = true);
+        },
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Amount Display
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          settings.currencySymbol,
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
+                    // 1. Centered Segmented Type Selector
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _amountStr,
-                          style: TextStyle(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w800,
-                            color: _type == TransactionType.expense
-                                ? (_amountStr == '0'
-                                    ? (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)
-                                    : AppColors.expenseRed)
-                                : (_amountStr == '0'
-                                    ? (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)
-                                    : AppColors.incomeGreen),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Expense Option
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _type = TransactionType.expense;
+                                  final expCats = categories.where((c) => c.type == TransactionType.expense).toList();
+                                  _selectedCategoryId = expCats.isNotEmpty ? expCats.first.id : null;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: !_typeIsIncome()
+                                      ? AppColors.expenseRed
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_downward_rounded,
+                                      size: 16,
+                                      color: !_typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Expense',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: !_typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Income Option
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _type = TransactionType.income;
+                                  final incCats = categories.where((c) => c.type == TransactionType.income).toList();
+                                  _selectedCategoryId = incCats.isNotEmpty ? incCats.first.id : null;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _typeIsIncome()
+                                      ? AppColors.incomeGreen
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_upward_rounded,
+                                      size: 16,
+                                      color: _typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Income',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: _typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Title Input with Category Auto-suggest
+                    // 2. Large Amount Input Display
+                    GestureDetector(
+                      onTap: () {
+                        _titleFocus.unfocus();
+                        setState(() => _showNumpad = true);
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: activeColor.withValues(alpha: 0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'AMOUNT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '${isIncome ? '+' : '-'}${settings.currencySymbol}$_amountStr',
+                                style: TextStyle(
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w900,
+                                  color: activeColor,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Title / Custom Tag Input
                     TextField(
                       controller: _titleController,
                       focusNode: _titleFocus,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
                       decoration: InputDecoration(
-                        hintText: 'What was this for? (e.g. Lunch at Zomato)',
-                        hintStyle: TextStyle(
-                          fontSize: 14,
-                          color: isDark
-                              ? AppColors.darkTextTertiary
-                              : AppColors.lightTextTertiary,
-                        ),
-                        prefixIcon: const Icon(Icons.edit_note_rounded, size: 22),
+                        hintText: 'Enter title, custom tag, or description...',
+                        prefixIcon: const Icon(Icons.edit_note_rounded),
+                        suffixIcon: _titleController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _titleController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 14),
 
-                    // Category Selector Chips with Auto-suggest highlight
+                    // 4. Categories Horizontal List
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Category',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
+                        if (_selectedCategoryId != null)
+                          TextButton(
+                            onPressed: () => setState(() => _selectedCategoryId = null),
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                            child: const Text('Clear', style: TextStyle(fontSize: 11, color: AppColors.primaryGreenLight)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     SizedBox(
-                      height: 40,
+                      height: 42,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: filteredCategories.length,
                         separatorBuilder: (context, index) => const SizedBox(width: 8),
                         itemBuilder: (context, index) {
                           final cat = filteredCategories[index];
-                          final isSelected = _selectedCategoryId == cat.id;
-                          final isSuggested = _suggestedCategoryId == cat.id;
+                          final isSelected = cat.id == _selectedCategoryId;
 
-                          return FilterChip(
-                            avatar: Text(cat.icon),
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(cat.name),
-                                if (isSuggested && !isSelected) ...[
-                                  const SizedBox(width: 4),
-                                  const Text('✨', style: TextStyle(fontSize: 10)),
-                                ],
-                              ],
-                            ),
+                          return ChoiceChip(
+                            avatar: Text(cat.icon, style: const TextStyle(fontSize: 13)),
+                            label: Text(cat.name),
                             selected: isSelected,
+                            selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.25),
                             onSelected: (_) {
+                              _titleFocus.unfocus();
                               setState(() {
-                                _selectedCategoryId = cat.id;
+                                _selectedCategoryId = isSelected ? null : cat.id;
+                                _showNumpad = true;
                               });
                             },
-                            selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.2),
-                            checkmarkColor: AppColors.primaryGreenLight,
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppColors.primaryGreenLight
-                                  : (isSuggested
-                                      ? AppColors.accentOrange
-                                      : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder)),
-                              width: isSuggested ? 1.5 : 1.0,
-                            ),
                           );
                         },
                       ),
                     ),
                     const SizedBox(height: 14),
 
-                    // Wallet & Date Row
+                    // 5. Account/Wallet & Date Pickers
                     Row(
                       children: [
                         // Wallet selector
                         Expanded(
                           child: InkWell(
+                            onTap: () {
+                              _titleFocus.unfocus();
+                              _showWalletPicker(wallets);
+                            },
                             borderRadius: BorderRadius.circular(12),
-                            onTap: () => _showWalletPicker(wallets),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
@@ -350,14 +511,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Text(
-                                    wallets.firstWhere((w) => w.id == _selectedWalletId, orElse: () => wallets.first).icon,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
+                                  Text(selectedWallet.icon, style: const TextStyle(fontSize: 18)),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      wallets.firstWhere((w) => w.id == _selectedWalletId, orElse: () => wallets.first).name,
+                                      selectedWallet.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -373,13 +531,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
 
-                        // Date selector
+                        // Date picker
                         Expanded(
                           child: InkWell(
+                            onTap: () {
+                              _titleFocus.unfocus();
+                              _pickDate();
+                            },
                             borderRadius: BorderRadius.circular(12),
-                            onTap: _pickDate,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
@@ -396,8 +557,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   Expanded(
                                     child: Text(
                                       _formatSelectedDate(_selectedDate),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -413,22 +572,84 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 14),
+
+                    // 6. Make Recurring Toggle Box
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.autorenew_rounded, size: 20, color: AppColors.primaryGreenLight),
+                                  SizedBox(width: 8),
+                                  Text('Make this Recurring', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                              Switch(
+                                value: _isRecurring,
+                                activeThumbColor: AppColors.primaryGreenLight,
+                                onChanged: (val) {
+                                  _titleFocus.unfocus();
+                                  setState(() => _isRecurring = val);
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_isRecurring) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Repeat Frequency:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                DropdownButton<RecurringFrequency>(
+                                  value: _recurringFrequency,
+                                  isDense: true,
+                                  items: RecurringFrequency.values.map((f) {
+                                    return DropdownMenuItem(
+                                      value: f,
+                                      child: Text(f.name.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (f) {
+                                    if (f != null) setState(() => _recurringFrequency = f);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-            // Calculator Numpad at the bottom
-            CalculatorNumpad(
-              onKeyPress: _handleNumpadPress,
-              onDelete: _handleNumpadDelete,
-              onConfirm: _saveTransaction,
-            ),
+            // Calculator Numpad at the bottom (Smoothly toggled)
+            if (_showNumpad)
+              CalculatorNumpad(
+                onKeyPress: _handleNumpadPress,
+                onDelete: _handleNumpadDelete,
+                onConfirm: _saveTransaction,
+              ),
           ],
         ),
       ),
     );
   }
+
+  bool _typeIsIncome() => _type == TransactionType.income;
 
   String _formatSelectedDate(DateTime dt) {
     final now = DateTime.now();
@@ -480,12 +701,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   return ListTile(
                     leading: Text(w.icon, style: const TextStyle(fontSize: 22)),
                     title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Balance: ₹${w.currentBalance.toStringAsFixed(2)}'),
+                    subtitle: Text('Balance: ${w.currentBalance.toStringAsFixed(2)}'),
                     trailing: isSelected
                         ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
                         : null,
                     onTap: () {
-                      setState(() => _selectedWalletId = w.id);
+                      setState(() {
+                        _selectedWalletId = w.id;
+                        _showNumpad = true;
+                      });
                       Navigator.pop(context);
                     },
                   );

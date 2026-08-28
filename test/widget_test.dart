@@ -37,7 +37,7 @@ void main() {
     expect(find.text('Today'), findsOneWidget);
   });
 
-  testWidgets('OnboardingScreen renders welcome slide and buttons', (WidgetTester tester) async {
+  testWidgets('OnboardingScreen renders welcome slide and navigation buttons without skip', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final storage = await StorageService.init();
 
@@ -55,6 +55,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Welcome to Pocket'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
-    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('Step 1 of 3'), findsOneWidget);
+    expect(find.text('Skip'), findsNothing); // Skip button removed
   });
 }

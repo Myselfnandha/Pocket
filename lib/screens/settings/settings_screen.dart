@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
@@ -13,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
+    final recurring = ref.watch(recurringRulesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -92,7 +94,39 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 2. Section: Theme & Appearance
+          // 2. Section: Automated Recurring Expenses
+          _buildSectionHeader('AUTOMATION'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.autorenew_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Recurring Expenses', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${recurring.where((r) => r.isActive).length} active rules (Rent, EMI, OTT...)'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/recurring-rules'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 3. Section: Notifications & Reminders
+          _buildSectionHeader('NOTIFICATIONS & ALERTS'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined, color: AppColors.accentOrange),
+                title: const Text('Alerts & Reminders', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Budget limits (80%/100%), recurring dues, daily reminder'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showNotificationSettingsModal(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 4. Section: Appearance & Theme
           _buildSectionHeader('THEME & APPEARANCE'),
           _buildSettingsGroup(
             isDark: isDark,
@@ -128,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 3. Section: Categories & General
+          // 5. Section: Categories & Currency
           _buildSectionHeader('CATEGORIES & CURRENCY'),
           _buildSettingsGroup(
             isDark: isDark,
@@ -163,7 +197,23 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 4. Section: About
+          // 6. Section: Data & Account
+          _buildSectionHeader('DATA & ACCOUNT'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
+                title: const Text('Backup & Database Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/data-management'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 7. Section: About
           _buildSectionHeader('ABOUT'),
           _buildSettingsGroup(
             isDark: isDark,
@@ -171,7 +221,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.1 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.0.2 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -206,6 +256,119 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Column(children: children),
+    );
+  }
+
+  void _showNotificationSettingsModal(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Notification Preferences', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Budget Warning (80% Reached)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Alert when spending reaches 80% of budget limit'),
+                  value: settings.notifyBudgetNearLimit,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(notifyBudgetNearLimit: val),
+                        );
+                    setModalState(() {});
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Budget Exceeded Alert', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Alert immediately when spending exceeds 100%'),
+                  value: settings.notifyBudgetExceeded,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(notifyBudgetExceeded: val),
+                        );
+                    setModalState(() {});
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Recurring Payment Due Alerts', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Notify on or before automated recurring due date'),
+                  value: settings.notifyRecurringDue,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(notifyRecurringDue: val),
+                        );
+                    setModalState(() {});
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Daily Spending Reminder', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('Evening check-in at ${settings.dailyReminderHour.toString().padLeft(2, '0')}:${settings.dailyReminderMinute.toString().padLeft(2, '0')}'),
+                  value: settings.dailyReminderEnabled,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(dailyReminderEnabled: val),
+                        );
+                    setModalState(() {});
+                  },
+                ),
+                if (settings.dailyReminderEnabled)
+                  ListTile(
+                    leading: const Icon(Icons.access_time_rounded, color: AppColors.primaryGreenLight),
+                    title: const Text('Change Reminder Time'),
+                    trailing: Text(
+                      '${settings.dailyReminderHour.toString().padLeft(2, '0')}:${settings.dailyReminderMinute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryGreenLight),
+                    ),
+                    onTap: () async {
+                      final pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(hour: settings.dailyReminderHour, minute: settings.dailyReminderMinute),
+                      );
+                      if (pickedTime != null) {
+                        ref.read(settingsProvider.notifier).updateSettings(
+                              settings.copyWith(
+                                dailyReminderHour: pickedTime.hour,
+                                dailyReminderMinute: pickedTime.minute,
+                              ),
+                            );
+                        setModalState(() {});
+                      }
+                    },
+                  ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Monthly Summary Digest', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Monthly report card on savings & spending on the 1st'),
+                  value: settings.monthlySummaryEnabled,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(monthlySummaryEnabled: val),
+                        );
+                    setModalState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

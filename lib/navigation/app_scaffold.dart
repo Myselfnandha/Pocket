@@ -52,15 +52,6 @@ class _AppScaffoldState extends State<AppScaffold> {
       onPopInvokedWithResult: (didPop, result) => _handlePopInvoked(didPop),
       child: Scaffold(
         body: widget.navigationShell,
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push('/add-transaction'),
-          backgroundColor: AppColors.primaryGreenLight,
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          tooltip: 'Add Transaction',
-          child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkSurface : Colors.white,

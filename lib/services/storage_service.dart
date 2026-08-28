@@ -1,15 +1,20 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
 import '../models/wallet_model.dart';
 import '../models/transaction_model.dart';
 import '../models/settings_model.dart';
+import '../models/recurring_model.dart';
+import '../models/notification_model.dart';
 
 class StorageService {
   static const _kTransactions = 'pocket_transactions';
   static const _kCategories = 'pocket_categories';
   static const _kWallets = 'pocket_wallets';
   static const _kSettings = 'pocket_settings';
+  static const _kRecurringRules = 'pocket_recurring_rules';
+  static const _kNotifications = 'pocket_notifications';
 
   final SharedPreferences _prefs;
 
@@ -94,6 +99,133 @@ class StorageService {
     await _prefs.setString(_kSettings, raw);
   }
 
+  // --- Recurring Rules ---
+
+  List<RecurringRuleModel> getRecurringRules() {
+    final raw = _prefs.getString(_kRecurringRules);
+    if (raw == null) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.map((e) => RecurringRuleModel.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveRecurringRules(List<RecurringRuleModel> list) async {
+    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    await _prefs.setString(_kRecurringRules, raw);
+  }
+
+  // --- In-App Notifications ---
+
+  List<AppNotificationModel> getNotifications() {
+    final raw = _prefs.getString(_kNotifications);
+    if (raw == null) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.map((e) => AppNotificationModel.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveNotifications(List<AppNotificationModel> list) async {
+    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    await _prefs.setString(_kNotifications, raw);
+  }
+
+  Future<void> addNotification(AppNotificationModel notification) async {
+    final current = getNotifications();
+    final updated = [notification, ...current];
+    await saveNotifications(updated);
+  }
+
+  // --- Process Due Recurring Rules ---
+
+  Future<int> processDueRecurringRules() async {
+    final rules = getRecurringRules();
+    final transactions = getTransactions();
+    final notifications = getNotifications();
+    final settings = getSettings();
+    final now = DateTime.now();
+
+    int generatedCount = 0;
+    final List<RecurringRuleModel> updatedRules = [];
+    final List<TransactionModel> newTransactions = [];
+    final List<AppNotificationModel> newNotifications = [];
+
+    for (final rule in rules) {
+      if (!rule.isActive) {
+        updatedRules.add(rule);
+        continue;
+      }
+
+      // Check if current time is on or past the due date
+      if (now.isAfter(rule.nextDueDate) ||
+          (now.year == rule.nextDueDate.year &&
+              now.month == rule.nextDueDate.month &&
+              now.day == rule.nextDueDate.day)) {
+        // Create the automated transaction
+        final newTx = TransactionModel(
+          id: const Uuid().v4(),
+          title: rule.title,
+          amount: rule.amount,
+          type: rule.type,
+          categoryId: rule.categoryId,
+          walletId: rule.walletId,
+          date: rule.nextDueDate,
+          note: rule.note ?? 'Automated recurring ${rule.templatePreset.displayName}',
+          createdAt: now,
+        );
+
+        newTransactions.add(newTx);
+        generatedCount++;
+
+        // Calculate next due date
+        final nextDue = rule.calculateNextDueDateAfter(rule.nextDueDate);
+        final updatedRule = rule.copyWith(
+          lastCreatedDate: now,
+          nextDueDate: nextDue,
+        );
+        updatedRules.add(updatedRule);
+
+        // Add Notification
+        newNotifications.add(
+          AppNotificationModel(
+            id: const Uuid().v4(),
+            title: 'Auto-Logged: ${rule.title}',
+            message: 'Recurring ${rule.frequency.name} payment of ${settings.currencySymbol}${rule.amount.toStringAsFixed(2)} was logged automatically.',
+            type: NotificationType.recurringCreated,
+            createdAt: now,
+          ),
+        );
+      } else {
+        updatedRules.add(rule);
+      }
+    }
+
+    if (generatedCount > 0) {
+      await saveTransactions([...newTransactions, ...transactions]);
+      await saveRecurringRules(updatedRules);
+      await saveNotifications([...newNotifications, ...notifications]);
+    }
+
+    return generatedCount;
+  }
+
+  // --- Reset Entire Database ---
+
+  Future<void> clearAllData() async {
+    await _prefs.remove(_kTransactions);
+    await _prefs.remove(_kCategories);
+    await _prefs.remove(_kWallets);
+    await _prefs.remove(_kSettings);
+    await _prefs.remove(_kRecurringRules);
+    await _prefs.remove(_kNotifications);
+    await _seedInitialDataIfNeeded();
+  }
+
   // --- Smart Category Auto-suggestion ---
 
   String? suggestCategoryForTitle(
@@ -125,10 +257,10 @@ class StorageService {
       'groceries': ['grocery', 'groceries', 'supermarket', 'blinkit', 'zepto', 'instamart', 'milk', 'vegetables', 'fruits', 'market'],
       'transport': ['uber', 'ola', 'rapido', 'metro', 'bus', 'fuel', 'petrol', 'diesel', 'taxi', 'auto', 'toll', 'parking'],
       'shopping': ['amazon', 'flipkart', 'myntra', 'clothes', 'shoes', 'dress', 'mall', 'electronics', 'purchase'],
-      'utilities': ['electricity', 'water', 'wifi', 'broadband', 'recharge', 'jio', 'airtel', 'gas', 'bill'],
+      'bills': ['electricity', 'water', 'wifi', 'broadband', 'recharge', 'jio', 'airtel', 'gas', 'bill', 'emi', 'insurance'],
       'rent': ['rent', 'house', 'maintenance', 'landlord'],
       'health': ['pharmacy', 'medicine', 'doctor', 'hospital', 'apollo', 'clinic', 'dentist', 'gym'],
-      'entertainment': ['netflix', 'spotify', 'movie', 'cinema', 'theatre', 'prime', 'game', 'gaming'],
+      'entertainment': ['netflix', 'spotify', 'movie', 'cinema', 'theatre', 'prime', 'game', 'gaming', 'ott', 'hotstar'],
       'salary': ['salary', 'paycheck', 'payroll', 'bonus', 'stipend', 'wage'],
       'freelance': ['client', 'project', 'freelance', 'consulting', 'upwork', 'fiverr'],
     };
@@ -154,5 +286,7 @@ class StorageService {
     await saveCategories(defaultCategories);
     await saveWallets(defaultWallets);
     await saveSettings(const UserSettingsModel());
+    await saveRecurringRules([]);
+    await saveNotifications([]);
   }
 }

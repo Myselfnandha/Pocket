@@ -76,6 +76,43 @@ class HomeScreen extends ConsumerWidget {
           },
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, child) {
+              final unreadCount = ref.watch(unreadNotificationsCountProvider);
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, size: 24),
+                    tooltip: 'Notifications',
+                    onPressed: () => context.push('/notifications'),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.accentOrange,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          '$unreadCount',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, size: 24),
             tooltip: 'Settings',
@@ -84,6 +121,15 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(width: 6),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/add-transaction'),
+        backgroundColor: AppColors.primaryGreenLight,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        tooltip: 'Add Transaction',
+        child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
         onRefresh: () async {},
         child: SingleChildScrollView(
@@ -201,7 +247,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tap the + button to log an expense or income',
+                        'Tap the + button below to log an expense or income',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -249,7 +295,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
 
-              const SizedBox(height: 80), // bottom space for FAB
+              const SizedBox(height: 80), // space for FAB
             ],
           ),
         ),

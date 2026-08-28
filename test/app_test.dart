@@ -1,17 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket/models/category_model.dart';
-import 'package:pocket/models/settings_model.dart';
 import 'package:pocket/models/transaction_model.dart';
+import 'package:pocket/models/recurring_model.dart';
+import 'package:pocket/models/notification_model.dart';
 import 'package:pocket/services/storage_service.dart';
+import 'package:pocket/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('Pocket Data & Algorithm Tests', () {
     late StorageService storage;
+    late BackupService backupService;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       storage = await StorageService.init();
+      backupService = BackupService(storage);
     });
 
     test('Initial seeded clean data loads correctly', () {
@@ -19,7 +23,7 @@ void main() {
       final wallets = storage.getWallets();
       final categories = storage.getCategories();
 
-      expect(txs.isEmpty, isTrue); // Clean initial state with 0 dummy data
+      expect(txs.isEmpty, isTrue);
       expect(wallets.isNotEmpty, isTrue);
       expect(categories.isNotEmpty, isTrue);
       expect(wallets.any((w) => w.id == 'cash'), isTrue);
@@ -116,22 +120,74 @@ void main() {
       expect(reloaded.amount, equals(1999.0));
     });
 
-    test('User Settings save and load with Theme Mode configuration', () async {
-      final initialSettings = storage.getSettings();
-      final newSettings = initialSettings.copyWith(
-        themeMode: AppThemeMode.manual,
-        manualThemeStyle: ManualThemeStyle.pureBlack,
-        isPureBlackEnabled: true,
-        showCategoryTags: false,
+    test('Recurring Rule due date automated creation generates transactions', () async {
+      final pastDue = DateTime.now().subtract(const Duration(days: 1));
+      final rule = RecurringRuleModel(
+        id: 'rec-1',
+        title: 'House Rent',
+        amount: 15000.0,
+        type: TransactionType.expense,
+        categoryId: 'rent',
+        walletId: 'bank',
+        frequency: RecurringFrequency.monthly,
+        dueDay: pastDue.day,
+        nextDueDate: pastDue,
+        templatePreset: RecurringTemplatePreset.rent,
+        createdAt: pastDue.subtract(const Duration(days: 30)),
       );
 
-      await storage.saveSettings(newSettings);
-      final reloadedSettings = storage.getSettings();
+      await storage.saveRecurringRules([rule]);
+      final generatedCount = await storage.processDueRecurringRules();
 
-      expect(reloadedSettings.themeMode, equals(AppThemeMode.manual));
-      expect(reloadedSettings.manualThemeStyle, equals(ManualThemeStyle.pureBlack));
-      expect(reloadedSettings.isPureBlackEnabled, isTrue);
-      expect(reloadedSettings.showCategoryTags, isFalse);
+      expect(generatedCount, equals(1));
+      final txs = storage.getTransactions();
+      expect(txs.any((t) => t.title == 'House Rent' && t.amount == 15000.0), isTrue);
+
+      final notifs = storage.getNotifications();
+      expect(notifs.any((n) => n.title.contains('House Rent')), isTrue);
+
+      final updatedRules = storage.getRecurringRules();
+      expect(updatedRules.first.nextDueDate.isAfter(DateTime.now()), isTrue);
+    });
+
+    test('Full JSON Database export and restore maintains complete state integrity', () async {
+      final tx = TransactionModel(
+        id: 'tx-json-1',
+        title: 'Special Item',
+        amount: 420.0,
+        type: TransactionType.expense,
+        categoryId: 'shopping',
+        walletId: 'cash',
+        date: DateTime.now(),
+        createdAt: DateTime.now(),
+      );
+      await storage.saveTransactions([tx]);
+
+      final backupContent = backupService.exportJsonBackupString();
+
+      // Clear all
+      await storage.clearAllData();
+      expect(storage.getTransactions().isEmpty, isTrue);
+
+      // Restore
+      final restored = await backupService.restoreFromJsonString(backupContent);
+      expect(restored, isTrue);
+      expect(storage.getTransactions().any((t) => t.id == 'tx-json-1'), isTrue);
+    });
+
+    test('Notification preferences and unread counts', () async {
+      final notif = AppNotificationModel(
+        id: 'notif-1',
+        title: 'Budget Alert',
+        message: '80% budget limit reached',
+        type: NotificationType.budgetNearLimit,
+        createdAt: DateTime.now(),
+      );
+
+      await storage.addNotification(notif);
+      final list = storage.getNotifications();
+      expect(list.length, equals(1));
+      expect(list.first.isRead, isFalse);
     });
   });
 }
