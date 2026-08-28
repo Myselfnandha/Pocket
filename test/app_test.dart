@@ -4,6 +4,7 @@ import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/recurring_model.dart';
 import 'package:pocket/models/notification_model.dart';
 import 'package:pocket/models/debt_model.dart';
+import 'package:pocket/models/budget_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:pocket/services/backup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -224,6 +225,37 @@ void main() {
       expect(loaded.length, equals(1));
       expect(loaded.first.personName, equals('Rahul'));
       expect(loaded.first.isSettled, isTrue);
+    });
+
+    test('CategoryBudgetModel calculates safe daily spend, progress, and persists properly', () async {
+      final now = DateTime(2026, 8, 15);
+      final budget = CategoryBudgetModel(
+        id: 'budget-food',
+        categoryId: 'food',
+        monthlyLimit: 6000.0,
+        isRolloverEnabled: true,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // Current spent: 2600. Remaining: 3400. Total days in August = 31. Remaining days from 15th = (31 - 15 + 1) = 17 days.
+      final safeDaily = budget.calculateDailySafeSpend(2600.0, referenceDate: now);
+      expect(safeDaily, closeTo(3400.0 / 17, 0.01));
+
+      // Progress calculation
+      final progress = budget.calculateProgress(3000.0);
+      expect(progress, equals(0.5));
+
+      final overbudgetProgress = budget.calculateProgress(7500.0);
+      expect(overbudgetProgress, equals(1.25));
+
+      // Persist and retrieve from storage
+      await storage.saveCategoryBudgets([budget]);
+      final loaded = storage.getCategoryBudgets();
+      expect(loaded.length, equals(1));
+      expect(loaded.first.categoryId, equals('food'));
+      expect(loaded.first.monthlyLimit, equals(6000.0));
+      expect(loaded.first.isRolloverEnabled, isTrue);
     });
   });
 }

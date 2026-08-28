@@ -11,6 +11,8 @@ import '../models/transaction_model.dart';
 import '../models/settings_model.dart';
 import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
+import '../models/debt_model.dart';
+import '../models/budget_model.dart';
 import 'storage_service.dart';
 
 class BackupService {
@@ -27,9 +29,11 @@ class BackupService {
     final settings = _storage.getSettings();
     final recurring = _storage.getRecurringRules();
     final notifications = _storage.getNotifications();
+    final debts = _storage.getDebts();
+    final budgets = _storage.getCategoryBudgets();
 
     final Map<String, dynamic> backupData = {
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'appName': 'Pocket',
       'exportTimestamp': DateTime.now().toIso8601String(),
       'transactions': transactions.map((e) => e.toJson()).toList(),
@@ -38,32 +42,15 @@ class BackupService {
       'settings': settings.toJson(),
       'recurringRules': recurring.map((e) => e.toJson()).toList(),
       'notifications': notifications.map((e) => e.toJson()).toList(),
+      'debts': debts.map((e) => e.toJson()).toList(),
+      'categoryBudgets': budgets.map((e) => e.toJson()).toList(),
     };
 
     return const JsonEncoder.withIndent('  ').convert(backupData);
   }
 
   Future<File> exportJsonBackup() async {
-    final transactions = _storage.getTransactions();
-    final categories = _storage.getCategories();
-    final wallets = _storage.getWallets();
-    final settings = _storage.getSettings();
-    final recurring = _storage.getRecurringRules();
-    final notifications = _storage.getNotifications();
-
-    final Map<String, dynamic> backupData = {
-      'schemaVersion': 1,
-      'appName': 'Pocket',
-      'exportTimestamp': DateTime.now().toIso8601String(),
-      'transactions': transactions.map((e) => e.toJson()).toList(),
-      'categories': categories.map((e) => e.toJson()).toList(),
-      'wallets': wallets.map((e) => e.toJson()).toList(),
-      'settings': settings.toJson(),
-      'recurringRules': recurring.map((e) => e.toJson()).toList(),
-      'notifications': notifications.map((e) => e.toJson()).toList(),
-    };
-
-    final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+    final jsonStr = exportJsonBackupString();
     final tempDir = await getTemporaryDirectory();
     final fileName = 'Pocket_Backup_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.json';
     final file = File('${tempDir.path}/$fileName');
@@ -123,6 +110,18 @@ class BackupService {
           .map((e) => AppNotificationModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
+      // Parse debts
+      final List<dynamic> rawDebts = decoded['debts'] as List<dynamic>? ?? [];
+      final List<DebtModel> debts = rawDebts
+          .map((e) => DebtModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      // Parse budgets
+      final List<dynamic> rawBudgets = decoded['categoryBudgets'] as List<dynamic>? ?? [];
+      final List<CategoryBudgetModel> budgets = rawBudgets
+          .map((e) => CategoryBudgetModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
       // Save to storage
       await _storage.saveTransactions(txs);
       await _storage.saveCategories(cats);
@@ -130,6 +129,8 @@ class BackupService {
       await _storage.saveSettings(settings);
       await _storage.saveRecurringRules(recurring);
       await _storage.saveNotifications(notifs);
+      await _storage.saveDebts(debts);
+      await _storage.saveCategoryBudgets(budgets);
 
       return true;
     } catch (_) {

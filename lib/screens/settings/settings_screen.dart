@@ -229,7 +229,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.6 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.0.7 • Material 3 Transaction Tracker'),
               ),
             ],
           ),

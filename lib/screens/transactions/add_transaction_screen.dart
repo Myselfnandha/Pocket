@@ -447,6 +447,102 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     const SizedBox(height: 14),
 
+                    // 3.5 Real-time Category Budget Warning Banner (If Expense & Budget Configured)
+                    if (!isIncome && _selectedCategoryId != null) ...[
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final budgets = ref.watch(categoryBudgetsProvider);
+                          final matchingBudget = budgets.where((b) => b.categoryId == _selectedCategoryId).firstOrNull;
+                          if (matchingBudget == null) return const SizedBox.shrink();
+
+                          final spendingMap = ref.watch(currentMonthCategorySpendingProvider);
+                          final currentSpent = spendingMap[_selectedCategoryId] ?? 0.0;
+                          final enteredAmount = _parseAmount();
+                          final projectedTotal = currentSpent + enteredAmount;
+                          final isExceeded = projectedTotal > matchingBudget.monthlyLimit;
+                          final isNearLimit = projectedTotal >= (matchingBudget.monthlyLimit * 0.8) && !isExceeded;
+
+                          final cat = categories.firstWhere(
+                            (c) => c.id == _selectedCategoryId,
+                            orElse: () => const CategoryModel(id: '', name: 'Category', icon: '🏷️', colorValue: 0),
+                          );
+
+                          if (!isExceeded && !isNearLimit) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.incomeGreen.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.incomeGreen.withValues(alpha: 0.25)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.shield_outlined, size: 16, color: AppColors.incomeGreen),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Safe budget buffer: ${settings.currencySymbol}${(matchingBudget.monthlyLimit - projectedTotal).toStringAsFixed(0)} left for ${cat.name}',
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.incomeGreen),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final bannerColor = isExceeded ? AppColors.expenseRed : AppColors.accentOrange;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: bannerColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: bannerColor.withValues(alpha: 0.4), width: 1.2),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isExceeded ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                                  size: 18,
+                                  color: bannerColor,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isExceeded
+                                            ? 'Exceeds ${cat.name} Monthly Budget!'
+                                            : 'Nearing ${cat.name} Budget Limit (80%+)',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: bannerColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isExceeded
+                                            ? 'Projected ${settings.currencySymbol}${projectedTotal.toStringAsFixed(0)} exceeds limit of ${settings.currencySymbol}${matchingBudget.monthlyLimit.toStringAsFixed(0)} by ${settings.currencySymbol}${(projectedTotal - matchingBudget.monthlyLimit).toStringAsFixed(0)}'
+                                            : 'Will reach ${((projectedTotal / matchingBudget.monthlyLimit) * 100).toStringAsFixed(0)}% of monthly limit (${settings.currencySymbol}${projectedTotal.toStringAsFixed(0)} / ${settings.currencySymbol}${matchingBudget.monthlyLimit.toStringAsFixed(0)})',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+
                     // 4. Categories Horizontal List
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

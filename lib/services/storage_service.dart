@@ -8,6 +8,7 @@ import '../models/settings_model.dart';
 import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
 import '../models/debt_model.dart';
+import '../models/budget_model.dart';
 
 class StorageService {
   static const _kTransactions = 'pocket_transactions';
@@ -17,6 +18,7 @@ class StorageService {
   static const _kRecurringRules = 'pocket_recurring_rules';
   static const _kNotifications = 'pocket_notifications';
   static const _kDebts = 'pocket_debts';
+  static const _kBudgets = 'pocket_category_budgets';
 
   final SharedPreferences _prefs;
 
@@ -161,6 +163,24 @@ class StorageService {
     await _prefs.setString(_kDebts, raw);
   }
 
+  // --- Category Budgets ---
+
+  List<CategoryBudgetModel> getCategoryBudgets() {
+    final raw = _prefs.getString(_kBudgets);
+    if (raw == null) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.map((e) => CategoryBudgetModel.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveCategoryBudgets(List<CategoryBudgetModel> list) async {
+    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    await _prefs.setString(_kBudgets, raw);
+  }
+
   // --- Process Due Recurring Rules ---
 
   Future<int> processDueRecurringRules() async {
@@ -244,6 +264,7 @@ class StorageService {
     await _prefs.remove(_kRecurringRules);
     await _prefs.remove(_kNotifications);
     await _prefs.remove(_kDebts);
+    await _prefs.remove(_kBudgets);
     await _seedInitialDataIfNeeded();
   }
 
@@ -310,5 +331,6 @@ class StorageService {
     await saveRecurringRules([]);
     await saveNotifications([]);
     await saveDebts([]);
+    await saveCategoryBudgets([]);
   }
 }

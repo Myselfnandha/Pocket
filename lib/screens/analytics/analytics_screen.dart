@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../models/transaction_model.dart';
 import '../../models/category_model.dart';
+import '../../models/budget_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 
@@ -21,8 +22,21 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   void _previousMonth(DateTime minDate) {
     final prev = DateTime(_currentMonth.year, _currentMonth.month - 1);
@@ -43,6 +57,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final allTxs = ref.watch(transactionsProvider);
     final categories = ref.watch(categoriesProvider);
     final settings = ref.watch(settingsProvider);
+    final categoryBudgets = ref.watch(categoryBudgetsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final now = DateTime.now();
@@ -82,7 +97,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final monthExpenses = monthTxs.where((tx) => tx.type == TransactionType.expense).toList();
     final currencyFormat = NumberFormat('#,##0.00');
 
-    // Calculate top spending category
+    // Calculate category spending map for this month
     final Map<String, double> catExpenseTotals = {};
     final Map<String, int> catExpenseCounts = {};
     for (final tx in monthExpenses) {
@@ -128,7 +143,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics & Reports'),
+        title: const Text('Analytics & Budgets'),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
@@ -137,15 +152,24 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ),
           const SizedBox(width: 8),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.primaryGreenLight,
+          labelColor: AppColors.primaryGreenLight,
+          unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+          tabs: const [
+            Tab(text: 'Insights & Charts', icon: Icon(Icons.insights_rounded, size: 18)),
+            Tab(text: 'Category Budgets', icon: Icon(Icons.track_changes_rounded, size: 18)),
+          ],
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Month Selector Bar (Constrained)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      body: Column(
+        children: [
+          // Month Selector Bar (Global across both sub-tabs)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -164,7 +188,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   Text(
                     DateFormat('MMMM yyyy').format(_currentMonth),
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                     ),
@@ -177,516 +201,844 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+          ),
 
-            // Top Summary Grid: Income | Expenses | Net Savings
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          // Tab Bar Views
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // TAB 1: Insights & Charts
+                _buildInsightsTab(
+                  context,
+                  isDark: isDark,
+                  settings: settings,
+                  currencyFormat: currencyFormat,
+                  totalIncome: totalIncome,
+                  totalExpense: totalExpense,
+                  netSavings: netSavings,
+                  savingsRate: savingsRate,
+                  monthExpenses: monthExpenses,
+                  catExpenseTotals: catExpenseTotals,
+                  categories: categories,
+                  topCategory: topCategory,
+                  topCatSpend: topCatSpend,
+                  peakDayName: peakDayName,
+                  peakWeekday: peakWeekday,
+                  peakWeekdaySpend: peakWeekdaySpend,
+                  dayOfWeekSpending: dayOfWeekSpending,
+                  maxBarY: maxBarY,
+                  dayNames: dayNames,
+                  monthTxs: monthTxs,
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SummaryBox(
-                          label: 'Income',
-                          amount: '+${settings.currencySymbol}${currencyFormat.format(totalIncome)}',
-                          color: AppColors.incomeGreen,
-                          icon: Icons.arrow_upward_rounded,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 52,
-                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                      ),
-                      Expanded(
-                        child: _SummaryBox(
-                          label: 'Expenses',
-                          amount: '-${settings.currencySymbol}${currencyFormat.format(totalExpense)}',
-                          color: AppColors.expenseRed,
-                          icon: Icons.arrow_downward_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Divider(
-                    height: 28,
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Net Savings',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.lightTextSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${netSavings >= 0 ? '+' : ''}${settings.currencySymbol}${currencyFormat.format(netSavings)}',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: netSavings >= 0
-                                  ? AppColors.incomeGreen
-                                  : AppColors.expenseRed,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: (netSavings >= 0
-                                  ? AppColors.incomeGreen
-                                  : AppColors.expenseRed)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${savingsRate.toStringAsFixed(1)}% Saved',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: netSavings >= 0
-                                ? AppColors.incomeGreen
-                                : AppColors.expenseRed,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+
+                // TAB 2: Category Budgets
+                _buildBudgetsTab(
+                  context,
+                  ref,
+                  isDark: isDark,
+                  settings: settings,
+                  categories: categories,
+                  categoryBudgets: categoryBudgets,
+                  catExpenseTotals: catExpenseTotals,
+                  currencyFormat: currencyFormat,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- TAB 1: Insights & Charts ---
+  Widget _buildInsightsTab(
+    BuildContext context, {
+    required bool isDark,
+    required dynamic settings,
+    required NumberFormat currencyFormat,
+    required double totalIncome,
+    required double totalExpense,
+    required double netSavings,
+    required double savingsRate,
+    required List<TransactionModel> monthExpenses,
+    required Map<String, double> catExpenseTotals,
+    required List<CategoryModel> categories,
+    required CategoryModel topCategory,
+    required double topCatSpend,
+    required String peakDayName,
+    required int peakWeekday,
+    required double peakWeekdaySpend,
+    required Map<int, double> dayOfWeekSpending,
+    required double maxBarY,
+    required List<String> dayNames,
+    required List<TransactionModel> monthTxs,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Top Summary Grid: Income | Expenses | Net Savings
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Top Spending Category & Day-of-Week Breakdown Card
-            Text(
-              'Most Spending Category & Day-of-Week',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (monthExpenses.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
-                ),
-                child: Column(
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    const Text('📊', style: TextStyle(fontSize: 36)),
-                    const SizedBox(height: 10),
+                    Expanded(
+                      child: _SummaryBox(
+                        label: 'Income',
+                        amount: '+${settings.currencySymbol}${currencyFormat.format(totalIncome)}',
+                        color: AppColors.incomeGreen,
+                        icon: Icons.arrow_downward_rounded,
+                      ),
+                    ),
+                    Container(width: 1, height: 40, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                    Expanded(
+                      child: _SummaryBox(
+                        label: 'Expense',
+                        amount: '-${settings.currencySymbol}${currencyFormat.format(totalExpense)}',
+                        color: AppColors.expenseRed,
+                        icon: Icons.arrow_upward_rounded,
+                      ),
+                    ),
+                    Container(width: 1, height: 40, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                    Expanded(
+                      child: _SummaryBox(
+                        label: 'Net Savings',
+                        amount: '${netSavings >= 0 ? '+' : '-'}${settings.currencySymbol}${currencyFormat.format(netSavings.abs())}',
+                        color: netSavings >= 0 ? AppColors.infoBlue : AppColors.expenseRed,
+                        icon: Icons.account_balance_wallet_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      'No expense records for this month',
+                      'Monthly Savings Rate',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                    Text(
+                      '${savingsRate.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: savingsRate >= 20 ? AppColors.incomeGreen : AppColors.accentOrange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (savingsRate / 100).clamp(0.0, 1.0),
+                    minHeight: 6,
+                    backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0),
+                    valueColor: AlwaysStoppedAnimation<Color>(savingsRate >= 20 ? AppColors.incomeGreen : AppColors.accentOrange),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // 2. Spending Breakdown by Category (Pie Chart)
+          Text(
+            'Spending Breakdown',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: monthExpenses.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'No expenses recorded for this month',
+                        style: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      SizedBox(
+                        height: 180,
+                        child: PieChart(
+                          PieChartData(
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 40,
+                            sections: _buildPieSections(catExpenseTotals, categories, totalExpense),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                      const SizedBox(height: 12),
+                      ..._buildCategoryLegend(catExpenseTotals, categories, totalExpense, settings.currencySymbol, currencyFormat, isDark),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 18),
+
+          // 3. Day of Week Pattern (Bar Chart)
+          Text(
+            'Spending Pattern by Weekday',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Peak Spending Day',
+                      style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                    ),
+                    Text(
+                      '$peakDayName (${settings.currencySymbol}${currencyFormat.format(peakWeekdaySpend)})',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accentOrange),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 150,
+                  child: BarChart(
+                    BarChartData(
+                      maxY: maxBarY,
+                      barTouchData: BarTouchData(enabled: true),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (val, meta) {
+                              final idx = val.toInt();
+                              if (idx < 0 || idx >= dayNames.length) return const SizedBox();
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  dayNames[idx],
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      gridData: const FlGridData(show: false),
+                      barGroups: List.generate(7, (idx) {
+                        final spend = dayOfWeekSpending[idx + 1] ?? 0.0;
+                        final isPeak = (idx + 1) == peakWeekday && spend > 0;
+                        return BarChartGroupData(
+                          x: idx,
+                          barRods: [
+                            BarChartRodData(
+                              toY: spend,
+                              color: isPeak ? AppColors.accentOrange : AppColors.primaryGreenLight,
+                              width: 14,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                            ),
+                          ],
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 4. Export Actions
+          Row(
+            children: [
+              Expanded(
+                child: _ExportActionCard(
+                  icon: Icons.table_chart_outlined,
+                  iconColor: AppColors.incomeGreen,
+                  title: 'Export CSV',
+                  subtitle: 'Spreadsheet format',
+                  onTap: () => _exportCsv(monthTxs, categories),
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ExportActionCard(
+                  icon: Icons.picture_as_pdf_outlined,
+                  iconColor: AppColors.expenseRed,
+                  title: 'Export PDF',
+                  subtitle: 'Printable statement',
+                  onTap: () => _exportPdf(monthTxs, categories, settings, totalIncome, totalExpense, netSavings),
+                  isDark: isDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // --- TAB 2: Category Budgets ---
+  Widget _buildBudgetsTab(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isDark,
+    required dynamic settings,
+    required List<CategoryModel> categories,
+    required List<CategoryBudgetModel> categoryBudgets,
+    required Map<String, double> catExpenseTotals,
+    required NumberFormat currencyFormat,
+  }) {
+    final totalBudget = categoryBudgets.fold(0.0, (sum, b) => sum + b.monthlyLimit);
+    double totalSpentInBudgetedCats = 0;
+    for (final b in categoryBudgets) {
+      totalSpentInBudgetedCats += (catExpenseTotals[b.categoryId] ?? 0.0);
+    }
+    final overallProgress = totalBudget > 0 ? (totalSpentInBudgetedCats / totalBudget).clamp(0.0, 1.0) : 0.0;
+    final isOverallExceeded = totalSpentInBudgetedCats > totalBudget && totalBudget > 0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Overall Monthly Budget Summary Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MONTHLY BUDGET CAP',
+                      style: TextStyle(
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                      ),
+                    ),
+                    Text(
+                      '${(overallProgress * 100).toStringAsFixed(1)}% Spent',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: isOverallExceeded
+                            ? AppColors.expenseRed
+                            : (overallProgress >= 0.75 ? AppColors.accentOrange : AppColors.incomeGreen),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${settings.currencySymbol}${currencyFormat.format(totalSpentInBudgetedCats)}',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Text(
-                      'Log transactions to see category & day-of-week spending patterns',
-                      textAlign: TextAlign.center,
+                      'Cap: ${settings.currencySymbol}${currencyFormat.format(totalBudget)}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                       ),
                     ),
                   ],
                 ),
-              )
-            else ...[
-              // Top Category Hero Badge
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isDark
-                        ? [const Color(0xFF1B3B22), const Color(0xFF131313)]
-                        : [const Color(0xFFE8F5E9), Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: AppColors.primaryGreenLight.withValues(alpha: 0.3),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: overallProgress,
+                    minHeight: 8,
+                    backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isOverallExceeded
+                          ? AppColors.expenseRed
+                          : (overallProgress >= 0.75 ? AppColors.accentOrange : AppColors.primaryGreenLight),
+                    ),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreenLight.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(topCategory.icon, style: const TextStyle(fontSize: 26)),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentOrange.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  '🔥 #1 TOP CATEGORY',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.accentOrange,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            topCategory.name,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                            ),
-                          ),
-                          Text(
-                            '${catExpenseCounts[topCatId] ?? 0} transactions • ${(totalExpense > 0 ? (topCatSpend / totalExpense * 100) : 0).toStringAsFixed(1)}% of total expenses',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${settings.currencySymbol}${currencyFormat.format(topCatSpend)}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.expenseRed,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Day of Week Distribution Chart
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                const SizedBox(height: 10),
+                Text(
+                  isOverallExceeded
+                      ? '⚠️ Total budget exceeded by ${settings.currencySymbol}${currencyFormat.format(totalSpentInBudgetedCats - totalBudget)}'
+                      : 'Safe buffer: ${settings.currencySymbol}${currencyFormat.format(totalBudget - totalSpentInBudgetedCats)} remaining for ${DateFormat('MMMM').format(_currentMonth)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isOverallExceeded ? AppColors.expenseRed : AppColors.incomeGreen,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Day-of-Week Cash Outflow',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                        if (peakWeekdaySpend > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentOrange.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Peak: $peakDayName',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.accentOrange,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 160,
-                      child: BarChart(
-                        BarChartData(
-                          maxY: maxBarY,
-                          barTouchData: BarTouchData(
-                            touchTooltipData: BarTouchTooltipData(
-                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                final dayName = dayNames[group.x];
-                                final val = rod.toY;
-                                return BarTooltipItem(
-                                  '$dayName\n${settings.currencySymbol}${currencyFormat.format(val)}',
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                getTitlesWidget: (val, meta) {
-                                  final idx = val.toInt();
-                                  if (idx < 0 || idx >= 7) return const SizedBox.shrink();
-                                  final isPeak = (idx + 1) == peakWeekday && peakWeekdaySpend > 0;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      dayNames[idx],
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: isPeak ? FontWeight.w800 : FontWeight.w600,
-                                        color: isPeak
-                                            ? AppColors.accentOrange
-                                            : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          gridData: FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          barGroups: List.generate(7, (index) {
-                            final spend = dayOfWeekSpending[index + 1] ?? 0;
-                            final isPeak = (index + 1) == peakWeekday && spend > 0;
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
 
-                            return BarChartGroupData(
-                              x: index,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: spend,
-                                  color: isPeak
-                                      ? AppColors.accentOrange
-                                      : AppColors.primaryGreenLight,
-                                  width: 22,
-                                  borderRadius: BorderRadius.circular(6),
-                                  backDrawRodData: BackgroundBarChartRodData(
-                                    show: true,
-                                    toY: maxBarY,
-                                    color: (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0)),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-
-            // Category Breakdown Donut Chart
-            if (monthExpenses.isNotEmpty) ...[
+          // 2. Section Header & Add Budget Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Text(
-                'Spending by Category',
+                'Category Spending Limits',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                 ),
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: AppColors.primaryGreenLight,
                 ),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 180,
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 3,
-                          centerSpaceRadius: 42,
-                          sections: _buildPieSections(monthExpenses, categories, totalExpense),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ..._buildCategoryLegend(monthExpenses, categories, totalExpense, settings.currencySymbol, currencyFormat, isDark),
-                  ],
-                ),
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                label: const Text('+ Add Budget', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                onPressed: () => _showSetBudgetDialog(context, ref, categories, null, settings.currencySymbol),
               ),
             ],
-            const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 8),
 
-            // Export Financial Data
-            Text(
-              'Export Financial Data',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          // 3. Category Budgets List
+          if (categoryBudgets.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.track_changes_rounded, size: 36, color: AppColors.primaryGreenLight),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('No Category Budgets Set', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Set monthly spending limits for categories like Food, Shopping, or Bills to monitor safe daily spending and avoid overspending.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreenLight,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Set Your First Budget', style: TextStyle(fontWeight: FontWeight.w800)),
+                    onPressed: () => _showSetBudgetDialog(context, ref, categories, null, settings.currencySymbol),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: categoryBudgets.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final budget = categoryBudgets[index];
+                final cat = categories.firstWhere(
+                  (c) => c.id == budget.categoryId,
+                  orElse: () => const CategoryModel(id: '', name: 'Unknown Category', icon: '🏷️', colorValue: 0xFF4CAF50),
+                );
+                final spent = catExpenseTotals[budget.categoryId] ?? 0.0;
+                final progress = budget.calculateProgress(spent);
+                final safeDaily = budget.calculateDailySafeSpend(spent, referenceDate: _currentMonth);
+                final isExceeded = spent > budget.monthlyLimit;
+                final isNearLimit = spent >= (budget.monthlyLimit * 0.75) && !isExceeded;
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isExceeded
+                          ? AppColors.expenseRed.withValues(alpha: 0.6)
+                          : (isNearLimit
+                              ? AppColors.accentOrange.withValues(alpha: 0.6)
+                              : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder)),
+                      width: isExceeded || isNearLimit ? 1.4 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(cat.icon, style: const TextStyle(fontSize: 24)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                                    if (budget.isRolloverEnabled) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.infoBlue.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text('ROLLOVER', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w800, color: AppColors.infoBlue)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${settings.currencySymbol}${currencyFormat.format(spent)} of ${settings.currencySymbol}${currencyFormat.format(budget.monthlyLimit)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isExceeded)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.expenseRed.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('OVER BUDGET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.expenseRed)),
+                            )
+                          else
+                            Text(
+                              '${(progress * 100).toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: isNearLimit ? AppColors.accentOrange : AppColors.incomeGreen,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Progress Indicator
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress.clamp(0.0, 1.0),
+                          minHeight: 6,
+                          backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isExceeded
+                                ? AppColors.expenseRed
+                                : (isNearLimit ? AppColors.accentOrange : AppColors.incomeGreen),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Bottom Row: Safe Daily Spending & Quick Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                isExceeded ? Icons.error_outline_rounded : Icons.shield_outlined,
+                                size: 13,
+                                color: isExceeded ? AppColors.expenseRed : AppColors.incomeGreen,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isExceeded
+                                    ? 'Over by ${settings.currencySymbol}${currencyFormat.format(spent - budget.monthlyLimit)}'
+                                    : 'Safe: ${settings.currencySymbol}${currencyFormat.format(safeDaily)}/day left',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isExceeded ? AppColors.expenseRed : (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                visualDensity: VisualDensity.compact,
+                                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                                onPressed: () => _showSetBudgetDialog(context, ref, categories, budget, settings.currencySymbol),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                                visualDensity: VisualDensity.compact,
+                                color: AppColors.expenseRed,
+                                onPressed: () => ref.read(categoryBudgetsProvider.notifier).deleteBudget(budget.id),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            Row(
+          const SizedBox(height: 28),
+        ],
+      ),
+    );
+  }
+
+  void _showSetBudgetDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<CategoryModel> categories,
+    CategoryBudgetModel? existingBudget,
+    String currencySymbol,
+  ) {
+    final expenseCategories = categories.where((c) => c.type == TransactionType.expense).toList();
+    String selectedCatId = existingBudget?.categoryId ?? (expenseCategories.isNotEmpty ? expenseCategories.first.id : 'food');
+    final amountCtrl = TextEditingController(text: existingBudget != null ? existingBudget.monthlyLimit.toStringAsFixed(0) : '');
+    bool isRollover = existingBudget?.isRolloverEnabled ?? false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(existingBudget == null ? 'Set Category Budget' : 'Edit Category Budget'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _ExportActionCard(
-                    icon: Icons.table_chart_rounded,
-                    iconColor: AppColors.primaryGreenLight,
-                    title: 'Export CSV',
-                    subtitle: '${monthTxs.length} items (${settings.currencySymbol})',
-                    onTap: () => _exportCsv(monthTxs, categories),
-                    isDark: isDark,
+                const Text('Select Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCatId,
+                  decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                  items: expenseCategories.map((c) {
+                    return DropdownMenuItem(value: c.id, child: Text('${c.icon} ${c.name}'));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedCatId = val);
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                Text('Monthly Budget Limit ($currencySymbol)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    prefixText: '$currencySymbol ',
+                    hintText: 'e.g. 5000',
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ExportActionCard(
-                    icon: Icons.picture_as_pdf_rounded,
-                    iconColor: AppColors.expenseRed,
-                    title: 'Export PDF',
-                    subtitle: 'Summary & Ledger',
-                    onTap: () => _exportPdf(monthTxs, categories, settings, totalIncome, totalExpense, netSavings),
-                    isDark: isDark,
-                  ),
+                const SizedBox(height: 14),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Carry-over Balance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text('Roll unspent budget to next month', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      ],
+                    ),
+                    Switch(
+                      value: isRollover,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (v) => setDialogState(() => isRollover = v),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final limit = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
+                if (limit <= 0) return;
+
+                ref.read(categoryBudgetsProvider.notifier).setBudget(
+                      categoryId: selectedCatId,
+                      monthlyLimit: limit,
+                      isRolloverEnabled: isRollover,
+                    );
+                Navigator.pop(ctx);
+              },
+              child: const Text('Save Budget'),
+            ),
           ],
         ),
       ),
     );
   }
 
+  // --- Helper chart builders ---
+
   List<PieChartSectionData> _buildPieSections(
-    List<TransactionModel> expenses,
+    Map<String, double> catTotals,
     List<CategoryModel> categories,
     double totalExpense,
   ) {
     if (totalExpense <= 0) return [];
-
-    final Map<String, double> catTotals = {};
-    for (final tx in expenses) {
-      catTotals[tx.categoryId] = (catTotals[tx.categoryId] ?? 0) + tx.amount;
-    }
-
-    final palette = [
-      const Color(0xFF4CAF50),
-      const Color(0xFFFF9800),
-      const Color(0xFF2196F3),
-      const Color(0xFFE91E63),
-      const Color(0xFF9C27B0),
-      const Color(0xFF00BCD4),
-      const Color(0xFFFFC107),
+    final colors = [
+      AppColors.primaryGreenLight,
+      AppColors.accentOrange,
+      AppColors.infoBlue,
+      const Color(0xFFAB47BC),
+      const Color(0xFFFF7043),
+      const Color(0xFF26A69A),
+      const Color(0xFFEC407A),
+      const Color(0xFF78909C),
     ];
 
     int colorIdx = 0;
     return catTotals.entries.map((e) {
-      final percentage = (e.value / totalExpense * 100);
-      final color = palette[colorIdx % palette.length];
+      final percentage = (e.value / totalExpense) * 100;
+      final color = colors[colorIdx % colors.length];
       colorIdx++;
 
       return PieChartSectionData(
-        value: e.value,
         color: color,
-        title: percentage > 8 ? '${percentage.toStringAsFixed(0)}%' : '',
-        radius: 36,
-        titleStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
-        ),
+        value: e.value,
+        title: '${percentage.toStringAsFixed(0)}%',
+        radius: 45,
+        titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black),
       );
     }).toList();
   }
 
   List<Widget> _buildCategoryLegend(
-    List<TransactionModel> expenses,
+    Map<String, double> catTotals,
     List<CategoryModel> categories,
     double totalExpense,
     String currencySymbol,
     NumberFormat currencyFormat,
     bool isDark,
   ) {
-    final Map<String, double> catTotals = {};
-    for (final tx in expenses) {
-      catTotals[tx.categoryId] = (catTotals[tx.categoryId] ?? 0) + tx.amount;
-    }
+    final colors = [
+      AppColors.primaryGreenLight,
+      AppColors.accentOrange,
+      AppColors.infoBlue,
+      const Color(0xFFAB47BC),
+      const Color(0xFFFF7043),
+      const Color(0xFF26A69A),
+      const Color(0xFFEC407A),
+      const Color(0xFF78909C),
+    ];
 
-    final sorted = catTotals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return sorted.map((e) {
+    int colorIdx = 0;
+    return catTotals.entries.map((e) {
       final cat = categories.firstWhere(
         (c) => c.id == e.key,
-        orElse: () => CategoryModel(id: e.key, name: 'Other', icon: '📦', colorValue: 0xFF9E9E9E),
+        orElse: () => const CategoryModel(id: '', name: 'Other', icon: '🏷️', colorValue: 0xFF2E7D32),
       );
-      final percentage = totalExpense > 0 ? (e.value / totalExpense * 100) : 0.0;
+      final percentage = totalExpense > 0 ? (e.value / totalExpense) * 100 : 0.0;
+      final color = colors[colorIdx % colors.length];
+      colorIdx++;
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Text(cat.icon, style: const TextStyle(fontSize: 16)),
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
             const SizedBox(width: 8),
+            Text(cat.icon, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 cat.name,
