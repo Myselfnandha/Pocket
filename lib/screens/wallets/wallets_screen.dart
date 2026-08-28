@@ -216,9 +216,10 @@ class WalletsScreen extends ConsumerWidget {
     final nameCtrl = TextEditingController();
     final balanceCtrl = TextEditingController();
     final limitCtrl = TextEditingController();
-    WalletType selectedType = WalletType.bank;
+    WalletType? selectedType;
     String selectedIcon = '🏦';
     bool enableLimit = false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final icons = ['💵', '🏦', '📱', '💳', '💰', '🪙', '💼'];
 
@@ -241,14 +242,27 @@ class WalletsScreen extends ConsumerWidget {
                     return ChoiceChip(
                       label: Text(type.name.toUpperCase()),
                       selected: isSel,
+                      selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.25),
                       onSelected: (_) {
                         setDialogState(() {
                           selectedType = type;
-                          if (type == WalletType.cash) selectedIcon = '💵';
-                          if (type == WalletType.bank) selectedIcon = '🏦';
-                          if (type == WalletType.upi) selectedIcon = '📱';
-                          if (type == WalletType.creditCard) selectedIcon = '💳';
-                          if (type == WalletType.savings) selectedIcon = '💰';
+                          if (type == WalletType.cash) {
+                            selectedIcon = '💵';
+                            nameCtrl.text = 'Cash';
+                          } else if (type == WalletType.bank) {
+                            selectedIcon = '🏦';
+                            nameCtrl.text = 'Bank Account';
+                          } else if (type == WalletType.upi) {
+                            selectedIcon = '📱';
+                            nameCtrl.text = 'UPI';
+                          } else if (type == WalletType.creditCard) {
+                            selectedIcon = '💳';
+                            nameCtrl.text = 'Credit Card';
+                          } else if (type == WalletType.savings) {
+                            selectedIcon = '💰';
+                            nameCtrl.text = 'Savings';
+                          }
+                          nameCtrl.selection = TextSelection(baseOffset: 0, extentOffset: nameCtrl.text.length);
                         });
                       },
                     );
@@ -259,7 +273,12 @@ class WalletsScreen extends ConsumerWidget {
                 const SizedBox(height: 6),
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(hintText: 'e.g. HDFC Salary Bank'),
+                  onTap: () {
+                    if (nameCtrl.text.isNotEmpty) {
+                      nameCtrl.selection = TextSelection(baseOffset: 0, extentOffset: nameCtrl.text.length);
+                    }
+                  },
+                  decoration: const InputDecoration(hintText: 'Enter wallet name'),
                 ),
                 const SizedBox(height: 14),
                 Text('Starting Balance ($currencySymbol)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -269,7 +288,9 @@ class WalletsScreen extends ConsumerWidget {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     prefixText: '$currencySymbol ',
+                    prefixStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
                     hintText: '0.00',
+                    hintStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary.withValues(alpha: 0.4) : AppColors.lightTextTertiary.withValues(alpha: 0.4)),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -291,7 +312,9 @@ class WalletsScreen extends ConsumerWidget {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       prefixText: '$currencySymbol ',
+                      prefixStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
                       hintText: 'Monthly limit (e.g. 50000)',
+                      hintStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary.withValues(alpha: 0.4) : AppColors.lightTextTertiary.withValues(alpha: 0.4)),
                     ),
                   ),
                 ],
@@ -337,7 +360,7 @@ class WalletsScreen extends ConsumerWidget {
                   colorValue: 0xFF2E7D32,
                   initialBalance: startBal,
                   currentBalance: startBal,
-                  walletType: selectedType,
+                  walletType: selectedType ?? WalletType.bank,
                   spendingLimit: limit,
                 );
 

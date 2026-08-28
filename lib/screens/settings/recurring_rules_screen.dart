@@ -25,11 +25,12 @@ class RecurringRulesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Recurring Expenses'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
-            tooltip: 'Add Recurring Rule',
-            onPressed: () => _showAddRuleDialog(context, ref, categories, wallets, settings.currencySymbol),
-          ),
+          if (rules.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
+              tooltip: 'Add Recurring Rule',
+              onPressed: () => _showAddRuleDialog(context, ref, categories, wallets, settings.currencySymbol),
+            ),
           const SizedBox(width: 8),
         ],
       ),

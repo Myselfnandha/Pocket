@@ -229,7 +229,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.5 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.0.6 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -411,7 +411,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.light_mode_rounded, color: AppColors.accentOrange),
-                title: const Text('Manual: Light Mode'),
+                title: const Text('Light Mode'),
                 subtitle: const Text('Crisp paper light theme'),
                 trailing: (settings.themeMode == AppThemeMode.manual && settings.manualThemeStyle == ManualThemeStyle.light)
                     ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
@@ -429,7 +429,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.dark_mode_rounded, color: AppColors.infoBlue),
-                title: const Text('Manual: Dark Mode (Charcoal)'),
+                title: const Text('Dark Mode (Charcoal)'),
                 subtitle: const Text('Standard dark gray interface (#131313)'),
                 trailing: (settings.themeMode == AppThemeMode.manual && settings.manualThemeStyle == ManualThemeStyle.dark && !settings.isPureBlackEnabled)
                     ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
@@ -447,8 +447,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.brightness_2_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Manual: Pure Black AMOLED'),
-                subtitle: const Text('Deep OLED true black (#000000) for battery saving'),
+                title: const Text('Pure Black AMOLED'),
+                subtitle: const Text('Deep OLED true black for battery saving'),
                 trailing: (settings.themeMode == AppThemeMode.manual && (settings.manualThemeStyle == ManualThemeStyle.pureBlack || settings.isPureBlackEnabled))
                     ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
                     : null,

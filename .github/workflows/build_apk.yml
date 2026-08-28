@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.0.3)'
+        description: 'Version Name (e.g. 1.0.6)'
         required: false
-        default: '1.0.3'
+        default: '1.0.6'
       build_number:
-        description: 'Build Number (e.g. 3)'
+        description: 'Build Number (e.g. 6)'
         required: false
-        default: '3'
+        default: '6'
 
 concurrency:
   group: pocket-build-${{ github.ref }}
@@ -93,7 +93,19 @@ jobs:
       - name: Run Tests in Parallel
         run: flutter test --concurrency=4
 
-      - name: Fast Universal Release APK Build
+      - name: Configure Production Release Keystore
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/pocket-release-key.jks
+          fi
+          if [ ! -f android/key.properties ]; then
+            echo "storePassword=${{ secrets.STORE_PASSWORD || 'pocketrelease2026' }}" > android/key.properties
+            echo "keyPassword=${{ secrets.KEY_PASSWORD || 'pocketrelease2026' }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.KEY_ALIAS || 'pocket_key' }}" >> android/key.properties
+            echo "storeFile=../app/pocket-release-key.jks" >> android/key.properties
+          fi
+
+      - name: Fast Universal Release APK Build (Signed)
         run: |
           if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
           flutter build apk --release --no-pub \

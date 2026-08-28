@@ -173,56 +173,135 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 14),
 
               // 2.5 Quick Hub Row: Recurring & Debts
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => context.push('/recurring-rules'),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              Consumer(
+                builder: (context, ref, _) {
+                  final recurringRules = ref.watch(recurringRulesProvider);
+                  final activeRulesCount = recurringRules.where((r) => r.isActive).length;
+                  final totalLent = ref.watch(totalLentProvider);
+                  final totalBorrowed = ref.watch(totalBorrowedProvider);
+                  final netDebt = totalLent - totalBorrowed;
+
+                  return Row(
+                    children: [
+                      // Recurring Dues Card Button
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => context.push('/recurring-rules'),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF18221B) : const Color(0xFFEDF7F1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.3 : 0.4),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryGreenLight.withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.autorenew_rounded, size: 18, color: AppColors.primaryGreenLight),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Recurring Dues',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$activeRulesCount active',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryGreenLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                              ],
+                            ),
                           ),
                         ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.autorenew_rounded, size: 18, color: AppColors.primaryGreenLight),
-                            SizedBox(width: 8),
-                            Text('Recurring Dues', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => context.push('/debts'),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      const SizedBox(width: 12),
+
+                      // Debts & Loans Card Button
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => context.push('/debts'),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF141E28) : const Color(0xFFEEF5FB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.infoBlue.withValues(alpha: isDark ? 0.3 : 0.4),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.infoBlue.withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.handshake_outlined, size: 18, color: AppColors.infoBlue),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Debts & Loans',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        netDebt >= 0
+                                            ? '+${settings.currencySymbol}${currencyFormat.format(netDebt)}'
+                                            : '-${settings.currencySymbol}${currencyFormat.format(netDebt.abs())}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: netDebt >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                              ],
+                            ),
                           ),
                         ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.handshake_outlined, size: 18, color: AppColors.infoBlue),
-                            SizedBox(width: 8),
-                            Text('Debts & Loans', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
 

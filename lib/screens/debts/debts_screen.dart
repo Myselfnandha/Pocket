@@ -20,7 +20,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -39,6 +39,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final activeDebts = debts.where((d) => !d.isSettled).toList();
+    final lentDebts = debts.where((d) => !d.isSettled && d.type == DebtType.lent).toList();
+    final borrowedDebts = debts.where((d) => !d.isSettled && d.type == DebtType.borrowed).toList();
     final settledDebts = debts.where((d) => d.isSettled).toList();
     final currencyFormat = NumberFormat('#,##0.00');
 
@@ -78,7 +80,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                           children: [
                             Icon(Icons.arrow_upward_rounded, size: 14, color: AppColors.incomeGreen),
                             SizedBox(width: 4),
-                            Text('You are owed', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.incomeGreen)),
+                            Text('You are owed (Lent)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.incomeGreen)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -103,7 +105,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                           children: [
                             Icon(Icons.arrow_downward_rounded, size: 14, color: AppColors.expenseRed),
                             SizedBox(width: 4),
-                            Text('You owe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.expenseRed)),
+                            Text('You owe (Borrowed)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.expenseRed)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -119,14 +121,18 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
             ),
           ),
 
-          // 2. Tab Bar: Active vs Settled
+          // 2. 4 Filter Tabs: All, Lent, Borrowed, Settled
           TabBar(
             controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             indicatorColor: AppColors.primaryGreenLight,
             labelColor: AppColors.primaryGreenLight,
             unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             tabs: [
-              Tab(text: 'Active (${activeDebts.length})'),
+              Tab(text: 'All (${activeDebts.length})'),
+              Tab(text: 'Lent (${lentDebts.length})'),
+              Tab(text: 'Borrowed (${borrowedDebts.length})'),
               Tab(text: 'Settled (${settledDebts.length})'),
             ],
           ),
@@ -136,8 +142,10 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildDebtsList(activeDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false),
-                _buildDebtsList(settledDebts, settings.currencySymbol, currencyFormat, wallets, isDark, true),
+                _buildDebtsList(activeDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No active debts or loans'),
+                _buildDebtsList(lentDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently lent to others'),
+                _buildDebtsList(borrowedDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently borrowed from others'),
+                _buildDebtsList(settledDebts, settings.currencySymbol, currencyFormat, wallets, isDark, true, 'Fully settled debts will appear here in history'),
               ],
             ),
           ),
@@ -153,6 +161,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     List<WalletModel> wallets,
     bool isDark,
     bool isSettledList,
+    String emptyMessage,
   ) {
     if (list.isEmpty) {
       return Center(
@@ -164,7 +173,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               Text(isSettledList ? '🎉' : '🤝', style: const TextStyle(fontSize: 44)),
               const SizedBox(height: 12),
               Text(
-                isSettledList ? 'No Settled Debts' : 'No Active Debts or Loans',
+                isSettledList ? 'No Settled Debts' : 'Empty Debt Ledger',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -173,9 +182,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               ),
               const SizedBox(height: 4),
               Text(
-                isSettledList
-                    ? 'Fully paid debts will appear here in history'
-                    : 'Track money given to or borrowed from friends and colleagues',
+                emptyMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -241,7 +248,37 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                           ),
                         ),
-                        if (debt.phoneNumber != null && debt.phoneNumber!.isNotEmpty)
+                        const SizedBox(height: 3),
+                        // Prominent Type Badge Tag
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isLent ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                size: 11,
+                                color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                isLent ? 'LENT • YOU GAVE' : 'BORROWED • YOU TOOK',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                  color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (debt.phoneNumber != null && debt.phoneNumber!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
                           Text(
                             debt.phoneNumber!,
                             style: TextStyle(
@@ -249,6 +286,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                               color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),
@@ -294,7 +332,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                   Row(
                     children: [
                       if (debt.dueDate != null) ...[
-                        Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.accentOrange),
+                        const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.accentOrange),
                         const SizedBox(width: 4),
                         Text(
                           'Due: ${DateFormat('d MMM yyyy').format(debt.dueDate!)}',
@@ -375,7 +413,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Type selector
+                // Type selector with rich labels
                 Row(
                   children: [
                     ChoiceChip(

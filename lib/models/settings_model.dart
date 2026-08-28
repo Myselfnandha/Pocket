@@ -21,7 +21,7 @@ class UserSettingsModel {
   final bool monthlySummaryEnabled;
 
   const UserSettingsModel({
-    this.userName = 'Nandha',
+    this.userName = '',
     this.currencySymbol = '₹',
     this.currencyCode = 'INR',
     this.themeMode = AppThemeMode.autoTime,
