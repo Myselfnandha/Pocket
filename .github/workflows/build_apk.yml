@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.0.6)'
+        description: 'Version Name (e.g. 1.0.8)'
         required: false
-        default: '1.0.6'
+        default: '1.0.8'
       build_number:
-        description: 'Build Number (e.g. 6)'
+        description: 'Build Number (e.g. 8)'
         required: false
-        default: '6'
+        default: '8'
 
 concurrency:
   group: pocket-build-${{ github.ref }}
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & Release Universal APK
+    name: Build & Release Universal APK (Turbo)
     runs-on: ubuntu-latest
 
     steps:
@@ -62,7 +62,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Fast Gradle Cache & Daemon
+      - name: Setup Fast Gradle Cache & Build Action
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -74,15 +74,17 @@ jobs:
           cache: true
           cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
 
-      - name: Cache Pub Dependencies & Artifacts
+      - name: Cache Pub Dependencies & Native Artifacts
         uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
             .dart_tool/
-          key: pub-cache-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: build-cache-${{ runner.os }}-${{ hashFiles('**/pubspec.lock', 'android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
-            pub-cache-${{ runner.os }}-
+            build-cache-${{ runner.os }}-
 
       - name: Install Dependencies
         run: flutter pub get
@@ -105,10 +107,10 @@ jobs:
             echo "storeFile=../app/pocket-release-key.jks" >> android/key.properties
           fi
 
-      - name: Fast Universal Release APK Build (Signed)
+      - name: Turbo Universal Release APK Build (Signed)
         run: |
           if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
-          flutter build apk --release --no-pub \
+          flutter build apk --release --no-pub --tree-shake-icons \
             --build-name="${{ steps.versioning.outputs.VERSION_NAME }}" \
             --build-number="${{ steps.versioning.outputs.BUILD_NUMBER }}"
 
