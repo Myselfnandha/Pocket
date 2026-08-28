@@ -2,19 +2,18 @@ name: Build & Release Universal APK
 
 on:
   push:
-    branches: [ main ]
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.0.1)'
+        description: 'Version Name (e.g. 1.0.3)'
         required: false
-        default: '1.0.1'
+        default: '1.0.3'
       build_number:
-        description: 'Build Number (e.g. 2)'
+        description: 'Build Number (e.g. 3)'
         required: false
-        default: '2'
+        default: '3'
 
 concurrency:
   group: pocket-build-${{ github.ref }}
