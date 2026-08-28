@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket/models/category_model.dart';
-import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';

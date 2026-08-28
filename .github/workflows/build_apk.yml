@@ -84,6 +84,7 @@ jobs:
 
       - name: Build Universal Release APK with Version Tag
         run: |
+          if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
           flutter build apk --release \
             --build-name="${{ steps.versioning.outputs.VERSION_NAME }}" \
             --build-number="${{ steps.versioning.outputs.BUILD_NUMBER }}"
