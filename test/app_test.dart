@@ -91,5 +91,34 @@ void main() {
       expect(updated.first.id, equals('new-123'));
       expect(updated.first.amount, equals(899.0));
     });
+
+    test('Updating existing transaction updates values properly', () async {
+      final initialTx = storage.getTransactions().first;
+      final modifiedTx = initialTx.copyWith(title: 'Modified Title', amount: 1999.0);
+
+      final currentList = storage.getTransactions();
+      final updatedList = currentList.map((t) => t.id == modifiedTx.id ? modifiedTx : t).toList();
+      await storage.saveTransactions(updatedList);
+
+      final reloaded = storage.getTransactions().firstWhere((t) => t.id == initialTx.id);
+      expect(reloaded.title, equals('Modified Title'));
+      expect(reloaded.amount, equals(1999.0));
+    });
+
+    test('User Settings save and load with PIN configuration', () async {
+      final initialSettings = storage.getSettings();
+      final newSettings = initialSettings.copyWith(
+        pinCode: '4321',
+        pinLockEnabled: true,
+        biometricEnabled: true,
+      );
+
+      await storage.saveSettings(newSettings);
+      final reloadedSettings = storage.getSettings();
+
+      expect(reloadedSettings.pinCode, equals('4321'));
+      expect(reloadedSettings.pinLockEnabled, isTrue);
+      expect(reloadedSettings.biometricEnabled, isTrue);
+    });
   });
 }

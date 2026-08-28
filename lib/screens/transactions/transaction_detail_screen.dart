@@ -8,6 +8,8 @@ import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 
+import 'edit_transaction_screen.dart';
+
 class TransactionDetailScreen extends ConsumerWidget {
   final TransactionModel transaction;
 
@@ -15,13 +17,18 @@ class TransactionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final allTxs = ref.watch(transactionsProvider);
+    final currentTx = allTxs.firstWhere(
+      (t) => t.id == transaction.id,
+      orElse: () => transaction,
+    );
     final categories = ref.watch(categoriesProvider);
-    final wallets = ref.watch(walletsProvider);
+    final wallets = ref.watch(walletsWithBalancesProvider);
     final settings = ref.watch(settingsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final category = categories.firstWhere(
-      (c) => c.id == transaction.categoryId,
+      (c) => c.id == currentTx.categoryId,
       orElse: () => const CategoryModel(
         id: 'other',
         name: 'Other',
@@ -31,22 +38,32 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
 
     final wallet = wallets.firstWhere(
-      (w) => w.id == transaction.walletId,
+      (w) => w.id == currentTx.walletId,
       orElse: () => defaultWallets.first,
     );
 
-    final isIncome = transaction.type == TransactionType.income;
+    final isIncome = currentTx.type == TransactionType.income;
     final amountColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
     final prefix = isIncome ? '+' : '-';
-    final formattedAmount = NumberFormat('#,##0.00').format(transaction.amount);
+    final formattedAmount = NumberFormat('#,##0.00').format(currentTx.amount);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transaction Details'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit_outlined, color: AppColors.primaryGreenLight),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (ctx) => EditTransactionScreen(transaction: currentTx),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.expenseRed),
-            onPressed: () => _confirmDelete(context, ref),
+            onPressed: () => _confirmDelete(context, ref, currentTx),
           ),
           const SizedBox(width: 8),
         ],
@@ -75,7 +92,7 @@ class TransactionDetailScreen extends ConsumerWidget {
 
             // Title
             Text(
-              transaction.title,
+              currentTx.title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
@@ -122,7 +139,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                     context,
                     icon: Icons.calendar_today_rounded,
                     label: 'Date & Time',
-                    value: DateFormat('d MMMM yyyy, h:mm a').format(transaction.date),
+                    value: DateFormat('d MMMM yyyy, h:mm a').format(currentTx.date),
                     isDark: isDark,
                   ),
                   _buildDivider(isDark),
@@ -150,13 +167,13 @@ class TransactionDetailScreen extends ConsumerWidget {
                     valueColor: amountColor,
                     isDark: isDark,
                   ),
-                  if (transaction.note != null && transaction.note!.isNotEmpty) ...[
+                  if (currentTx.note != null && currentTx.note!.isNotEmpty) ...[
                     _buildDivider(isDark),
                     _buildDetailRow(
                       context,
                       icon: Icons.notes_rounded,
                       label: 'Note',
-                      value: transaction.note!,
+                      value: currentTx.note!,
                       isDark: isDark,
                     ),
                   ],
@@ -165,22 +182,39 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
 
-            // Action Buttons
+            // Edit & Delete Action Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.expenseRed,
-                      side: const BorderSide(color: AppColors.expenseRed),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      side: const BorderSide(color: AppColors.primaryGreenLight),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    label: const Text('Delete'),
-                    onPressed: () => _confirmDelete(context, ref),
+                    icon: const Icon(Icons.edit_outlined, color: AppColors.primaryGreenLight),
+                    label: const Text('Edit', style: TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (ctx) => EditTransactionScreen(transaction: currentTx),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.expenseRed,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _confirmDelete(context, ref, currentTx),
                   ),
                 ),
               ],
@@ -241,12 +275,12 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, TransactionModel tx) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Transaction?'),
-        content: Text('Are you sure you want to delete "${transaction.title}"?'),
+        content: Text('Are you sure you want to delete "${tx.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -258,7 +292,7 @@ class TransactionDetailScreen extends ConsumerWidget {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              ref.read(transactionsProvider.notifier).deleteTransaction(transaction.id);
+              ref.read(transactionsProvider.notifier).deleteTransaction(tx.id);
               Navigator.pop(ctx);
               context.pop();
             },

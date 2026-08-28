@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
@@ -22,6 +23,14 @@ class WalletsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallets & Accounts'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.swap_horiz_rounded, color: AppColors.primaryGreenLight),
+            tooltip: 'Transfer Money',
+            onPressed: () => _showTransferDialog(context, ref, wallets, settings.currencySymbol),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -327,6 +336,137 @@ class WalletsScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showTransferDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<WalletModel> wallets,
+    String currencySymbol,
+  ) {
+    if (wallets.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need at least 2 wallets to transfer funds.')),
+      );
+      return;
+    }
+
+    String fromWalletId = wallets[0].id;
+    String toWalletId = wallets[1].id;
+    final amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Transfer Funds'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('From Account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                initialValue: fromWalletId,
+                items: wallets.map((w) {
+                  return DropdownMenuItem(
+                    value: w.id,
+                    child: Text('${w.icon} ${w.name}'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setDialogState(() {
+                      fromWalletId = val;
+                      if (toWalletId == fromWalletId) {
+                        toWalletId = wallets.firstWhere((w) => w.id != fromWalletId).id;
+                      }
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text('To Account', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                initialValue: toWalletId,
+                items: wallets.where((w) => w.id != fromWalletId).map((w) {
+                  return DropdownMenuItem(
+                    value: w.id,
+                    child: Text('${w.icon} ${w.name}'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => toWalletId = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              Text('Transfer Amount ($currencySymbol)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: '$currencySymbol ',
+                  hintText: '0.00',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+                if (amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid amount')),
+                  );
+                  return;
+                }
+
+                final fromWallet = wallets.firstWhere((w) => w.id == fromWalletId);
+                final toWallet = wallets.firstWhere((w) => w.id == toWalletId);
+
+                // Add transfer expense from source
+                await ref.read(transactionsProvider.notifier).addTransaction(
+                      title: 'Transfer to ${toWallet.name}',
+                      amount: amount,
+                      type: TransactionType.expense,
+                      categoryId: 'other',
+                      walletId: fromWallet.id,
+                      date: DateTime.now(),
+                      note: 'Inter-account fund transfer',
+                    );
+
+                // Add transfer income to destination
+                await ref.read(transactionsProvider.notifier).addTransaction(
+                      title: 'Transfer from ${fromWallet.name}',
+                      amount: amount,
+                      type: TransactionType.income,
+                      categoryId: 'other',
+                      walletId: toWallet.id,
+                      date: DateTime.now(),
+                      note: 'Inter-account fund transfer',
+                    );
+
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Transferred $currencySymbol${amount.toStringAsFixed(2)} from ${fromWallet.name} to ${toWallet.name} ✓'),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              },
+              child: const Text('Transfer'),
+            ),
+          ],
         ),
       ),
     );

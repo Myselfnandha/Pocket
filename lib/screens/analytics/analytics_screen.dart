@@ -184,6 +184,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       spots.add(FlSpot(day.toDouble(), dailySpending[day] ?? 0));
     }
 
+    final monthExpenses = monthTxs.where((tx) => tx.type == TransactionType.expense).toList();
+    final currencyFormat = NumberFormat('#,##0.00');
+
     final maxSpend = dailySpending.values.fold(0.0, (m, v) => v > m ? v : m);
     final maxY = maxSpend > 0 ? (maxSpend * 1.25) : 1000.0;
 
@@ -423,6 +426,45 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
               ),
             ),
+            // Category Breakdown Section
+            if (monthExpenses.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Category Breakdown',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 180,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 3,
+                          centerSpaceRadius: 42,
+                          sections: _buildPieSections(monthExpenses, categories, totalExpense),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ..._buildCategoryLegend(monthExpenses, categories, totalExpense, settings.currencySymbol, currencyFormat, isDark),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // Export Actions Row
@@ -480,6 +522,129 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         ),
       ),
     );
+  }
+
+  List<PieChartSectionData> _buildPieSections(
+    List<TransactionModel> expenses,
+    List<CategoryModel> categories,
+    double totalExpenses,
+  ) {
+    final Map<String, double> catMap = {};
+    for (final tx in expenses) {
+      catMap[tx.categoryId] = (catMap[tx.categoryId] ?? 0.0) + tx.amount;
+    }
+
+    final sorted = catMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final top4 = sorted.take(4).toList();
+    final otherTotal = sorted.skip(4).fold(0.0, (sum, e) => sum + e.value);
+
+    final colors = [
+      AppColors.primaryGreenLight,
+      AppColors.accentOrange,
+      AppColors.infoBlue,
+      const Color(0xFFAB47BC),
+      const Color(0xFF78909C),
+    ];
+
+    final sections = <PieChartSectionData>[];
+    for (int i = 0; i < top4.length; i++) {
+      final entry = top4[i];
+      final pct = totalExpenses > 0 ? (entry.value / totalExpenses * 100) : 0.0;
+      final cat = categories.firstWhere(
+        (c) => c.id == entry.key,
+        orElse: () => const CategoryModel(id: '', name: 'Other', icon: '📦', colorValue: 0xFF2E7D32),
+      );
+
+      sections.add(
+        PieChartSectionData(
+          color: colors[i % colors.length],
+          value: entry.value,
+          title: '${pct.toStringAsFixed(0)}%',
+          radius: 40,
+          titleStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          badgeWidget: Text(cat.icon, style: const TextStyle(fontSize: 14)),
+          badgePositionPercentageOffset: 1.25,
+        ),
+      );
+    }
+
+    if (otherTotal > 0) {
+      final pct = totalExpenses > 0 ? (otherTotal / totalExpenses * 100) : 0.0;
+      sections.add(
+        PieChartSectionData(
+          color: colors[4],
+          value: otherTotal,
+          title: '${pct.toStringAsFixed(0)}%',
+          radius: 36,
+          titleStyle: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    return sections;
+  }
+
+  List<Widget> _buildCategoryLegend(
+    List<TransactionModel> expenses,
+    List<CategoryModel> categories,
+    double totalExpenses,
+    String currencySymbol,
+    NumberFormat formatter,
+    bool isDark,
+  ) {
+    final Map<String, double> catMap = {};
+    for (final tx in expenses) {
+      catMap[tx.categoryId] = (catMap[tx.categoryId] ?? 0.0) + tx.amount;
+    }
+
+    final sorted = catMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sorted.take(5).map((entry) {
+      final cat = categories.firstWhere(
+        (c) => c.id == entry.key,
+        orElse: () => const CategoryModel(id: '', name: 'Other', icon: '📦', colorValue: 0xFF2E7D32),
+      );
+      final pct = totalExpenses > 0 ? (entry.value / totalExpenses * 100) : 0.0;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Text(cat.icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                cat.name,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Text(
+              '${pct.toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$currencySymbol${formatter.format(entry.value)}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 }
 

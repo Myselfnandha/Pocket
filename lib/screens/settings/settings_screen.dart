@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
@@ -144,10 +145,22 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.biometricEnabled,
                 activeThumbColor: AppColors.primaryGreenLight,
                 onChanged: (val) {
-                  ref.read(settingsProvider.notifier).updateSettings(
-                        settings.copyWith(biometricEnabled: val),
-                      );
+                  if (val && settings.pinCode == null) {
+                    _showSetPinDialog(context, ref, settings);
+                  } else {
+                    ref.read(settingsProvider.notifier).updateSettings(
+                          settings.copyWith(biometricEnabled: val, pinLockEnabled: val),
+                        );
+                  }
                 },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.pin_outlined, color: AppColors.accentOrange),
+                title: const Text('Change 4-Digit PIN', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.pinCode != null ? 'PIN is configured (••••)' : 'Default PIN: 1234'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showSetPinDialog(context, ref, settings),
               ),
             ],
           ),
@@ -158,8 +171,16 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsGroup(
             isDark: isDark,
             children: [
+              ListTile(
+                leading: const Icon(Icons.slideshow_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Replay Onboarding Tour', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('View the welcome guide and feature tour'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/onboarding'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               const ListTile(
-                leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
+                leading: Icon(Icons.info_outline_rounded, color: AppColors.infoBlue),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text('v1.0.0 • Material 3 Transaction Tracker'),
               ),
@@ -467,6 +488,81 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSetPinDialog(
+    BuildContext context,
+    WidgetRef ref,
+    UserSettingsModel settings,
+  ) {
+    final pinController = TextEditingController(text: settings.pinCode ?? '1234');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Set 4-Digit Security PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter a 4-digit PIN to secure your transaction and wallet data:',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 24,
+                letterSpacing: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: const InputDecoration(
+                hintText: '••••',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final pin = pinController.text.trim();
+              if (pin.length == 4 && int.tryParse(pin) != null) {
+                ref.read(settingsProvider.notifier).updateSettings(
+                      settings.copyWith(
+                        pinCode: pin,
+                        biometricEnabled: true,
+                        pinLockEnabled: true,
+                      ),
+                    );
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Security PIN saved successfully ✓'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid 4-digit numeric PIN'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save PIN'),
+          ),
+        ],
       ),
     );
   }

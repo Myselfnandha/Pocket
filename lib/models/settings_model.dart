@@ -18,7 +18,7 @@ class UserSettingsModel {
     this.biometricEnabled = false,
     this.pinLockEnabled = false,
     this.pinCode,
-    this.isOnboarded = true,
+    this.isOnboarded = false,
   });
 
   UserSettingsModel copyWith({
@@ -65,6 +65,6 @@ class UserSettingsModel {
         biometricEnabled: json['biometricEnabled'] as bool? ?? false,
         pinLockEnabled: json['pinLockEnabled'] as bool? ?? false,
         pinCode: json['pinCode'] as String?,
-        isOnboarded: json['isOnboarded'] as bool? ?? true,
+        isOnboarded: json['isOnboarded'] as bool? ?? false,
       );
 }
