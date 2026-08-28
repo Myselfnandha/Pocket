@@ -18,7 +18,7 @@ on:
         required: false
         default: '1'
 
-# Cancel in-progress runs for the same branch/tag to save runner time
+# Cancel obsolete in-flight runs immediately
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,12 +33,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Fast Shallow Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Extract Version Info from Git Tag / Run
+      - name: Extract Version Info
         id: versioning
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -63,13 +63,13 @@ jobs:
           fi
           echo "Building Version: $VERSION_NAME+$BUILD_NUMBER"
 
-      - name: Set up Java Development Kit (JDK 17)
+      - name: Set up Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Gradle Build Cache & Daemon
+      - name: Setup Fast Gradle Cache & Daemon
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -81,7 +81,7 @@ jobs:
           cache: true
           cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
 
-      - name: Cache Pub Dependencies
+      - name: Cache Pub Dependencies & Artifacts
         uses: actions/cache@v4
         with:
           path: |
@@ -91,27 +91,26 @@ jobs:
           restore-keys: |
             pub-cache-${{ runner.os }}-
 
-      - name: Install Project Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Analyze Flutter Code
+      - name: Quick Static Analysis
         run: flutter analyze --no-fatal-infos
 
-      - name: Run Automated Test Suite
-        run: flutter test
+      - name: Run Tests in Parallel
+        run: flutter test --concurrency=4
 
-      - name: Build Universal Release APK
+      - name: Fast Universal Release APK Build
         run: |
           if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
-          flutter build apk --release \
+          flutter build apk --release --no-pub \
             --build-name="${{ steps.versioning.outputs.VERSION_NAME }}" \
             --build-number="${{ steps.versioning.outputs.BUILD_NUMBER }}"
 
-      - name: Rename and Package APK
+      - name: Package APK for Distribution
         run: |
           mkdir -p dist/
           cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
-          echo "Output package created at dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
 
       - name: Upload Universal APK Artifact
         uses: actions/upload-artifact@v4
