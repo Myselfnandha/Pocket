@@ -1,12 +1,9 @@
-name: Build Pocket Universal APK
+name: Release Universal APK
 
 on:
   push:
-    branches: [ main, master ]
     tags:
       - 'v*'
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       version_name:
@@ -18,9 +15,9 @@ on:
         required: false
         default: '1'
 
-# Cancel obsolete in-flight runs immediately
+# Cancel obsolete in-flight runs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -28,7 +25,7 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  build_and_release:
     name: Build & Package Universal APK
     runs-on: ubuntu-latest
 
@@ -57,11 +54,11 @@ jobs:
           else
             VERSION_NAME="1.0.0"
             BUILD_NUMBER="${{ github.run_number }}"
-            echo "VERSION_TAG=v1.0.0-build.${BUILD_NUMBER}" >> $GITHUB_OUTPUT
+            echo "VERSION_TAG=v1.0.0" >> $GITHUB_OUTPUT
             echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
             echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
           fi
-          echo "Building Version: $VERSION_NAME+$BUILD_NUMBER"
+          echo "Building Release: $VERSION_NAME+$BUILD_NUMBER ($VERSION_TAG)"
 
       - name: Set up Java JDK 17
         uses: actions/setup-java@v4
@@ -94,7 +91,7 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Quick Static Analysis
+      - name: Run Static Analysis
         run: flutter analyze --no-fatal-infos
 
       - name: Run Tests in Parallel
@@ -120,7 +117,6 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk
