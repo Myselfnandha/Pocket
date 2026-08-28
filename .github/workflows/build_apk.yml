@@ -1,9 +1,8 @@
-name: Release Universal APK
+name: Build & Release Universal APK
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       version_name:
@@ -15,9 +14,9 @@ on:
         required: false
         default: '1'
 
-# Cancel obsolete in-flight runs
+# Single run per commit
 concurrency:
-  group: release-${{ github.ref }}
+  group: pocket-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -25,8 +24,8 @@ permissions:
   packages: write
 
 jobs:
-  build_and_release:
-    name: Build & Package Universal APK
+  build:
+    name: Build & Release Universal APK
     runs-on: ubuntu-latest
 
     steps:
@@ -38,14 +37,7 @@ jobs:
       - name: Extract Version Info
         id: versioning
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/v}"
-            VERSION_NAME=$(echo "$TAG_NAME" | cut -d'+' -f1)
-            BUILD_NUMBER="${{ github.run_number }}"
-            echo "VERSION_TAG=v${TAG_NAME}" >> $GITHUB_OUTPUT
-            echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
-            echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version_name }}" != "" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version_name }}" != "" ]]; then
             VERSION_NAME="${{ github.event.inputs.version_name }}"
             BUILD_NUMBER="${{ github.event.inputs.build_number }}"
             echo "VERSION_TAG=v${VERSION_NAME}" >> $GITHUB_OUTPUT
@@ -58,7 +50,7 @@ jobs:
             echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
             echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
           fi
-          echo "Building Release: $VERSION_NAME+$BUILD_NUMBER ($VERSION_TAG)"
+          echo "Building Version: $VERSION_NAME+$BUILD_NUMBER ($VERSION_TAG)"
 
       - name: Set up Java JDK 17
         uses: actions/setup-java@v4
@@ -91,7 +83,7 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Run Static Analysis
+      - name: Quick Static Analysis
         run: flutter analyze --no-fatal-infos
 
       - name: Run Tests in Parallel
@@ -125,5 +117,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
