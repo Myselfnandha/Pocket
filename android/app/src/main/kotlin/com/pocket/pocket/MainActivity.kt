@@ -11,11 +11,14 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CONTACT_CHANNEL = "com.pocket.pocket/contact_picker"
     private val SHARED_TX_CHANNEL = "com.pocket.pocket/shared_transaction"
+    private val WIDGET_CHANNEL = "com.pocket.pocket/widget_events"
     private val REQUEST_CODE_PICK_CONTACT = 1001
 
     private var pendingResult: MethodChannel.Result? = null
     private var sharedTxChannel: MethodChannel? = null
+    private var widgetChannel: MethodChannel? = null
     private var pendingSharedTransactionPayload: String? = null
+    private var pendingWidgetUri: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -58,14 +61,29 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Check if app was started with intent extra
+        // 3. Widget Quick Add Launch Channel
+        widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).apply {
+            setMethodCallHandler { call, result ->
+                if (call.method == "getPendingWidgetUri") {
+                    val uri = pendingWidgetUri
+                    pendingWidgetUri = null
+                    result.success(uri)
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        // Check if app was started with intent extra or widget uri
         handleIntentForSharedTransaction(intent)
+        handleIntentForWidget(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntentForSharedTransaction(intent)
+        handleIntentForWidget(intent)
     }
 
     private fun handleIntentForSharedTransaction(intent: Intent?) {
@@ -73,6 +91,14 @@ class MainActivity : FlutterActivity() {
         if (!payload.isNullOrBlank()) {
             pendingSharedTransactionPayload = payload
             sharedTxChannel?.invokeMethod("onSharedTransactionReceived", payload)
+        }
+    }
+
+    private fun handleIntentForWidget(intent: Intent?) {
+        val dataUri = intent?.dataString
+        if (dataUri != null && dataUri.contains("quick-add")) {
+            pendingWidgetUri = dataUri
+            widgetChannel?.invokeMethod("onWidgetUriReceived", dataUri)
         }
     }
 

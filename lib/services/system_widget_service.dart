@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet_model.dart';
@@ -44,25 +45,51 @@ class SystemWidgetService {
     }
   }
 
+  static const MethodChannel _nativeChannel = MethodChannel('com.pocket.pocket/widget_events');
+
   /// Listens for quick action deep links triggered from the Android system home screen widget
   static void registerWidgetLaunchCallback(Function(Uri uri) onLaunchUri) {
-    // Check initial launch
+    // 1. Check initial launch via HomeWidget plugin
     HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
       if (uri != null) {
         onLaunchUri(uri);
       }
     });
 
-    // Listen to foreground/background launches
+    // 2. Listen to foreground/background launches via HomeWidget stream
     _widgetSubscription?.cancel();
     _widgetSubscription = HomeWidget.widgetClicked.listen((uri) {
       if (uri != null) {
         onLaunchUri(uri);
       }
     });
+
+    // 3. Listen to native Android Intent channel directly (instant fallback)
+    _nativeChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onWidgetUriReceived') {
+        final uriStr = call.arguments as String?;
+        if (uriStr != null) {
+          final uri = Uri.tryParse(uriStr);
+          if (uri != null) {
+            onLaunchUri(uri);
+          }
+        }
+      }
+    });
+
+    // 4. Check if native channel has a pending widget uri
+    _nativeChannel.invokeMethod<String>('getPendingWidgetUri').then((uriStr) {
+      if (uriStr != null) {
+        final uri = Uri.tryParse(uriStr);
+        if (uri != null) {
+          onLaunchUri(uri);
+        }
+      }
+    });
   }
 
   static void dispose() {
     _widgetSubscription?.cancel();
+    _nativeChannel.setMethodCallHandler(null);
   }
 }

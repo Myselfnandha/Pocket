@@ -60,26 +60,24 @@ class _PocketAppState extends ConsumerState<PocketApp> {
   }
 
   void _handleWidgetLaunch(Uri uri) {
-    if (uri.host == 'quick-add' || uri.path.contains('quick-add') || uri.toString().contains('quick-add')) {
+    final uriStr = uri.toString();
+    if (uri.host == 'quick-add' || uri.path.contains('quick-add') || uriStr.contains('quick-add')) {
       final typeParam = uri.queryParameters['type'];
       final initialType = typeParam == 'income' ? TransactionType.income : TransactionType.expense;
 
-      void launchPopup() {
+      void showPopup([int retries = 0]) {
+        if (!mounted) return;
         final navContext = rootNavigatorKey.currentContext;
-        if (navContext != null) {
+        if (navContext != null && navContext.mounted) {
           QuickAddTransactionDialog.show(navContext, initialType: initialType);
-        } else {
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (!mounted) return;
-            final ctx = rootNavigatorKey.currentContext;
-            if (ctx != null && ctx.mounted) {
-              QuickAddTransactionDialog.show(ctx, initialType: initialType);
-            }
+        } else if (retries < 12) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            showPopup(retries + 1);
           });
         }
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) => launchPopup());
+      WidgetsBinding.instance.addPostFrameCallback((_) => showPopup());
     }
   }
 
