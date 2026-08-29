@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="12dp">
 
     <!-- Header: App Name and Quick Launch -->
     <LinearLayout
@@ -19,8 +19,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.05"
             android:text="POCKET"
             android:textColor="#4CAF50"
             android:textSize="13sp"
@@ -30,7 +28,6 @@
             android:id="@+id/widget_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
             android:text="Today"
             android:textColor="#8E8E8E"
             android:textSize="11sp" />
@@ -56,7 +53,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
                 android:text="TOTAL BALANCE"
                 android:textColor="#9E9E9E"
                 android:textSize="9.5sp"
@@ -67,19 +63,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:fontFamily="sans-serif-black"
                 android:text="₹0.00"
                 android:textColor="#FFFFFF"
-                android:textSize="17sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Divider -->
-        <View
+        <!-- Divider using ImageView for 100% RemoteViews compatibility -->
+        <ImageView
             android:layout_width="1dp"
             android:layout_height="match_parent"
-            android:layout_marginHorizontal="6dp"
-            android:background="#2E2E2E" />
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="6dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="#2E2E2E"
+            android:contentDescription="@null" />
 
         <!-- Today Expense Column -->
         <LinearLayout
@@ -91,7 +90,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
                 android:text="TODAY SPENT"
                 android:textColor="#9E9E9E"
                 android:textSize="9.5sp"
@@ -102,7 +100,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:fontFamily="sans-serif-black"
                 android:text="₹0.00"
                 android:textColor="#EF5350"
                 android:textSize="15sp"
@@ -114,7 +111,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -122,8 +119,9 @@
         <LinearLayout
             android:id="@+id/btn_quick_expense"
             android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="6dp"
+            android:layout_height="34dp"
+            android:layout_marginRight="4dp"
+            android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button_expense"
             android:gravity="center"
@@ -132,8 +130,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:text="+ Expense"
+                android:text="- Expense"
                 android:textColor="#EF5350"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -143,8 +140,9 @@
         <LinearLayout
             android:id="@+id/btn_quick_income"
             android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="6dp"
+            android:layout_height="34dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button_income"
             android:gravity="center"
@@ -153,7 +151,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
                 android:text="+ Income"
                 android:textColor="#4CAF50"
                 android:textSize="12sp"
