@@ -23,10 +23,12 @@ class PocketWidgetProvider : HomeWidgetProvider() {
                     val totalBalance = widgetData.getString("total_balance", "₹0.00") ?: "₹0.00"
                     val todayExpense = widgetData.getString("today_expense", "₹0.00") ?: "₹0.00"
                     val currentDate = widgetData.getString("current_date", "Today") ?: "Today"
+                    val accountsSummary = widgetData.getString("accounts_summary", "No active accounts") ?: "No active accounts"
 
                     setTextViewText(R.id.widget_total_balance, totalBalance)
                     setTextViewText(R.id.widget_today_expense, todayExpense)
                     setTextViewText(R.id.widget_date, currentDate)
+                    setTextViewText(R.id.widget_accounts_summary, accountsSummary)
 
                     // Root tap -> open main app
                     val mainIntent = Intent(context, MainActivity::class.java).apply {
@@ -42,33 +44,19 @@ class PocketWidgetProvider : HomeWidgetProvider() {
                     )
                     setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
 
-                    // Quick Expense button -> open instant quick-add popup with expense type
-                    val expenseIntent = Intent(context, MainActivity::class.java).apply {
+                    // Quick Add button -> open instant quick-add popup
+                    val quickAddIntent = Intent(context, MainActivity::class.java).apply {
                         action = Intent.ACTION_VIEW
-                        setData(Uri.parse("pocket://quick-add?type=expense"))
+                        setData(Uri.parse("pocket://quick-add"))
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
-                    val expensePendingIntent = PendingIntent.getActivity(
+                    val quickAddPendingIntent = PendingIntent.getActivity(
                         context,
                         101,
-                        expenseIntent,
+                        quickAddIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
                     )
-                    setOnClickPendingIntent(R.id.btn_quick_expense, expensePendingIntent)
-
-                    // Quick Income button -> open instant quick-add popup with income type
-                    val incomeIntent = Intent(context, MainActivity::class.java).apply {
-                        action = Intent.ACTION_VIEW
-                        setData(Uri.parse("pocket://quick-add?type=income"))
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    }
-                    val incomePendingIntent = PendingIntent.getActivity(
-                        context,
-                        102,
-                        incomeIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-                    )
-                    setOnClickPendingIntent(R.id.btn_quick_income, incomePendingIntent)
+                    setOnClickPendingIntent(R.id.btn_quick_add, quickAddPendingIntent)
                 }
                 appWidgetManager.updateAppWidget(widgetId, views)
             } catch (_: Exception) {

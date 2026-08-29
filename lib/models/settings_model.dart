@@ -3,6 +3,7 @@ enum ManualThemeStyle { light, dark, pureBlack }
 
 class UserSettingsModel {
   final String userName;
+  final String? userPhoneNumber;
   final String currencySymbol;
   final String currencyCode;
   final AppThemeMode themeMode;
@@ -22,6 +23,7 @@ class UserSettingsModel {
 
   const UserSettingsModel({
     this.userName = '',
+    this.userPhoneNumber,
     this.currencySymbol = '₹',
     this.currencyCode = 'INR',
     this.themeMode = AppThemeMode.autoTime,
@@ -40,6 +42,7 @@ class UserSettingsModel {
 
   UserSettingsModel copyWith({
     String? userName,
+    String? userPhoneNumber,
     String? currencySymbol,
     String? currencyCode,
     AppThemeMode? themeMode,
@@ -57,6 +60,7 @@ class UserSettingsModel {
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
+      userPhoneNumber: userPhoneNumber ?? this.userPhoneNumber,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       currencyCode: currencyCode ?? this.currencyCode,
       themeMode: themeMode ?? this.themeMode,
@@ -76,6 +80,7 @@ class UserSettingsModel {
 
   Map<String, dynamic> toJson() => {
         'userName': userName,
+        'userPhoneNumber': userPhoneNumber,
         'currencySymbol': currencySymbol,
         'currencyCode': currencyCode,
         'themeMode': themeMode.name,
@@ -94,7 +99,8 @@ class UserSettingsModel {
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
       UserSettingsModel(
-        userName: json['userName'] as String? ?? 'Nandha',
+        userName: json['userName'] as String? ?? '',
+        userPhoneNumber: json['userPhoneNumber'] as String?,
         currencySymbol: json['currencySymbol'] as String? ?? '₹',
         currencyCode: json['currencyCode'] as String? ?? 'INR',
         themeMode: AppThemeMode.values.byName(

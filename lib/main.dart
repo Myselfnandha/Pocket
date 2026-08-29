@@ -105,12 +105,14 @@ class _PocketAppState extends ConsumerState<PocketApp> {
     final totalBalance = ref.watch(totalBalanceProvider);
     final monthlyStats = ref.watch(monthlyStatsProvider);
     final settings = ref.watch(settingsProvider);
+    final wallets = ref.watch(walletsWithBalancesProvider);
 
-    // Sync real-time balance and today's spend to Android System Home Screen App Widget
+    // Sync real-time balance, today's spend and active accounts to Android System Home Screen App Widget
     SystemWidgetService.updateWidgetData(
       totalBalance: totalBalance,
       todayExpense: monthlyStats.todayExpense,
       currencySymbol: settings.currencySymbol,
+      wallets: wallets,
     );
 
     return MaterialApp.router(

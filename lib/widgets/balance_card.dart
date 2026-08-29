@@ -285,7 +285,9 @@ class BalanceCard extends ConsumerWidget {
                         ),
                         const Spacer(),
                         Text(
-                          wallet.name,
+                          wallet.maskedAccountNumber.isNotEmpty
+                              ? '${wallet.name} (${wallet.maskedAccountNumber})'
+                              : wallet.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

@@ -12,6 +12,7 @@ class WalletModel {
   final WalletType walletType;
   final double? spendingLimit;
   final bool isDefault;
+  final String? accountNumber; // Last 4 digits e.g. "4821"
 
   const WalletModel({
     required this.id,
@@ -23,9 +24,16 @@ class WalletModel {
     this.walletType = WalletType.bank,
     this.spendingLimit,
     this.isDefault = false,
+    this.accountNumber,
   });
 
   Color get color => Color(colorValue);
+
+  String get maskedAccountNumber {
+    if (accountNumber == null || accountNumber!.trim().isEmpty) return '';
+    final digits = accountNumber!.trim();
+    return digits.length <= 4 ? '•••• $digits' : '•••• ${digits.substring(digits.length - 4)}';
+  }
 
   WalletModel copyWith({
     String? id,
@@ -37,6 +45,7 @@ class WalletModel {
     WalletType? walletType,
     double? spendingLimit,
     bool? isDefault,
+    String? accountNumber,
   }) {
     return WalletModel(
       id: id ?? this.id,
@@ -48,6 +57,7 @@ class WalletModel {
       walletType: walletType ?? this.walletType,
       spendingLimit: spendingLimit ?? this.spendingLimit,
       isDefault: isDefault ?? this.isDefault,
+      accountNumber: accountNumber ?? this.accountNumber,
     );
   }
 
@@ -61,6 +71,7 @@ class WalletModel {
         'walletType': walletType.name,
         'spendingLimit': spendingLimit,
         'isDefault': isDefault,
+        'accountNumber': accountNumber,
       };
 
   factory WalletModel.fromJson(Map<String, dynamic> json) => WalletModel(
@@ -75,6 +86,7 @@ class WalletModel {
         ),
         spendingLimit: (json['spendingLimit'] as num?)?.toDouble(),
         isDefault: json['isDefault'] as bool? ?? false,
+        accountNumber: json['accountNumber'] as String?,
       );
 }
 

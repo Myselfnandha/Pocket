@@ -66,13 +66,6 @@ GoRouter createRouter(bool isOnboarded) {
         builder: (context, state) => const TransactionsListScreen(),
       ),
 
-      // Settings (Dedicated Screen)
-      GoRoute(
-        path: '/settings',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const SettingsScreen(),
-      ),
-
       // Recurring Rules (Dedicated Screen)
       GoRoute(
         path: '/recurring-rules',
@@ -115,13 +108,13 @@ GoRouter createRouter(bool isOnboarded) {
         },
       ),
 
-      // 3-Tab Navigation Shell: Home, Analytics, Wallets
+      // 4-Tab Navigation Shell: Home, Analytics, Wallets, Settings
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppScaffold(navigationShell: navigationShell);
         },
         branches: [
-          // Tab 1: Home
+          // Tab 1: Home (Branch 0)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -131,7 +124,7 @@ GoRouter createRouter(bool isOnboarded) {
             ],
           ),
 
-          // Tab 2: Analytics
+          // Tab 2: Analytics (Branch 1)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -141,12 +134,22 @@ GoRouter createRouter(bool isOnboarded) {
             ],
           ),
 
-          // Tab 3: Wallets
+          // Tab 3: Wallets (Branch 2)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/wallets',
                 builder: (context, state) => const WalletsScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 4: Settings (Branch 3)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),

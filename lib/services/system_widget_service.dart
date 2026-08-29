@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
+import '../models/wallet_model.dart';
 
 class SystemWidgetService {
   static const String androidWidgetName = 'PocketWidgetProvider';
@@ -12,6 +13,7 @@ class SystemWidgetService {
     required double totalBalance,
     required double todayExpense,
     required String currencySymbol,
+    List<WalletModel>? wallets,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
@@ -19,9 +21,18 @@ class SystemWidgetService {
       final formattedExpense = '$currencySymbol${currencyFormat.format(todayExpense)}';
       final formattedDate = DateFormat('d MMM').format(DateTime.now());
 
+      String accountsSummary = 'No accounts created';
+      if (wallets != null && wallets.isNotEmpty) {
+        accountsSummary = wallets.map((w) {
+          final last4 = w.maskedAccountNumber.isNotEmpty ? ' (${w.maskedAccountNumber})' : '';
+          return '${w.icon} ${w.name}$last4: $currencySymbol${currencyFormat.format(w.currentBalance)}';
+        }).join('  •  ');
+      }
+
       await HomeWidget.saveWidgetData<String>('total_balance', formattedBalance);
       await HomeWidget.saveWidgetData<String>('today_expense', formattedExpense);
       await HomeWidget.saveWidgetData<String>('current_date', formattedDate);
+      await HomeWidget.saveWidgetData<String>('accounts_summary', accountsSummary);
 
       await HomeWidget.updateWidget(
         name: androidWidgetName,

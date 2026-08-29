@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -24,16 +25,31 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _scrollController = ScrollController();
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  bool _isMonthBarVisible = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
+    _scrollController.addListener(() {
+      final direction = _scrollController.position.userScrollDirection;
+      if (direction == ScrollDirection.reverse && _isMonthBarVisible) {
+        setState(() => _isMonthBarVisible = false);
+      } else if (direction == ScrollDirection.forward && !_isMonthBarVisible) {
+        setState(() => _isMonthBarVisible = true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -165,42 +181,48 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       ),
       body: Column(
         children: [
-          // Month Selector Bar (Global across both sub-tabs)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded),
-                    color: canGoBack ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
-                    onPressed: canGoBack ? () => _previousMonth(minDate) : null,
-                  ),
-                  Text(
-                    DateFormat('MMMM yyyy').format(_currentMonth),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          // Month Selector Bar (Only on Insights tab & hides on scroll)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: (_tabController.index == 0 && _isMonthBarVisible)
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left_rounded),
+                            color: canGoBack ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
+                            onPressed: canGoBack ? () => _previousMonth(minDate) : null,
+                          ),
+                          Text(
+                            DateFormat('MMMM yyyy').format(_currentMonth),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right_rounded),
+                            color: canGoForward ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
+                            onPressed: canGoForward ? () => _nextMonth(maxDate) : null,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right_rounded),
-                    color: canGoForward ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
-                    onPressed: canGoForward ? () => _nextMonth(maxDate) : null,
-                  ),
-                ],
-              ),
-            ),
+                  )
+                : const SizedBox.shrink(),
           ),
 
           // Tab Bar Views
@@ -211,6 +233,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 // TAB 1: Insights & Charts
                 _buildInsightsTab(
                   context,
+                  scrollController: _scrollController,
                   isDark: isDark,
                   settings: settings,
                   currencyFormat: currencyFormat,
@@ -221,6 +244,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   monthExpenses: monthExpenses,
                   catExpenseTotals: catExpenseTotals,
                   categories: categories,
+                  categoryBudgets: categoryBudgets,
                   topCategory: topCategory,
                   topCatSpend: topCatSpend,
                   peakDayName: peakDayName,
@@ -254,6 +278,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   // --- TAB 1: Insights & Charts ---
   Widget _buildInsightsTab(
     BuildContext context, {
+    required ScrollController scrollController,
     required bool isDark,
     required dynamic settings,
     required NumberFormat currencyFormat,
@@ -264,6 +289,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     required List<TransactionModel> monthExpenses,
     required Map<String, double> catExpenseTotals,
     required List<CategoryModel> categories,
+    required List<CategoryBudgetModel> categoryBudgets,
     required CategoryModel topCategory,
     required double topCatSpend,
     required String peakDayName,
@@ -275,8 +301,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     required List<TransactionModel> monthTxs,
   }) {
     final now = DateTime.now();
+    final totalBudgetLimit = categoryBudgets.fold(0.0, (s, b) => s + b.monthlyLimit);
+    final remainingBudget = (totalBudgetLimit > 0)
+        ? (totalBudgetLimit - totalExpense)
+        : (totalIncome - totalExpense);
 
     return SingleChildScrollView(
+      controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,10 +463,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                       Container(
                         padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
-                          color: AppColors.incomeGreen.withValues(alpha: 0.15),
+                          color: (remainingBudget >= 0 ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.savings_outlined, size: 16, color: AppColors.incomeGreen),
+                        child: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 16,
+                          color: remainingBudget >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -443,7 +478,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Net Savings',
+                              totalBudgetLimit > 0 ? 'Budget Left' : 'Safe to Spend',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -452,13 +487,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${netSavings >= 0 ? '+' : '-'}${settings.currencySymbol}${currencyFormat.format(netSavings.abs())}',
+                              '${remainingBudget >= 0 ? '+' : '-'}${settings.currencySymbol}${currencyFormat.format(remainingBudget.abs())}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w800,
-                                color: netSavings >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                                color: remainingBudget >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
                               ),
                             ),
                           ],
