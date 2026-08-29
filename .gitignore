@@ -38,5 +38,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 *.jks
+!android/app/pocket-release-key.jks
 *.keystore
 key.properties
