@@ -146,35 +146,162 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // 1. Balance Summary Card
               const BalanceCard(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // 2. Quick Stats Row (Daily Average & Monthly Savings)
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickStatCard(
-                      icon: Icons.local_fire_department_rounded,
-                      iconColor: AppColors.accentOrange,
-                      label: 'Daily Average',
-                      value: '${settings.currencySymbol}${currencyFormat.format(dailyAvg)}',
-                      valueColor: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.lightTextPrimary,
+              // 2. Compact Connected Accounts Strip (2 full + 1/4 of 3rd card visible)
+              Consumer(
+                builder: (context, ref, _) {
+                  final wallets = ref.watch(walletsProvider);
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  // Sizing for 2 full cards + 1/4 of the 3rd card
+                  final cardWidth = (screenWidth - 32 - 16) / 2.28;
+
+                  return SizedBox(
+                    height: 86,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: wallets.length + 1,
+                      separatorBuilder: (context, index) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (index == wallets.length) {
+                          // Quick Add / Manage Accounts Tile at end
+                          return InkWell(
+                            onTap: () => context.push('/wallets'),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: cardWidth * 0.75,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkSurfaceVariant.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.8),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.35 : 0.4),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.account_balance_wallet_outlined, size: 16, color: AppColors.primaryGreenLight),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Manage',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primaryGreenLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final wallet = wallets[index];
+                        final walletColor = wallet.color;
+
+                        return InkWell(
+                          onTap: () => context.push('/wallets'),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: cardWidth,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: walletColor.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        wallet.icon,
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                    if (wallet.isDefault)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Primary',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.primaryGreenLight,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      wallet.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${settings.currencySymbol}${currencyFormat.format(wallet.currentBalance)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: wallet.currentBalance >= 0
+                                            ? (isDark ? Colors.white : Colors.black87)
+                                            : AppColors.expenseRed,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickStatCard(
-                      icon: Icons.savings_outlined,
-                      iconColor: AppColors.incomeGreen,
-                      label: 'Monthly Savings',
-                      value: '${settings.currencySymbol}${currencyFormat.format(monthlyStats.netSavings)}',
-                      valueColor: monthlyStats.netSavings >= 0
-                          ? AppColors.incomeGreen
-                          : AppColors.expenseRed,
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
               const SizedBox(height: 14),
 

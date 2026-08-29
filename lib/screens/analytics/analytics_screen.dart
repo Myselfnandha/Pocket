@@ -358,6 +358,116 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
               ],
             ),
           ),
+          const SizedBox(height: 14),
+
+          // 1.5 Quick Stats Row: Daily Average & Monthly Savings
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentOrange.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.local_fire_department_rounded, size: 16, color: AppColors.accentOrange),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Daily Average',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${settings.currencySymbol}${currencyFormat.format(_currentMonth.year == now.year && _currentMonth.month == now.month ? (now.day > 0 ? totalExpense / now.day : 0.0) : (DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) > 0 ? totalExpense / DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) : 0.0))}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: AppColors.incomeGreen.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.savings_outlined, size: 16, color: AppColors.incomeGreen),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Net Savings',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${netSavings >= 0 ? '+' : '-'}${settings.currencySymbol}${currencyFormat.format(netSavings.abs())}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: netSavings >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 18),
 
           // 2. Spending Breakdown by Category (Pie Chart)
