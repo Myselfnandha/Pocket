@@ -274,6 +274,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     required List<String> dayNames,
     required List<TransactionModel> monthTxs,
   }) {
+    final now = DateTime.now();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
