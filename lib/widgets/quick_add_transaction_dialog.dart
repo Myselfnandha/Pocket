@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/category_model.dart';
 import '../providers/app_providers.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
 class QuickAddTransactionDialog extends ConsumerStatefulWidget {
@@ -86,6 +87,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   String? _selectedWalletId;
   String? _receiptImagePath;
   final DateTime _selectedDate = DateTime.now();
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -160,6 +162,8 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   }
 
   Future<void> _quickSave() async {
+    if (_isSaving) return;
+
     final amountText = _amountController.text.trim();
     final amount = double.tryParse(amountText);
 
@@ -188,6 +192,8 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
       return;
     }
 
+    setState(() => _isSaving = true);
+
     final defaultCatId = _type == TransactionType.expense
         ? (categories.any((c) => c.id == 'food') ? 'food' : categories.first.id)
         : (categories.any((c) => c.id == 'salary') ? 'salary' : categories.first.id);
@@ -214,11 +220,35 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final settings = ref.read(settingsProvider);
     final currencySymbol = settings.currencySymbol;
     final currencyFormat = NumberFormat('#,##0.00');
+    final selectedWallet = wallets.firstWhere((w) => w.id == walletId, orElse: () => wallets.first);
 
-    if (!widget.isStandaloneScreen) {
+    if (widget.isStandaloneScreen) {
+      // Trigger floating Android system notification with 4-second auto-dismiss
+      NotificationService().showTransactionLoggedNotification(
+        title: title,
+        amount: amount,
+        currencySymbol: currencySymbol,
+        isIncome: _type == TransactionType.income,
+        walletName: selectedWallet.name,
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Added "$title" • $currencySymbol${currencyFormat.format(amount)} ✓'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: const Color(0xFF1E1E1E),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Added "$title" • $currencySymbol${currencyFormat.format(amount)}',
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
           duration: const Duration(seconds: 4),
         ),
       );
@@ -709,7 +739,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             child: const Text('More Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           ),
         ElevatedButton(
-          onPressed: _quickSave,
+          onPressed: _isSaving ? null : _quickSave,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryGreenLight,
             foregroundColor: Colors.black,
@@ -717,17 +747,23 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_rounded, size: 18, color: Colors.black),
-              SizedBox(width: 6),
-              Text(
-                'Quick Save',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-              ),
-            ],
-          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                )
+              : const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_rounded, size: 18, color: Colors.black),
+                    SizedBox(width: 6),
+                    Text(
+                      'Quick Save',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                  ],
+                ),
         ),
       ],
     );

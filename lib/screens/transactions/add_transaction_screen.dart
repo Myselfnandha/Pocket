@@ -257,6 +257,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final settings = ref.read(settingsProvider);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: const Color(0xFF1E1E1E),
         content: Text('Saved "$title" (${_type == TransactionType.income ? '+' : '-'}${settings.currencySymbol}${amount.toStringAsFixed(2)}) ✓'),
         duration: const Duration(seconds: 4),
         action: SnackBarAction(

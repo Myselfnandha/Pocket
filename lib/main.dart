@@ -61,7 +61,12 @@ class _PocketAppState extends ConsumerState<PocketApp> {
 
   void _handleWidgetLaunch(Uri uri) {
     final uriStr = uri.toString();
-    if (uri.host == 'quick-add' || uri.path.contains('quick-add') || uriStr.contains('quick-add')) {
+    // If the intent is for the standalone transparent QuickAddActivity, it already renders QuickAddDialogScreen directly.
+    if (uriStr.contains('quick-add-dialog') || uri.host == 'quick-add-dialog') {
+      return;
+    }
+
+    if (uri.host == 'quick-add' || uri.path == '/quick-add' || uri.path == 'quick-add') {
       if (QuickAddTransactionDialog.isOpen) return;
 
       final typeParam = uri.queryParameters['type'];

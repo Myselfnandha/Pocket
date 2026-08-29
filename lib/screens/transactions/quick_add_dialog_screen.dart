@@ -2,8 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/quick_add_transaction_dialog.dart';
 
-class QuickAddDialogScreen extends StatelessWidget {
+class QuickAddDialogScreen extends StatefulWidget {
   const QuickAddDialogScreen({super.key});
+
+  @override
+  State<QuickAddDialogScreen> createState() => _QuickAddDialogScreenState();
+}
+
+class _QuickAddDialogScreenState extends State<QuickAddDialogScreen> {
+  @override
+  void initState() {
+    super.initState();
+    QuickAddTransactionDialog.isOpen = true;
+  }
+
+  @override
+  void dispose() {
+    QuickAddTransactionDialog.isOpen = false;
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

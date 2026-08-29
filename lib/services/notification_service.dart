@@ -78,6 +78,47 @@ class NotificationService {
     } catch (_) {}
   }
 
+  // Show floating heads-up notification with 4-second auto-dismiss when transaction is logged
+  Future<void> showTransactionLoggedNotification({
+    required String title,
+    required double amount,
+    required String currencySymbol,
+    required bool isIncome,
+    String? walletName,
+  }) async {
+    final prefix = isIncome ? '+' : '-';
+    final formattedAmount = '$prefix$currencySymbol${amount.toStringAsFixed(2)}';
+    final body = walletName != null && walletName.isNotEmpty
+        ? '$title • $formattedAmount via $walletName ✓'
+        : '$title • $formattedAmount ✓';
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'pocket_tx_channel_id',
+      'Transaction Updates',
+      channelDescription: 'Instant confirmation heads-up when transactions are recorded',
+      importance: Importance.max,
+      priority: Priority.high,
+      timeoutAfter: 4000, // Auto-dismiss after 4 seconds
+      autoCancel: true,
+      showWhen: true,
+      color: Color(0xFF00E676),
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    try {
+      final notifId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      await _flutterLocalNotificationsPlugin.show(
+        notifId,
+        '⚡ Transaction Logged',
+        body,
+        notificationDetails,
+      );
+    } catch (_) {}
+  }
+
   // Schedule daily spending reminder
   Future<void> scheduleDailyReminder({
     required int hour,
