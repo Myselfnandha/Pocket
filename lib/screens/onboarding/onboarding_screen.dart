@@ -351,7 +351,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
-              color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
             ),
           ),
           const SizedBox(height: 8),
@@ -371,7 +371,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
-              color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
             ),
           ),
           const SizedBox(height: 12),
@@ -452,8 +452,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 10,
-                                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
                               ),
                             ),
                           ],
@@ -610,8 +611,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
                     ),
                   ),
                 ],
@@ -647,8 +649,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Text(
             'Keep your budget on track with automatic reminders and threshold warnings.',
             style: TextStyle(
-              fontSize: 13,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF4A4A4A),
             ),
           ),
           const SizedBox(height: 24),
@@ -680,8 +683,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Daily Spending Check-in', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                          Text('Reminder to log today\'s expenses', style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)),
+                          Text(
+                            'Daily Spending Check-in',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Reminder to log today\'s expenses',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -699,7 +717,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Reminder Time', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Reminder Time',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
                       TextButton.icon(
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
@@ -817,8 +842,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              Text(subtitle, style: TextStyle(fontSize: 10.5, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
+                ),
+              ),
             ],
           ),
         ),
@@ -878,10 +918,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                          Text(
+                            w.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
                           Text(
                             'Starting: ${_selectedCurrencySymbol ?? '₹'}${w.initialBalance.toStringAsFixed(2)}',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
+                            ),
                           ),
                         ],
                       ),

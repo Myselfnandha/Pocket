@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:intl/intl.dart';
 import '../../models/debt_model.dart';
 import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/system_contact_service.dart';
 import '../../theme/app_theme.dart';
 
 class DebtsScreen extends ConsumerStatefulWidget {
@@ -532,20 +532,15 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                       icon: const Icon(Icons.contacts_rounded, color: AppColors.primaryGreenLight),
                       tooltip: 'Pick from Phone Contacts',
                       onPressed: () async {
-                        try {
-                          final hasPermission = await FlutterContacts.requestPermission();
-                          if (hasPermission) {
-                            final contact = await FlutterContacts.openExternalPick();
-                            if (contact != null) {
-                              setDialogState(() {
-                                nameCtrl.text = contact.displayName;
-                                if (contact.phones.isNotEmpty) {
-                                  phoneCtrl.text = contact.phones.first.number;
-                                }
-                              });
+                        final contact = await SystemContactService.pickContact();
+                        if (contact != null) {
+                          setDialogState(() {
+                            nameCtrl.text = contact.name;
+                            if (contact.phone != null && contact.phone!.isNotEmpty) {
+                              phoneCtrl.text = contact.phone!;
                             }
-                          }
-                        } catch (_) {}
+                          });
+                        }
                       },
                     ),
                   ],

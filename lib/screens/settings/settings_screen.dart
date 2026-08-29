@@ -145,26 +145,14 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: Text(
                   settings.themeMode == AppThemeMode.autoTime
                       ? 'Auto Mode (Switches Light/Dark based on time of day)'
-                      : 'Manual: ${settings.manualThemeStyle == ManualThemeStyle.light ? 'Light' : (settings.manualThemeStyle == ManualThemeStyle.pureBlack ? 'Pure Black AMOLED' : 'Dark')}',
+                      : (settings.manualThemeStyle == ManualThemeStyle.light
+                          ? 'Light Mode'
+                          : (settings.manualThemeStyle == ManualThemeStyle.pureBlack || settings.isPureBlackEnabled
+                              ? 'Pure Black AMOLED'
+                              : 'Dark Mode (Charcoal)')),
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.dark_mode_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Pure Black AMOLED', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('True pure black background (#000000) for OLED screens'),
-                value: settings.isPureBlackEnabled,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).updateSettings(
-                        settings.copyWith(
-                          isPureBlackEnabled: val,
-                          manualThemeStyle: val ? ManualThemeStyle.pureBlack : ManualThemeStyle.dark,
-                        ),
-                      );
-                },
               ),
             ],
           ),
@@ -229,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.0.9 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.1.0 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
