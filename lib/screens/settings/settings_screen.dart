@@ -217,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.2.7 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.2.8 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -258,6 +258,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showNotificationSettingsModal(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -371,6 +372,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showThemePicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -472,6 +474,7 @@ class SettingsScreen extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -537,6 +540,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showCategoriesManager(BuildContext context, WidgetRef ref, List<CategoryModel> categories) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

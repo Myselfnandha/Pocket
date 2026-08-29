@@ -916,6 +916,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void _showWalletPicker(List<WalletModel> wallets) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
