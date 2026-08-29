@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/upi_detection_service.dart';
 import '../../theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -134,6 +135,37 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
+          // 3.5 Section: Automated UPI & Banking Detection
+          _buildSectionHeader('REAL-TIME UPI DETECTION'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.bolt_rounded, color: AppColors.incomeGreen),
+                title: const Text('Real-Time Payment Detection', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Auto-detects payments from GPay, PhonePe, Paytm & Banks'),
+                value: settings.realtimePaymentDetectionEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(realtimePaymentDetectionEnabled: val),
+                      );
+                },
+              ),
+              if (settings.realtimePaymentDetectionEnabled) ...[
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                ListTile(
+                  leading: const Icon(Icons.tune_rounded, color: AppColors.primaryGreenLight),
+                  title: const Text('Monitored Apps & Permissions', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Configure supported UPI apps and notification access'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showUpiDetectionSettingsModal(context, ref, settings),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 24),
+
           // 4. Section: Appearance & Theme
           _buildSectionHeader('THEME & APPEARANCE'),
           _buildSettingsGroup(
@@ -217,7 +249,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.1.0 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.2.0 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -365,6 +397,259 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showUpiDetectionSettingsModal(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return FutureBuilder<bool>(
+            future: UpiDetectionService.isNotificationAccessGranted(),
+            builder: (context, snapshot) {
+              final isGranted = snapshot.data ?? false;
+
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.incomeGreen.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.bolt_rounded, color: AppColors.incomeGreen, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Real-Time Payment Detection', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold)),
+                                Text('Auto-detect transactions from UPI & Banks', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Notification Access Status Card
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isGranted
+                              ? (isDark ? const Color(0xFF1B2E20) : const Color(0xFFE8F5E9))
+                              : (isDark ? const Color(0xFF332014) : const Color(0xFFFFF3E0)),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isGranted ? AppColors.incomeGreen.withValues(alpha: 0.4) : AppColors.accentOrange.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isGranted ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                              color: isGranted ? AppColors.incomeGreen : AppColors.accentOrange,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isGranted ? 'Notification Access Granted' : 'Notification Access Required',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13.5,
+                                      color: isGranted ? (isDark ? Colors.white : const Color(0xFF1B5E20)) : (isDark ? Colors.white : const Color(0xFFE65100)),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isGranted
+                                        ? 'Pocket is actively listening for payment alerts in the background.'
+                                        : 'Grant notification permission in Android settings to auto-detect UPI alerts.',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: isGranted ? (isDark ? const Color(0xFFD4EAD6) : const Color(0xFF2E7D32)) : (isDark ? const Color(0xFFFFCC80) : const Color(0xFFEF6C00)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!isGranted) ...[
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accentOrange,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0,
+                                ),
+                                onPressed: () async {
+                                  await UpiDetectionService.openNotificationAccessSettings();
+                                  setModalState(() {});
+                                },
+                                child: const Text('Enable', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      const Text(
+                        'MONITORED PAYMENT APPS',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Supported Apps Switch List
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFF7F9FA),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildAppSwitch(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  iconColor: const Color(0xFF4285F4),
+                                  title: 'Google Pay (GPay)',
+                                  value: settings.detectGooglePay,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectGooglePay: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  iconColor: const Color(0xFF5F259F),
+                                  title: 'PhonePe',
+                                  value: settings.detectPhonePe,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectPhonePe: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  iconColor: const Color(0xFF002E6E),
+                                  title: 'Paytm UPI',
+                                  value: settings.detectPaytm,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectPaytm: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.credit_card_rounded,
+                                  iconColor: Colors.black,
+                                  title: 'CRED',
+                                  value: settings.detectCred,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectCred: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.qr_code_2_rounded,
+                                  iconColor: const Color(0xFF00897B),
+                                  title: 'BHIM / UPI',
+                                  value: settings.detectBhim,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectBhim: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.shopping_bag_outlined,
+                                  iconColor: const Color(0xFFFF9900),
+                                  title: 'Amazon Pay',
+                                  value: settings.detectAmazonPay,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectAmazonPay: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                                const Divider(height: 1),
+                                _buildAppSwitch(
+                                  icon: Icons.account_balance_rounded,
+                                  iconColor: AppColors.primaryGreenLight,
+                                  title: 'Banking Apps (SBI, HDFC, ICICI, Axis, Kotak)',
+                                  value: settings.detectBanks,
+                                  onChanged: (val) {
+                                    ref.read(settingsProvider.notifier).updateSettings(settings.copyWith(detectBanks: val));
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryGreenLight,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAppSwitch({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      secondary: Icon(icon, color: iconColor, size: 20),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+      value: value,
+      activeThumbColor: AppColors.primaryGreenLight,
+      onChanged: onChanged,
     );
   }
 

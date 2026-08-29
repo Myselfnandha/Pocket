@@ -1,28 +1,53 @@
 package com.pocket.pocket
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONArray
 
 class MainActivity : FlutterActivity() {
     private val CONTACT_CHANNEL = "com.pocket.pocket/contact_picker"
+    private val UPI_DETECTOR_CHANNEL = "com.pocket.pocket/upi_detector"
     private val REQUEST_CODE_PICK_CONTACT = 1001
-    private var pendingResult: MethodChannel.Result? = null
+    private var pendingContactResult: MethodChannel.Result? = null
+    private var upiDetectorChannel: MethodChannel? = null
+    private var initialDeepLink: String? = null
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        intent?.data?.let {
+            initialDeepLink = it.toString()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.data?.let { uri ->
+            val link = uri.toString()
+            initialDeepLink = link
+            upiDetectorChannel?.invokeMethod("onDeepLinkReceived", link)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // 1. Contact Picker Channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTACT_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "pickContact") {
-                if (pendingResult != null) {
+                if (pendingContactResult != null) {
                     result.error("ALREADY_PENDING", "A contact picking operation is already in progress", null)
                     return@setMethodCallHandler
                 }
-                pendingResult = result
+                pendingContactResult = result
                 try {
                     val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
                     startActivityForResult(intent, REQUEST_CODE_PICK_CONTACT)
@@ -31,12 +56,74 @@ class MainActivity : FlutterActivity() {
                         val fallbackIntent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
                         startActivityForResult(fallbackIntent, REQUEST_CODE_PICK_CONTACT)
                     } catch (ex: Exception) {
-                        pendingResult = null
+                        pendingContactResult = null
                         result.error("PICKER_FAILED", "Failed to launch system contact picker: ${ex.localizedMessage}", null)
                     }
                 }
             } else {
                 result.notImplemented()
+            }
+        }
+
+        // 2. UPI Real-Time Detector Channel
+        upiDetectorChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPI_DETECTOR_CHANNEL).apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isNotificationAccessGranted" -> {
+                        try {
+                            val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(this@MainActivity)
+                            result.success(enabledListeners.contains(packageName))
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    "openNotificationAccessSettings" -> {
+                        try {
+                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("SETTINGS_ERROR", "Unable to open Notification Access settings: ${e.localizedMessage}", null)
+                        }
+                    }
+                    "getPendingDetectedTransactions" -> {
+                        val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
+                        val jsonStr = prefs.getString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]") ?: "[]"
+                        result.success(jsonStr)
+                    }
+                    "removePendingDetectedTransaction" -> {
+                        val id = call.argument<String>("id")
+                        if (id != null) {
+                            val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
+                            val jsonStr = prefs.getString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]") ?: "[]"
+                            try {
+                                val jsonArray = JSONArray(jsonStr)
+                                val newArray = JSONArray()
+                                for (i in 0 until jsonArray.length()) {
+                                    val item = jsonArray.getJSONObject(i)
+                                    if (item.optString("id") != id) {
+                                        newArray.put(item)
+                                    }
+                                }
+                                prefs.edit().putString(PocketNotificationListenerService.KEY_PENDING_LIST, newArray.toString()).apply()
+                            } catch (_: Exception) {}
+                        }
+                        result.success(true)
+                    }
+                    "clearAllPendingDetectedTransactions" -> {
+                        val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
+                        prefs.edit().putString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]").apply()
+                        result.success(true)
+                    }
+                    "getInitialDeepLink" -> {
+                        val link = initialDeepLink
+                        initialDeepLink = null
+                        result.success(link)
+                    }
+                    else -> result.notImplemented()
+                }
             }
         }
     }
@@ -45,8 +132,8 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQUEST_CODE_PICK_CONTACT) {
-            val result = pendingResult ?: return
-            pendingResult = null
+            val result = pendingContactResult ?: return
+            pendingContactResult = null
 
             if (resultCode != Activity.RESULT_OK || data?.data == null) {
                 result.success(null)
