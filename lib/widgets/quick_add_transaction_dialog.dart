@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/category_model.dart';
 import '../providers/app_providers.dart';
@@ -8,19 +10,49 @@ import '../theme/app_theme.dart';
 
 class QuickAddTransactionDialog extends ConsumerStatefulWidget {
   final TransactionType initialType;
+  final double? initialAmount;
+  final String? initialTitle;
+  final String? initialCategoryId;
+  final String? initialWalletId;
+  final String? initialReceiptImagePath;
+  final String? initialNote;
+  final bool autoFocusNote;
 
   const QuickAddTransactionDialog({
     super.key,
     this.initialType = TransactionType.expense,
+    this.initialAmount,
+    this.initialTitle,
+    this.initialCategoryId,
+    this.initialWalletId,
+    this.initialReceiptImagePath,
+    this.initialNote,
+    this.autoFocusNote = false,
   });
 
   static Future<void> show(
     BuildContext context, {
     TransactionType initialType = TransactionType.expense,
+    double? initialAmount,
+    String? initialTitle,
+    String? initialCategoryId,
+    String? initialWalletId,
+    String? initialReceiptImagePath,
+    String? initialNote,
+    bool autoFocusNote = false,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => QuickAddTransactionDialog(initialType: initialType),
+      builder: (context) => QuickAddTransactionDialog(
+        initialType: initialType,
+        initialAmount: initialAmount,
+        initialTitle: initialTitle,
+        initialCategoryId: initialCategoryId,
+        initialWalletId: initialWalletId,
+        initialReceiptImagePath: initialReceiptImagePath,
+        initialNote: initialNote,
+        autoFocusNote: autoFocusNote,
+      ),
     );
   }
 
@@ -32,8 +64,12 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   late TransactionType _type;
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _notesFocusNode = FocusNode();
+
   String? _selectedCategoryId;
   String? _selectedWalletId;
+  String? _receiptImagePath;
   final DateTime _selectedDate = DateTime.now();
 
   final List<double> _quickAmounts = [50, 100, 200, 500, 1000, 2000];
@@ -42,7 +78,29 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   void initState() {
     super.initState();
     _type = widget.initialType;
+    if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+      _titleController.text = widget.initialTitle!;
+    }
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      _amountController.text = widget.initialAmount! % 1 == 0
+          ? widget.initialAmount!.toInt().toString()
+          : widget.initialAmount!.toStringAsFixed(2);
+    }
+    if (widget.initialNote != null) {
+      _notesController.text = widget.initialNote!;
+    }
+
+    _selectedCategoryId = widget.initialCategoryId;
+    _selectedWalletId = widget.initialWalletId;
+    _receiptImagePath = widget.initialReceiptImagePath;
+
     _titleController.addListener(_onTitleChanged);
+
+    if (widget.autoFocusNote) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _notesFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -50,6 +108,8 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _amountController.dispose();
+    _notesController.dispose();
+    _notesFocusNode.dispose();
     super.dispose();
   }
 
@@ -76,25 +136,39 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     });
   }
 
+  Future<void> _pickReceipt() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() {
+        _receiptImagePath = picked.path;
+      });
+    }
+  }
+
   Future<void> _quickSave() async {
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
-    if (amount <= 0) {
+    final amountText = _amountController.text.trim();
+    final amount = double.tryParse(amountText);
+
+    if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid amount greater than 0'),
+          content: Text('Please enter a valid amount'),
+          backgroundColor: AppColors.expenseRed,
           duration: Duration(seconds: 4),
         ),
       );
       return;
     }
 
-    final categories = ref.read(categoriesProvider);
-    final wallets = ref.read(walletsProvider);
+    final categories = ref.read(categoriesProvider).where((c) => c.type == _type).toList();
+    final wallets = ref.read(walletsWithBalancesProvider);
 
     if (wallets.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please create a wallet first in Wallets screen'),
+          content: Text('Please create a wallet first'),
+          backgroundColor: AppColors.expenseRed,
           duration: Duration(seconds: 4),
         ),
       );
@@ -108,6 +182,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final catId = _selectedCategoryId ?? defaultCatId;
     final walletId = _selectedWalletId ?? wallets.first.id;
     final title = _titleController.text.trim().isEmpty ? 'Quick ${_type.name.capitalize()}' : _titleController.text.trim();
+    final note = _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null;
 
     await ref.read(transactionsProvider.notifier).addTransaction(
           title: title,
@@ -116,6 +191,8 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           categoryId: catId,
           walletId: walletId,
           date: _selectedDate,
+          note: note,
+          receiptImagePath: _receiptImagePath,
         );
 
     if (!mounted) return;
@@ -183,7 +260,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               ),
               const SizedBox(width: 10),
               Text(
-                'Quick Transaction',
+                _receiptImagePath != null ? 'UPI Transaction' : 'Quick Transaction',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -205,6 +282,59 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Attached Screenshot Preview Chip (if shared from UPI app)
+            if (_receiptImagePath != null) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreenLight.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: File(_receiptImagePath!).existsSync()
+                          ? Image.file(
+                              File(_receiptImagePath!),
+                              width: 38,
+                              height: 38,
+                              fit: BoxFit.cover,
+                            )
+                          : const Icon(Icons.receipt_long_rounded, color: AppColors.primaryGreenLight),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'UPI Screenshot Attached',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
+                          ),
+                          Text(
+                            'Auto-scanned receipt attached to record',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.expenseRed),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => setState(() => _receiptImagePath = null),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Segmented Pill Toggle: Expense vs Income
             Container(
               padding: const EdgeInsets.all(3),
@@ -284,54 +414,48 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             // Amount Input Field
             TextField(
               controller: _amountController,
-              autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+              ),
               decoration: InputDecoration(
                 prefixText: '$currencySymbol ',
                 prefixStyle: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
                   color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
                 ),
                 hintText: '0.00',
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
-              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),
 
-            // Fast preset amounts
+            // Quick Amount Presets
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _quickAmounts.map((amt) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: InkWell(
-                      onTap: () => _addQuickAmount(amt),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF262626) : const Color(0xFFEBEBEB),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '+$currencySymbol${amt.toInt()}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
+                    child: ActionChip(
+                      label: Text('+$currencySymbol${amt.toInt()}'),
+                      labelStyle: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _addQuickAmount(amt),
                     ),
                   );
                 }).toList(),
@@ -339,36 +463,38 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 12),
 
-            // Title / Merchant with Smart Auto-Suggest
+            // Title / Merchant Input Field
             TextField(
               controller: _titleController,
               textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                hintText: 'Title or Merchant (e.g. Starbucks)',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              decoration: const InputDecoration(
+                hintText: 'Merchant / Description (e.g. Zomato, Salary)',
+                prefixIcon: Icon(Icons.edit_note_rounded, size: 20),
                 isDense: true,
-                prefixIcon: const Icon(Icons.edit_note_rounded, size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 12),
 
-            // Quick Category Selector Chips
+            // Category Selector Chips
             Text(
-              'CATEGORY',
+              'SELECT CATEGORY',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
               ),
             ),
+            const SizedBox(height: 6),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: categories.map((cat) {
                   final isSelected = _selectedCategoryId == cat.id;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(right: 8),
                     child: InkWell(
                       onTap: () => setState(() => _selectedCategoryId = cat.id),
                       borderRadius: BorderRadius.circular(10),
@@ -376,7 +502,9 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? (_type == TransactionType.expense ? AppColors.expenseRed.withValues(alpha: 0.18) : AppColors.incomeGreen.withValues(alpha: 0.18))
+                              ? (_type == TransactionType.expense
+                                  ? AppColors.expenseRed.withValues(alpha: 0.18)
+                                  : AppColors.incomeGreen.withValues(alpha: 0.18))
                               : (isDark ? const Color(0xFF222222) : const Color(0xFFF2F2F2)),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
@@ -417,7 +545,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
               ),
             ),
             const SizedBox(height: 6),
@@ -449,6 +577,26 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               onChanged: (val) {
                 if (val != null) setState(() => _selectedWalletId = val);
               },
+            ),
+            const SizedBox(height: 12),
+
+            // Notes / Description & Document Attach Section
+            TextField(
+              controller: _notesController,
+              focusNode: _notesFocusNode,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Add description, notes, or tags (optional)...',
+                prefixIcon: const Icon(Icons.notes_rounded, size: 20),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.attach_file_rounded, size: 20, color: AppColors.primaryGreenLight),
+                  tooltip: 'Attach Receipt / Bill',
+                  onPressed: _pickReceipt,
+                ),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
 
             // Category budget warning if applicable

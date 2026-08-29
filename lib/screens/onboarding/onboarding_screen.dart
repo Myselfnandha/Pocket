@@ -6,7 +6,6 @@ import '../../models/wallet_model.dart';
 import '../../models/settings_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
-import '../../services/upi_detection_service.dart';
 import '../../theme/app_theme.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -36,7 +35,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _budgetExceededEnabled = true;
   bool _recurringDueEnabled = true;
   bool _monthlySummaryEnabled = true;
-  bool _realtimePaymentDetectionEnabled = true;
 
   final List<WalletModel> _onboardingWallets = [];
 
@@ -125,7 +123,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 notifyBudgetExceeded: _budgetExceededEnabled,
                 notifyRecurringDue: _recurringDueEnabled,
                 monthlySummaryEnabled: _monthlySummaryEnabled,
-                realtimePaymentDetectionEnabled: _realtimePaymentDetectionEnabled,
                 isOnboarded: true,
               ),
         );
@@ -811,23 +808,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   subtitle: 'Automated breakdown report at month end',
                   value: _monthlySummaryEnabled,
                   onChanged: (v) => setState(() => _monthlySummaryEnabled = v),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 8),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                const SizedBox(height: 8),
-                _buildPreferenceSwitchRow(
-                  icon: Icons.bolt_rounded,
-                  iconColor: AppColors.incomeGreen,
-                  title: 'Real-Time Payment Detection',
-                  subtitle: 'Auto-detect incoming transactions with 1-tap save',
-                  value: _realtimePaymentDetectionEnabled,
-                  onChanged: (v) async {
-                    setState(() => _realtimePaymentDetectionEnabled = v);
-                    if (v) {
-                      await UpiDetectionService.openNotificationAccessSettings();
-                    }
-                  },
                   isDark: isDark,
                 ),
               ],

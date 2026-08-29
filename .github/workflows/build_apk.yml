@@ -2,18 +2,20 @@ name: Build & Release Universal APK
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.0.8)'
+        description: 'Version Name (e.g. 1.2.2)'
         required: false
-        default: '1.0.8'
+        default: '1.2.2'
       build_number:
-        description: 'Build Number (e.g. 8)'
+        description: 'Build Number (e.g. 34)'
         required: false
-        default: '8'
+        default: '34'
 
 concurrency:
   group: pocket-build-${{ github.ref }}
@@ -118,6 +120,7 @@ jobs:
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           files: dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk
           name: Pocket ${{ steps.versioning.outputs.VERSION_TAG }}
@@ -126,6 +129,18 @@ jobs:
           prerelease: false
           generate_release_notes: true
           make_latest: true
-          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Rich Release Summary
+        run: |
+          echo "## 🚀 Pocket ${{ steps.versioning.outputs.VERSION_TAG }} Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ steps.versioning.outputs.VERSION_NAME }}+${{ steps.versioning.outputs.BUILD_NUMBER }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Tag** | [\`${{ steps.versioning.outputs.VERSION_TAG }}\`](https://github.com/${{ github.repository }}/releases/tag/${{ steps.versioning.outputs.VERSION_TAG }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Universal APK** | \`Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download Release APK" >> $GITHUB_STEP_SUMMARY
+          echo "👉 [**Download Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk**](https://github.com/${{ github.repository }}/releases/download/${{ steps.versioning.outputs.VERSION_TAG }}/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk)" >> $GITHUB_STEP_SUMMARY

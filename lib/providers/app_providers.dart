@@ -9,11 +9,9 @@ import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
 import '../models/debt_model.dart';
 import '../models/budget_model.dart';
-import '../models/detected_transaction_model.dart';
 import '../services/storage_service.dart';
 import '../services/backup_service.dart';
 import '../services/notification_service.dart';
-import '../services/upi_detection_service.dart';
 import '../theme/app_theme.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -602,67 +600,5 @@ final currentMonthCategorySpendingProvider = Provider<Map<String, double>>((ref)
 final totalCategoryBudgetLimitProvider = Provider<double>((ref) {
   final budgets = ref.watch(categoryBudgetsProvider);
   return budgets.fold(0.0, (sum, b) => sum + b.monthlyLimit);
-});
-
-// --- Pending Detected Real-Time Transactions Provider ---
-
-class PendingDetectedTransactionsNotifier extends StateNotifier<List<DetectedTransactionModel>> {
-  final Ref _ref;
-
-  PendingDetectedTransactionsNotifier(this._ref) : super([]) {
-    refresh();
-  }
-
-  Future<void> refresh() async {
-    final list = await UpiDetectionService.getPendingDetectedTransactions();
-    state = list;
-
-    // Check if any item was marked 'auto_approved' by notification quick action
-    final autoApproved = list.where((item) => item.status == 'auto_approved').toList();
-    for (final item in autoApproved) {
-      await quickSave(item);
-    }
-  }
-
-  Future<void> quickSave(DetectedTransactionModel detected) async {
-    final wallets = _ref.read(walletsProvider);
-    final categories = _ref.read(categoriesProvider);
-
-    final wallet = UpiDetectionService.matchWalletForApp(detected.sourceApp, wallets) ??
-        (wallets.isNotEmpty ? wallets.first : null);
-    if (wallet == null) return;
-
-    final filteredCats = categories.where((c) => c.type == detected.type).toList();
-    final category = UpiDetectionService.predictCategoryForMerchant(
-      detected.merchant,
-      filteredCats.isNotEmpty ? filteredCats : categories,
-    ) ?? categories.first;
-
-    await _ref.read(transactionsProvider.notifier).addTransaction(
-      title: detected.merchant,
-      amount: detected.amount,
-      type: detected.type,
-      categoryId: category.id,
-      walletId: wallet.id,
-      date: detected.timestamp,
-      note: 'Auto-detected via ${detected.sourceApp}',
-    );
-    await remove(detected.id);
-  }
-
-  Future<void> remove(String id) async {
-    await UpiDetectionService.removePendingDetectedTransaction(id);
-    state = state.where((item) => item.id != id).toList();
-  }
-
-  Future<void> clearAll() async {
-    await UpiDetectionService.clearAllPendingDetectedTransactions();
-    state = [];
-  }
-}
-
-final pendingDetectedTransactionsProvider =
-    StateNotifierProvider<PendingDetectedTransactionsNotifier, List<DetectedTransactionModel>>((ref) {
-  return PendingDetectedTransactionsNotifier(ref);
 });
 

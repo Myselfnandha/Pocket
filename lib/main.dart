@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'models/category_model.dart';
 import 'navigation/app_router.dart';
 import 'providers/app_providers.dart';
-import 'services/storage_service.dart';
 import 'services/notification_service.dart';
+import 'services/shared_transaction_handler.dart';
+import 'services/storage_service.dart';
 import 'services/system_widget_service.dart';
+import 'services/upi_screenshot_parser_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/quick_add_transaction_dialog.dart';
 
@@ -17,45 +19,6 @@ void main() async {
 
   // Process any due recurring transactions automatically
   await storageService.processDueRecurringRules();
-
-  // Sync initial home screen widget data immediately on app start
-  try {
-    final initialWallets = storageService.getWallets();
-    final initialTxs = storageService.getTransactions();
-    final settings = storageService.getSettings();
-
-    double initialTotalBalance = 0.0;
-    for (final w in initialWallets) {
-      double b = w.initialBalance;
-      for (final tx in initialTxs) {
-        if (tx.walletId == w.id) {
-          if (tx.type == TransactionType.income) {
-            b += tx.amount;
-          } else {
-            b -= tx.amount;
-          }
-        }
-      }
-      initialTotalBalance += b;
-    }
-
-    final now = DateTime.now();
-    double initialTodayExpense = 0.0;
-    for (final tx in initialTxs) {
-      if (tx.type == TransactionType.expense &&
-          tx.date.year == now.year &&
-          tx.date.month == now.month &&
-          tx.date.day == now.day) {
-        initialTodayExpense += tx.amount;
-      }
-    }
-
-    await SystemWidgetService.updateWidgetData(
-      totalBalance: initialTotalBalance,
-      todayExpense: initialTodayExpense,
-      currencySymbol: settings.currencySymbol,
-    );
-  } catch (_) {}
 
   runApp(
     ProviderScope(
@@ -82,9 +45,18 @@ class _PocketAppState extends ConsumerState<PocketApp> {
   @override
   void initState() {
     super.initState();
+
+    // 1. Android System Home Screen App Widget Launch Listener
     SystemWidgetService.registerWidgetLaunchCallback((uri) {
       _handleWidgetLaunch(uri);
     });
+
+    // 2. Shared UPI Screenshot & Banking Intent Listener
+    SharedTransactionHandler.initialize(
+      onTransactionReceived: (parsed) {
+        _handleSharedTransaction(parsed);
+      },
+    );
   }
 
   void _handleWidgetLaunch(Uri uri) {
@@ -101,9 +73,27 @@ class _PocketAppState extends ConsumerState<PocketApp> {
     }
   }
 
+  void _handleSharedTransaction(UpiParsedTransaction tx) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final navContext = rootNavigatorKey.currentContext;
+      if (navContext != null) {
+        QuickAddTransactionDialog.show(
+          navContext,
+          initialAmount: tx.amount,
+          initialTitle: tx.merchant,
+          initialCategoryId: tx.suggestedCategoryId,
+          initialReceiptImagePath: tx.imagePath,
+          initialNote: tx.refId != null ? 'Ref: ${tx.refId}' : null,
+          autoFocusNote: true,
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     SystemWidgetService.dispose();
+    SharedTransactionHandler.dispose();
     super.dispose();
   }
 
@@ -133,4 +123,3 @@ class _PocketAppState extends ConsumerState<PocketApp> {
     );
   }
 }
-

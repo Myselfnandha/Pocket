@@ -2,6 +2,4 @@
 <resources>
     <string name="widget_name">Pocket Balance &amp; Quick Add</string>
     <string name="widget_description">View real-time balance, today\'s expenses, and instantly log transactions.</string>
-    <string name="notification_listener_name">Pocket Transaction Assistant</string>
-    <string name="notification_listener_description">Enables instant 1-tap reminders when transaction notifications occur.</string>
 </resources>

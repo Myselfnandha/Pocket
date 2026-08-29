@@ -20,16 +20,6 @@ class UserSettingsModel {
   final int dailyReminderMinute;
   final bool monthlySummaryEnabled;
 
-  // Real-Time UPI & Banking Payment Detection Preferences
-  final bool realtimePaymentDetectionEnabled;
-  final bool detectGooglePay;
-  final bool detectPhonePe;
-  final bool detectPaytm;
-  final bool detectCred;
-  final bool detectBhim;
-  final bool detectAmazonPay;
-  final bool detectBanks;
-
   const UserSettingsModel({
     this.userName = '',
     this.currencySymbol = '₹',
@@ -46,14 +36,6 @@ class UserSettingsModel {
     this.dailyReminderHour = 20,
     this.dailyReminderMinute = 0,
     this.monthlySummaryEnabled = true,
-    this.realtimePaymentDetectionEnabled = true,
-    this.detectGooglePay = true,
-    this.detectPhonePe = true,
-    this.detectPaytm = true,
-    this.detectCred = true,
-    this.detectBhim = true,
-    this.detectAmazonPay = true,
-    this.detectBanks = true,
   });
 
   UserSettingsModel copyWith({
@@ -72,14 +54,6 @@ class UserSettingsModel {
     int? dailyReminderHour,
     int? dailyReminderMinute,
     bool? monthlySummaryEnabled,
-    bool? realtimePaymentDetectionEnabled,
-    bool? detectGooglePay,
-    bool? detectPhonePe,
-    bool? detectPaytm,
-    bool? detectCred,
-    bool? detectBhim,
-    bool? detectAmazonPay,
-    bool? detectBanks,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -97,14 +71,6 @@ class UserSettingsModel {
       dailyReminderHour: dailyReminderHour ?? this.dailyReminderHour,
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
       monthlySummaryEnabled: monthlySummaryEnabled ?? this.monthlySummaryEnabled,
-      realtimePaymentDetectionEnabled: realtimePaymentDetectionEnabled ?? this.realtimePaymentDetectionEnabled,
-      detectGooglePay: detectGooglePay ?? this.detectGooglePay,
-      detectPhonePe: detectPhonePe ?? this.detectPhonePe,
-      detectPaytm: detectPaytm ?? this.detectPaytm,
-      detectCred: detectCred ?? this.detectCred,
-      detectBhim: detectBhim ?? this.detectBhim,
-      detectAmazonPay: detectAmazonPay ?? this.detectAmazonPay,
-      detectBanks: detectBanks ?? this.detectBanks,
     );
   }
 
@@ -124,14 +90,6 @@ class UserSettingsModel {
         'dailyReminderHour': dailyReminderHour,
         'dailyReminderMinute': dailyReminderMinute,
         'monthlySummaryEnabled': monthlySummaryEnabled,
-        'realtimePaymentDetectionEnabled': realtimePaymentDetectionEnabled,
-        'detectGooglePay': detectGooglePay,
-        'detectPhonePe': detectPhonePe,
-        'detectPaytm': detectPaytm,
-        'detectCred': detectCred,
-        'detectBhim': detectBhim,
-        'detectAmazonPay': detectAmazonPay,
-        'detectBanks': detectBanks,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -155,13 +113,5 @@ class UserSettingsModel {
         dailyReminderHour: json['dailyReminderHour'] as int? ?? 20,
         dailyReminderMinute: json['dailyReminderMinute'] as int? ?? 0,
         monthlySummaryEnabled: json['monthlySummaryEnabled'] as bool? ?? true,
-        realtimePaymentDetectionEnabled: json['realtimePaymentDetectionEnabled'] as bool? ?? true,
-        detectGooglePay: json['detectGooglePay'] as bool? ?? true,
-        detectPhonePe: json['detectPhonePe'] as bool? ?? true,
-        detectPaytm: json['detectPaytm'] as bool? ?? true,
-        detectCred: json['detectCred'] as bool? ?? true,
-        detectBhim: json['detectBhim'] as bool? ?? true,
-        detectAmazonPay: json['detectAmazonPay'] as bool? ?? true,
-        detectBanks: json['detectBanks'] as bool? ?? true,
       );
 }

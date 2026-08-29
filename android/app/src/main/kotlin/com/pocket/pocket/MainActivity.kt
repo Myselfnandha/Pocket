@@ -1,57 +1,33 @@
 package com.pocket.pocket
 
 import android.app.Activity
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.ContactsContract
-import android.provider.Settings
-import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import org.json.JSONArray
 
 class MainActivity : FlutterActivity() {
     private val CONTACT_CHANNEL = "com.pocket.pocket/contact_picker"
-    private val UPI_DETECTOR_CHANNEL = "com.pocket.pocket/upi_detector"
-    private val WIDGET_CHANNEL = "com.pocket.pocket/system_widget"
+    private val SHARED_TX_CHANNEL = "com.pocket.pocket/shared_transaction"
     private val REQUEST_CODE_PICK_CONTACT = 1001
-    private var pendingContactResult: MethodChannel.Result? = null
-    private var upiDetectorChannel: MethodChannel? = null
-    private var initialDeepLink: String? = null
 
-    override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        super.onCreate(savedInstanceState)
-        intent?.data?.let {
-            initialDeepLink = it.toString()
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        intent.data?.let { uri ->
-            val link = uri.toString()
-            initialDeepLink = link
-            upiDetectorChannel?.invokeMethod("onDeepLinkReceived", link)
-        }
-    }
+    private var pendingResult: MethodChannel.Result? = null
+    private var sharedTxChannel: MethodChannel? = null
+    private var pendingSharedTransactionPayload: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // 1. Contact Picker Channel
+        // 1. Zero-Permission Native Contact Picker Channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTACT_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "pickContact") {
-                if (pendingContactResult != null) {
+                if (pendingResult != null) {
                     result.error("ALREADY_PENDING", "A contact picking operation is already in progress", null)
                     return@setMethodCallHandler
                 }
-                pendingContactResult = result
+                pendingResult = result
                 try {
                     val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
                     startActivityForResult(intent, REQUEST_CODE_PICK_CONTACT)
@@ -60,7 +36,7 @@ class MainActivity : FlutterActivity() {
                         val fallbackIntent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
                         startActivityForResult(fallbackIntent, REQUEST_CODE_PICK_CONTACT)
                     } catch (ex: Exception) {
-                        pendingContactResult = null
+                        pendingResult = null
                         result.error("PICKER_FAILED", "Failed to launch system contact picker: ${ex.localizedMessage}", null)
                     }
                 }
@@ -69,103 +45,34 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // 2. UPI Real-Time Detector Channel
-        upiDetectorChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPI_DETECTOR_CHANNEL).apply {
+        // 2. Shared UPI / Screenshot Transaction Channel
+        sharedTxChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARED_TX_CHANNEL).apply {
             setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "isNotificationAccessGranted" -> {
-                        try {
-                            val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(this@MainActivity)
-                            result.success(enabledListeners.contains(packageName))
-                        } catch (e: Exception) {
-                            result.success(false)
-                        }
-                    }
-                    "openNotificationAccessSettings" -> {
-                        try {
-                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            startActivity(intent)
-                            result.success(true)
-                        } catch (e: Exception) {
-                            result.error("SETTINGS_ERROR", "Unable to open Notification Access settings: ${e.localizedMessage}", null)
-                        }
-                    }
-                    "getPendingDetectedTransactions" -> {
-                        val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
-                        val jsonStr = prefs.getString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]") ?: "[]"
-                        result.success(jsonStr)
-                    }
-                    "removePendingDetectedTransaction" -> {
-                        val id = call.argument<String>("id")
-                        if (id != null) {
-                            val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
-                            val jsonStr = prefs.getString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]") ?: "[]"
-                            try {
-                                val jsonArray = JSONArray(jsonStr)
-                                val newArray = JSONArray()
-                                for (i in 0 until jsonArray.length()) {
-                                    val item = jsonArray.getJSONObject(i)
-                                    if (item.optString("id") != id) {
-                                        newArray.put(item)
-                                    }
-                                }
-                                prefs.edit().putString(PocketNotificationListenerService.KEY_PENDING_LIST, newArray.toString()).apply()
-                            } catch (_: Exception) {}
-                        }
-                        result.success(true)
-                    }
-                    "clearAllPendingDetectedTransactions" -> {
-                        val prefs = getSharedPreferences(PocketNotificationListenerService.PREFS_NAME, Context.MODE_PRIVATE)
-                        prefs.edit().putString(PocketNotificationListenerService.KEY_PENDING_LIST, "[]").apply()
-                        result.success(true)
-                    }
-                    "getInitialDeepLink" -> {
-                        val link = initialDeepLink
-                        initialDeepLink = null
-                        result.success(link)
-                    }
-                    else -> result.notImplemented()
+                if (call.method == "getPendingSharedTransaction") {
+                    val payload = pendingSharedTransactionPayload
+                    pendingSharedTransactionPayload = null
+                    result.success(payload)
+                } else {
+                    result.notImplemented()
                 }
             }
         }
 
-        // 3. System Home Screen Widget Channel (Pinning)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "isPinWidgetSupported" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        try {
-                            val appWidgetManager = AppWidgetManager.getInstance(this)
-                            result.success(appWidgetManager.isRequestPinAppWidgetSupported)
-                        } catch (_: Exception) {
-                            result.success(false)
-                        }
-                    } else {
-                        result.success(false)
-                    }
-                }
-                "requestPinWidget" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        try {
-                            val appWidgetManager = AppWidgetManager.getInstance(this)
-                            val provider = ComponentName(this, PocketWidgetProvider::class.java)
-                            if (appWidgetManager.isRequestPinAppWidgetSupported) {
-                                val pinned = appWidgetManager.requestPinAppWidget(provider, null, null)
-                                result.success(pinned)
-                            } else {
-                                result.success(false)
-                            }
-                        } catch (e: Exception) {
-                            result.error("PIN_FAILED", "Failed to pin widget: ${e.localizedMessage}", null)
-                        }
-                    } else {
-                        result.success(false)
-                    }
-                }
-                else -> result.notImplemented()
-            }
+        // Check if app was started with intent extra
+        handleIntentForSharedTransaction(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntentForSharedTransaction(intent)
+    }
+
+    private fun handleIntentForSharedTransaction(intent: Intent?) {
+        val payload = intent?.getStringExtra("shared_transaction_payload")
+        if (!payload.isNullOrBlank()) {
+            pendingSharedTransactionPayload = payload
+            sharedTxChannel?.invokeMethod("onSharedTransactionReceived", payload)
         }
     }
 
@@ -173,8 +80,8 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQUEST_CODE_PICK_CONTACT) {
-            val result = pendingContactResult ?: return
-            pendingContactResult = null
+            val result = pendingResult ?: return
+            pendingResult = null
 
             if (resultCode != Activity.RESULT_OK || data?.data == null) {
                 result.success(null)
