@@ -319,7 +319,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.arrow_downward_rounded,
+                                      Icons.call_made_rounded,
                                       size: 16,
                                       color: !_typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
                                     ),
@@ -356,7 +356,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.arrow_upward_rounded,
+                                      Icons.call_received_rounded,
                                       size: 16,
                                       color: _typeIsIncome() ? Colors.white : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
                                     ),

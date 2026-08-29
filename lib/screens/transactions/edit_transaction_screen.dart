@@ -125,12 +125,12 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                   ButtonSegment(
                     value: TransactionType.expense,
                     label: Text('Expense'),
-                    icon: Icon(Icons.arrow_downward_rounded, size: 16),
+                    icon: Icon(Icons.call_made_rounded, size: 16),
                   ),
                   ButtonSegment(
                     value: TransactionType.income,
                     label: Text('Income'),
-                    icon: Icon(Icons.arrow_upward_rounded, size: 16),
+                    icon: Icon(Icons.call_received_rounded, size: 16),
                   ),
                 ],
                 selected: {_type},

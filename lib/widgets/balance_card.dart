@@ -92,7 +92,7 @@ class BalanceCard extends ConsumerWidget {
                 child: _MetricPill(
                   label: 'Income',
                   amount: '+${settings.currencySymbol}${compactFormat.format(monthlyStats.totalIncome)}',
-                  icon: Icons.arrow_upward_rounded,
+                  icon: Icons.call_received_rounded,
                   iconColor: const Color(0xFFA5D6A7),
                 ),
               ),
@@ -103,7 +103,7 @@ class BalanceCard extends ConsumerWidget {
                 child: _MetricPill(
                   label: 'Expense',
                   amount: '-${settings.currencySymbol}${compactFormat.format(monthlyStats.totalExpense)}',
-                  icon: Icons.arrow_downward_rounded,
+                  icon: Icons.call_made_rounded,
                   iconColor: const Color(0xFFFFAB91),
                 ),
               ),
