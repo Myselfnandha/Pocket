@@ -308,7 +308,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     return SingleChildScrollView(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -702,7 +702,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final isOverallExceeded = totalSpentInBudgetedCats > totalBudget && totalBudget > 0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

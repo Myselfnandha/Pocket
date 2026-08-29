@@ -19,6 +19,24 @@ class CategoryModel {
     this.isDefault = true,
   });
 
+  CategoryModel copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    int? colorValue,
+    TransactionType? type,
+    bool? isDefault,
+  }) {
+    return CategoryModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      colorValue: colorValue ?? this.colorValue,
+      type: type ?? this.type,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+
   Color get color => Color(colorValue);
 
   Map<String, dynamic> toJson() => {

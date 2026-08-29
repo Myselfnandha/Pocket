@@ -39,7 +39,7 @@ class WalletsScreen extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         child: Column(
           children: [
             // 1. Pro Total Balance Header Card
@@ -291,7 +291,7 @@ class WalletsScreen extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: 100), // Space for floating bottom bar
+            const SizedBox(height: 16),
           ],
         ),
       ),

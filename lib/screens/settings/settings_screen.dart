@@ -22,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Settings'),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
           // 1. Profile Card
           Container(
@@ -217,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.2.6 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.2.7 • Material 3 Transaction Tracker'),
               ),
             ],
           ),

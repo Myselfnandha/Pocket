@@ -109,33 +109,14 @@ class HomeScreen extends ConsumerWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, size: 24),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => QuickAddTransactionDialog.show(context),
-        backgroundColor: AppColors.primaryGreenLight,
-        foregroundColor: Colors.black,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        tooltip: 'Quick Add Transaction',
-        icon: const Icon(Icons.add_rounded, size: 24),
-        label: const Text(
-          'Quick Add',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
         onRefresh: () async {},
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -433,7 +414,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
 
-              const SizedBox(height: 80), // space for FAB
+              const SizedBox(height: 16),
             ],
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/budget_model.dart';
+import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
 import '../../models/settings_model.dart';
 import '../../providers/app_providers.dart';
@@ -40,6 +41,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _monthlySummaryEnabled = true;
 
   final List<WalletModel> _onboardingWallets = [];
+  late List<CategoryModel> _onboardingCategories;
   final Map<String, double> _onboardingBudgets = {};
 
   final List<Map<String, String>> _currencies = [
@@ -52,6 +54,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     {'symbol': 'C\$', 'code': 'CAD', 'name': 'Canadian Dollar'},
     {'symbol': 'A\$', 'code': 'AUD', 'name': 'Australian Dollar'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _onboardingCategories = List.from(defaultCategories);
+  }
 
   @override
   void dispose() {
@@ -100,10 +108,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     }
 
-    if (_currentPage < 5) {
+    if (_currentPage < 6) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.fastOutSlowIn,
       );
     } else {
       _finishOnboarding();
@@ -152,7 +160,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await storage.saveWallets(_onboardingWallets);
     ref.invalidate(walletsProvider);
 
-    // 3. Save configured category budgets
+    // 3. Save categories (with any added/edited categories)
+    await storage.saveCategories(_onboardingCategories);
+    ref.invalidate(categoriesProvider);
+
+    // 4. Save configured category budgets
     final now = DateTime.now();
     final List<CategoryBudgetModel> budgetsToSave = [];
     _onboardingBudgets.forEach((catId, limit) {
@@ -171,7 +183,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await storage.saveCategoryBudgets(budgetsToSave);
     ref.invalidate(categoryBudgetsProvider);
 
-    // 4. Request Notification & Alarm Permissions
+    // 5. Request Notification & Alarm Permissions
     try {
       await NotificationService().requestPermissions();
     } catch (_) {}
@@ -188,30 +200,43 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Page Indicator Bar (6 steps)
+            // Top Futuristic Animated Page Indicator Bar (7 steps)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Row(
-                children: List.generate(6, (index) {
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(7, (index) {
                   final isActive = index == _currentPage;
                   final isDone = index < _currentPage;
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                      decoration: BoxDecoration(
-                        color: isDone || isActive
-                            ? AppColors.primaryGreenLight
-                            : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.fastOutSlowIn,
+                    height: 5,
+                    width: isActive ? 28 : (isDone ? 10 : 6),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.primaryGreenLight
+                          : (isDone
+                              ? AppColors.primaryGreen.withValues(alpha: 0.6)
+                              : (isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE0E0E0))),
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primaryGreenLight.withValues(alpha: 0.5),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              )
+                            ]
+                          : null,
                     ),
                   );
                 }),
               ),
             ),
 
-            // Page View (6 Slides)
+            // Page View (7 Slides)
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -222,8 +247,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _buildSlide2Profile(isDark),
                   _buildSlide3Theme(isDark),
                   _buildSlide4Wallets(isDark),
-                  _buildSlide5CategoryBudgets(isDark),
-                  _buildSlide6Preferences(isDark),
+                  _buildSlide5Categories(isDark),
+                  _buildSlide6CategoryBudgets(isDark),
+                  _buildSlide7Preferences(isDark),
                 ],
               ),
             ),
@@ -238,8 +264,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       onPressed: () {
                         FocusScope.of(context).unfocus();
                         _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.fastOutSlowIn,
                         );
                       },
                       style: TextButton.styleFrom(
@@ -262,7 +288,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _currentPage == 5 ? 'Get Started' : 'Continue',
+                          _currentPage == 6 ? 'Get Started' : 'Continue',
                           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                         ),
                         const SizedBox(width: 6),
@@ -350,9 +376,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
               ),
             ),
           ),
@@ -361,7 +387,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 2: Profile (Name, Phone & Currency) ---
+  // --- Slide 2: User Profile & Currency ---
   Widget _buildSlide2Profile(bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
@@ -369,7 +395,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Set Up Your Profile',
+            'Your Profile',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -378,90 +404,60 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Enter your identity details and primary currency to personalize your ledger.',
+            'What should we call you, and which currency do you transact in?',
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Name Input
-          Text(
-            'YOUR NAME',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
-            ),
-          ),
+          const SizedBox(height: 24),
+          const Text('Your Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.person_outline_rounded),
-              hintText: 'Enter your full name',
+              hintText: 'Enter your name',
+              prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primaryGreenLight),
               filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Mobile Number Input (Optional with Country Code)
-          Text(
-            'MOBILE NUMBER (FOR IDENTITY)',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
-            ),
-          ),
+          // User Mobile Number Input
+          const Text('Mobile Number (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.phone_outlined),
-              hintText: '+91 98765 43210 (Optional)',
+              hintText: 'e.g. 9876543210',
+              prefixText: '+91 ',
+              prefixIcon: const Icon(Icons.phone_iphone_rounded, color: AppColors.primaryGreenLight),
               filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Currency Selection
-          Text(
-            'PRIMARY CURRENCY',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
-            ),
-          ),
+          const Text('Select Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisExtent: 64,
-              crossAxisSpacing: 10,
               mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.2,
             ),
             itemCount: _currencies.length,
             itemBuilder: (context, index) {
               final c = _currencies[index];
               final isSelected = _selectedCurrencyCode == c['code'];
-
               return InkWell(
                 onTap: () {
-                  FocusScope.of(context).unfocus();
                   setState(() {
                     _selectedCurrencySymbol = c['symbol'];
                     _selectedCurrencyCode = c['code'];
@@ -469,7 +465,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
@@ -479,28 +475,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       color: isSelected
                           ? AppColors.primaryGreenLight
                           : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                      width: isSelected ? 1.5 : 1.0,
+                      width: isSelected ? 1.5 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryGreenLight
-                              : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          c['symbol']!,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black),
-                          ),
+                      Text(
+                        c['symbol']!,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -513,8 +498,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               c['code']!,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                               ),
                             ),
                             Text(
@@ -540,16 +525,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 3: Theme ---
+  // --- Slide 3: Theme Preferences ---
   Widget _buildSlide3Theme(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Choose Visual Theme',
+            'Theme & Display',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -558,7 +542,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Select how Pocket renders across day, night, and OLED displays.',
+            'Choose your visual appearance and AMOLED display optimization.',
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -566,55 +550,106 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 24),
 
-          _buildThemeOption(
-            title: 'Auto (Time-Based)',
-            subtitle: 'Crisp Light Mode during day (6 AM - 6 PM) and Pure AMOLED Black at night',
+          _buildThemeModeCard(
+            title: 'Auto Mode (Time-Based)',
+            subtitle: 'Automatically switches to Light (6AM-6PM) & Dark (6PM-6AM)',
             icon: Icons.auto_mode_rounded,
             isSelected: _selectedThemeMode == AppThemeMode.autoTime,
-            isDark: isDark,
             onTap: () => setState(() => _selectedThemeMode = AppThemeMode.autoTime),
-          ),
-          const SizedBox(height: 12),
-          _buildThemeOption(
-            title: 'AMOLED Pure Black (Recommended)',
-            subtitle: '#000000 Pitch Black surfaces for infinite contrast & battery saving',
-            icon: Icons.dark_mode_rounded,
-            isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.pureBlack,
             isDark: isDark,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.manual;
-                _selectedThemeStyle = ManualThemeStyle.pureBlack;
-                _isPureBlack = true;
-              });
-            },
           ),
           const SizedBox(height: 12),
-          _buildThemeOption(
-            title: 'Crisp Light Mode',
-            subtitle: 'Bright, clean aesthetic with subtle green accents',
+
+          _buildThemeModeCard(
+            title: 'Dark Theme',
+            subtitle: 'Always dark background with soft mint green accents',
+            icon: Icons.dark_mode_rounded,
+            isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.dark,
+            onTap: () => setState(() {
+              _selectedThemeMode = AppThemeMode.manual;
+              _selectedThemeStyle = ManualThemeStyle.dark;
+            }),
+            isDark: isDark,
+          ),
+          const SizedBox(height: 12),
+
+          _buildThemeModeCard(
+            title: 'Light Theme',
+            subtitle: 'Crisp, clean bright appearance with high contrast',
             icon: Icons.light_mode_rounded,
             isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.light,
+            onTap: () => setState(() {
+              _selectedThemeMode = AppThemeMode.manual;
+              _selectedThemeStyle = ManualThemeStyle.light;
+            }),
             isDark: isDark,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.manual;
-                _selectedThemeStyle = ManualThemeStyle.light;
-              });
-            },
+          ),
+          const SizedBox(height: 24),
+
+          // AMOLED Pure Black Toggle
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.brightness_2_rounded, color: AppColors.primaryGreenLight, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Midnight Pure Black (#000000)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'True #000000 pixels for maximum battery savings',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _isPureBlack,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) => setState(() => _isPureBlack = val),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildThemeOption({
+  Widget _buildThemeModeCard({
     required String title,
     required String subtitle,
     required IconData icon,
     required bool isSelected,
-    required bool isDark,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return InkWell(
       onTap: onTap,
@@ -623,26 +658,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+              ? AppColors.primaryGreenLight.withValues(alpha: 0.12)
               : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? AppColors.primaryGreenLight
                 : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-            width: isSelected ? 1.5 : 1.0,
+            width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryGreenLight : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: isSelected ? Colors.black : (isDark ? Colors.white : Colors.black), size: 20),
-            ),
+            Icon(icon, color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -651,37 +679,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      fontSize: 14,
+                      color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11.5,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     ),
                   ),
                 ],
               ),
             ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 20),
           ],
         ),
       ),
     );
   }
 
-  // --- Slide 4: Wallets & Accounts (with Last 4 Digits) ---
+  // --- Slide 4: Wallets / Accounts Setup ---
   Widget _buildSlide4Wallets(bool isDark) {
+    final symbol = _selectedCurrencySymbol ?? '₹';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Create Your Accounts',
+            'Add Your Accounts',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -690,7 +722,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Add your bank accounts, cash wallet, or cards (with last 4 digits for instant bank identification).',
+            'Create your bank accounts or cash in hand to track transactions.',
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -700,8 +732,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
           // Created Wallets List
           if (_onboardingWallets.isNotEmpty) ...[
-            ...List.generate(_onboardingWallets.length, (index) {
-              final w = _onboardingWallets[index];
+            ..._onboardingWallets.map((w) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -722,49 +753,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         children: [
                           Row(
                             children: [
-                              Text(
-                                w.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                ),
-                              ),
+                              Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                               if (w.maskedAccountNumber.isNotEmpty) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                                    borderRadius: BorderRadius.circular(5),
+                                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     w.maskedAccountNumber,
-                                    style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                    ),
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
                                   ),
                                 ),
                               ],
                             ],
                           ),
-                          const SizedBox(height: 2),
                           Text(
-                            'Starting: ${_selectedCurrencySymbol ?? '₹'}${w.initialBalance.toStringAsFixed(2)} • ${w.walletType.name.toUpperCase()}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
-                            ),
+                            '$symbol${w.currentBalance.toStringAsFixed(2)}',
+                            style: const TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.w600, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.expenseRed),
-                      onPressed: () => setState(() => _onboardingWallets.removeAt(index)),
+                      icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                      onPressed: () {
+                        setState(() {
+                          _onboardingWallets.removeWhere((item) => item.id == w.id);
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -778,20 +797,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                foregroundColor: AppColors.primaryGreenLight,
                 side: const BorderSide(color: AppColors.primaryGreenLight, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
-              label: const Text(
-                '+ Add Account / Bank',
-                style: TextStyle(
-                  color: AppColors.primaryGreenLight,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              onPressed: () => _showAddWalletModal(context, isDark),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add Account / Wallet', style: TextStyle(fontWeight: FontWeight.w700)),
+              onPressed: () => _showAddWalletDialog(isDark),
             ),
           ),
         ],
@@ -799,54 +812,57 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  void _showAddWalletModal(BuildContext context, bool isDark) {
+  void _showAddWalletDialog(bool isDark) {
+    final nameCtrl = TextEditingController(text: 'Bank Account');
+    final balanceCtrl = TextEditingController();
+    final last4Ctrl = TextEditingController();
     WalletType selectedType = WalletType.bank;
     String selectedIcon = '🏦';
-    final nameCtrl = TextEditingController();
-    final last4Ctrl = TextEditingController();
-    final balanceCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
+        builder: (context, setDialogState) => Container(
           padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('Add Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
 
-                // Wallet Type ChoiceChips
-                const Text('Account Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
+                // Account Type Chips
                 Wrap(
                   spacing: 8,
-                  runSpacing: 8,
                   children: WalletType.values.map((type) {
                     final isSel = selectedType == type;
                     return ChoiceChip(
                       label: Text(type.name.toUpperCase()),
                       selected: isSel,
-                      selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.25),
-                      onSelected: (_) {
-                        setModalState(() {
+                      selectedColor: AppColors.primaryGreenLight,
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.black : (isDark ? Colors.white : Colors.black87),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                      onSelected: (val) {
+                        setDialogState(() {
                           selectedType = type;
                           if (type == WalletType.cash) {
                             selectedIcon = '💵';
-                            nameCtrl.text = 'Cash';
+                            nameCtrl.text = 'Cash in Hand';
                           } else if (type == WalletType.bank) {
                             selectedIcon = '🏦';
                             nameCtrl.text = 'Bank Account';
@@ -964,18 +980,341 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 5: Categories & Monthly Budgets Setup ---
-  Widget _buildSlide5CategoryBudgets(bool isDark) {
-    final symbol = _selectedCurrencySymbol ?? '₹';
-    final defaultCategories = [
-      {'id': 'cat_food', 'name': 'Food & Dining', 'icon': '🍔'},
-      {'id': 'cat_groceries', 'name': 'Groceries & Mart', 'icon': '🛒'},
-      {'id': 'cat_shopping', 'name': 'Shopping & Retail', 'icon': '🛍️'},
-      {'id': 'cat_transport', 'name': 'Transport & Fuel', 'icon': '🚗'},
-      {'id': 'cat_bills', 'name': 'Bills & Utilities', 'icon': '⚡'},
-      {'id': 'cat_entertainment', 'name': 'Entertainment', 'icon': '🍿'},
-      {'id': 'cat_health', 'name': 'Health & Medical', 'icon': '💊'},
+  // --- Slide 5: Step 5a - Personalize Categories (Add, Edit, Remove) ---
+  Widget _buildSlide5Categories(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Personalize Categories',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Step 1 of 2: Customize spending tags',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryGreenLight,
+                    ),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showAddOrEditCategoryModal(isDark),
+                icon: const Icon(Icons.add_rounded, size: 16, color: Colors.black),
+                label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.black)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreenLight,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Keep tags you need, remove ones you don\'t, or add custom tags.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _onboardingCategories.length,
+            separatorBuilder: (context, i) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final cat = _onboardingCategories[index];
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Color(cat.colorValue).withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(cat.icon, style: const TextStyle(fontSize: 18)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cat.name,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          Text(
+                            cat.type == TransactionType.expense ? 'Expense' : 'Income',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: cat.type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                      tooltip: 'Edit category',
+                      onPressed: () => _showAddOrEditCategoryModal(isDark, existing: cat),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
+                      tooltip: 'Delete category',
+                      onPressed: () {
+                        setState(() {
+                          _onboardingCategories.removeWhere((c) => c.id == cat.id);
+                          _onboardingBudgets.remove(cat.id);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOrEditCategoryModal(bool isDark, {CategoryModel? existing}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    String selectedIcon = existing?.icon ?? '🏷️';
+    int selectedColor = existing?.colorValue ?? 0xFF4CAF50;
+    TransactionType selectedType = existing?.type ?? TransactionType.expense;
+
+    final icons = ['🍔', '🛒', '🛍️', '🚗', '⚡', '🍿', '💊', '🎓', '✈️', '💰', '💼', '💻', '🎮', '🏋️', '☕', '🎁', '📝'];
+    final colors = [
+      0xFF4CAF50, // Green
+      0xFFE57373, // Red
+      0xFFFFB74D, // Orange
+      0xFF64B5F6, // Blue
+      0xFFBA68C8, // Purple
+      0xFF4DD0E1, // Cyan
+      0xFF81C784, // Mint
+      0xFFAED581, // Lime
+      0xFF90A4AE, // Grey
     ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  existing == null ? 'Add New Category' : 'Edit Category',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 14),
+
+                // Type Chips (Expense vs Income)
+                Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Expense'),
+                      selected: selectedType == TransactionType.expense,
+                      selectedColor: AppColors.expenseRed.withValues(alpha: 0.25),
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: selectedType == TransactionType.expense ? AppColors.expenseRed : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      onSelected: (val) => setModalState(() => selectedType = TransactionType.expense),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Income'),
+                      selected: selectedType == TransactionType.income,
+                      selectedColor: AppColors.incomeGreen.withValues(alpha: 0.25),
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: selectedType == TransactionType.income ? AppColors.incomeGreen : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      onSelected: (val) => setModalState(() => selectedType = TransactionType.income),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Category Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Coffee, Subscriptions',
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Icon Picker
+                const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: icons.length,
+                    separatorBuilder: (context, i) => const SizedBox(width: 6),
+                    itemBuilder: (context, i) {
+                      final ic = icons[i];
+                      final isSelected = selectedIcon == ic;
+                      return InkWell(
+                        onTap: () => setModalState(() => selectedIcon = ic),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primaryGreenLight.withValues(alpha: 0.2) : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primaryGreenLight : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(ic, style: const TextStyle(fontSize: 20)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Color Picker
+                const Text('Select Color', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: colors.length,
+                    separatorBuilder: (context, i) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final col = colors[i];
+                      final isSelected = selectedColor == col;
+                      return InkWell(
+                        onTap: () => setModalState(() => selectedColor = col),
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Color(col),
+                            shape: BoxShape.circle,
+                            border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                          ),
+                          child: isSelected ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreenLight,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) return;
+
+                      setState(() {
+                        if (existing == null) {
+                          _onboardingCategories.add(
+                            CategoryModel(
+                              id: const Uuid().v4(),
+                              name: name,
+                              icon: selectedIcon,
+                              colorValue: selectedColor,
+                              type: selectedType,
+                            ),
+                          );
+                        } else {
+                          final idx = _onboardingCategories.indexWhere((c) => c.id == existing.id);
+                          if (idx != -1) {
+                            _onboardingCategories[idx] = existing.copyWith(
+                              name: name,
+                              icon: selectedIcon,
+                              colorValue: selectedColor,
+                              type: selectedType,
+                            );
+                          }
+                        }
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(existing == null ? 'Add Category' : 'Save Changes', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Slide 6: Step 5b - Set Monthly Budgets with Custom Limits & Presets ---
+  Widget _buildSlide6CategoryBudgets(bool isDark) {
+    final symbol = _selectedCurrencySymbol ?? '₹';
+    final expenseCategories = _onboardingCategories.where((c) => c.type == TransactionType.expense).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -983,101 +1322,214 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Configure Monthly Budgets',
+            'Set Monthly Budgets',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
-            'Set monthly spending limits for each category in 1 tap to receive smart budget alerts.',
+            'Step 2 of 2: Set custom spending caps or tap preset limits',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryGreenLight,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tap amount to type any custom limit, or use quick presets below.',
+            style: TextStyle(
+              fontSize: 12.5,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 16),
 
-          ...defaultCategories.map((cat) {
-            final catId = cat['id']!;
-            final currentBudget = _onboardingBudgets[catId] ?? 0.0;
-            final isEnabled = currentBudget > 0;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isEnabled
-                      ? AppColors.primaryGreenLight.withValues(alpha: 0.3)
-                      : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                ),
+          if (expenseCategories.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text('No expense categories created', style: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+            )
+          else
+            ...expenseCategories.map((cat) {
+              final catId = cat.id;
+              final currentBudget = _onboardingBudgets[catId] ?? 0.0;
+              final isEnabled = currentBudget > 0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isEnabled
+                        ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
+                        : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(cat.icon, style: const TextStyle(fontSize: 20)),
+                            const SizedBox(width: 10),
+                            Text(
+                              cat.name,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Tap-to-edit inline amount button / chip
+                        InkWell(
+                          onTap: () => _showCustomBudgetDialog(cat, isDark),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isEnabled
+                                  ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
+                                  : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isEnabled ? AppColors.primaryGreenLight : Colors.transparent,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  isEnabled ? '$symbol${currentBudget.toStringAsFixed(0)} / mo' : 'Tap to set limit',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: isEnabled ? AppColors.primaryGreenLight : Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.edit_rounded, size: 12, color: isEnabled ? AppColors.primaryGreenLight : Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Preset Budget Chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
-                          Text(cat['icon']!, style: const TextStyle(fontSize: 20)),
-                          const SizedBox(width: 10),
-                          Text(
-                            cat['name']!,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          _buildPresetBudgetChip(catId, 0, 'Off', currentBudget == 0, isDark),
+                          const SizedBox(width: 6),
+                          _buildPresetBudgetChip(catId, 1000, '${symbol}1k', currentBudget == 1000, isDark),
+                          const SizedBox(width: 6),
+                          _buildPresetBudgetChip(catId, 2000, '${symbol}2k', currentBudget == 2000, isDark),
+                          const SizedBox(width: 6),
+                          _buildPresetBudgetChip(catId, 5000, '${symbol}5k', currentBudget == 5000, isDark),
+                          const SizedBox(width: 6),
+                          _buildPresetBudgetChip(catId, 10000, '${symbol}10k', currentBudget == 10000, isDark),
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () => _showCustomBudgetDialog(cat, isDark),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3)),
+                              ),
+                              child: const Text(
+                                '✏️ Custom',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isEnabled
-                              ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
-                              : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          isEnabled ? '$symbol${currentBudget.toStringAsFixed(0)} / mo' : 'No Limit',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: isEnabled ? AppColors.primaryGreenLight : Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Preset Budget Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildPresetBudgetChip(catId, 0, 'Off', currentBudget == 0, isDark),
-                        const SizedBox(width: 6),
-                        _buildPresetBudgetChip(catId, 2000, '${symbol}2k', currentBudget == 2000, isDark),
-                        const SizedBox(width: 6),
-                        _buildPresetBudgetChip(catId, 4000, '${symbol}4k', currentBudget == 4000, isDark),
-                        const SizedBox(width: 6),
-                        _buildPresetBudgetChip(catId, 6000, '${symbol}6k', currentBudget == 6000, isDark),
-                        const SizedBox(width: 6),
-                        _buildPresetBudgetChip(catId, 10000, '${symbol}10k', currentBudget == 10000, isDark),
-                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomBudgetDialog(CategoryModel cat, bool isDark) {
+    final symbol = _selectedCurrencySymbol ?? '₹';
+    final currentBudget = _onboardingBudgets[cat.id] ?? 0.0;
+    final ctrl = TextEditingController(text: currentBudget > 0 ? currentBudget.toStringAsFixed(0) : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Text(cat.icon, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 8),
+            Expanded(child: Text('${cat.name} Limit', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter monthly spending limit:', style: TextStyle(fontSize: 12.5)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                prefixText: '$symbol ',
+                hintText: 'e.g. 3500',
+                filled: true,
+                fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
               ),
-            );
-          }),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() => _onboardingBudgets[cat.id] = 0);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Clear Limit', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreenLight,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
+              setState(() => _onboardingBudgets[cat.id] = val);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save Limit', style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
         ],
       ),
     );
@@ -1111,8 +1563,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 6: Smart Preferences & Notification Alerts ---
-  Widget _buildSlide6Preferences(bool isDark) {
+  // --- Slide 7: Step 6 - Smart Preferences & Notification Alerts ---
+  Widget _buildSlide7Preferences(bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
       child: Column(
