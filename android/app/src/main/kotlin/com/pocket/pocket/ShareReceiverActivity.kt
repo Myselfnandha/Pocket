@@ -184,7 +184,7 @@ class ShareReceiverActivity : Activity() {
             .take(35)
     }
 
-    private fun showTransactionNotification(data: ParsedData, imagePath: String, rawText: String) {
+    private fun showTransactionNotification(parsedData: ParsedData, imagePath: String, rawText: String) {
         val channelId = "pocket_upi_shares"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -201,17 +201,17 @@ class ShareReceiverActivity : Activity() {
         }
 
         val payloadJson = JSONObject().apply {
-            put("amount", data.amount)
-            put("merchant", data.merchant)
-            put("app_source", data.appSource)
-            put("ref_id", data.refId)
+            put("amount", parsedData.amount)
+            put("merchant", parsedData.merchant)
+            put("app_source", parsedData.appSource)
+            put("ref_id", parsedData.refId)
             put("image_path", imagePath)
             put("raw_text", rawText)
         }.toString()
 
         val intent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = Uri.parse("pocket://log_shared_transaction")
+            setData(Uri.parse("pocket://log_shared_transaction"))
             putExtra("shared_transaction_payload", payloadJson)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -223,9 +223,9 @@ class ShareReceiverActivity : Activity() {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        val amountDisplay = if (data.amount.isNotEmpty()) "₹${data.amount}" else "Receipt"
-        val title = "💳 $amountDisplay at ${data.merchant}"
-        val body = "Paid via ${data.appSource} • Tap to complete & log transaction"
+        val amountDisplay = if (parsedData.amount.isNotEmpty()) "₹${parsedData.amount}" else "Receipt"
+        val title = "💳 $amountDisplay at ${parsedData.merchant}"
+        val body = "Paid via ${parsedData.appSource} • Tap to complete & log transaction"
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
