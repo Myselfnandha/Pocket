@@ -14,6 +14,7 @@ import '../screens/settings/data_management_screen.dart';
 import '../screens/notifications/notification_center_screen.dart';
 import '../screens/debts/debts_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/transactions/quick_add_dialog_screen.dart';
 import 'app_scaffold.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -29,6 +30,13 @@ GoRouter createRouter(bool isOnboarded) {
       GoRoute(
         path: '/',
         redirect: (context, state) => isOnboarded ? '/home' : '/onboarding',
+      ),
+
+      // Standalone Floating Quick Add Dialog (Widget Target)
+      GoRoute(
+        path: '/quick-add-dialog',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const QuickAddDialogScreen(),
       ),
 
       // Onboarding Route

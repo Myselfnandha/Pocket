@@ -39,11 +39,11 @@ class PocketWidgetProvider : HomeWidgetProvider() {
                     )
                     setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
 
-                    // Quick Add button -> open instant quick-add popup
+                    // Quick Add button -> open instant transparent floating quick-add popup
                     val quickAddPendingIntent = HomeWidgetLaunchIntent.getActivity(
                         context,
-                        MainActivity::class.java,
-                        Uri.parse("pocket://quick-add")
+                        QuickAddActivity::class.java,
+                        Uri.parse("pocket://quick-add-dialog")
                     )
                     setOnClickPendingIntent(R.id.btn_quick_add, quickAddPendingIntent)
                 }

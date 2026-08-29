@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,6 +18,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
   final String? initialReceiptImagePath;
   final String? initialNote;
   final bool autoFocusNote;
+  final bool isStandaloneScreen;
 
   const QuickAddTransactionDialog({
     super.key,
@@ -28,7 +30,10 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     this.initialReceiptImagePath,
     this.initialNote,
     this.autoFocusNote = false,
+    this.isStandaloneScreen = false,
   });
+
+  static bool isOpen = false;
 
   static Future<void> show(
     BuildContext context, {
@@ -40,20 +45,30 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     String? initialReceiptImagePath,
     String? initialNote,
     bool autoFocusNote = false,
-  }) {
-    return showDialog(
-      context: context,
-      builder: (context) => QuickAddTransactionDialog(
-        initialType: initialType,
-        initialAmount: initialAmount,
-        initialTitle: initialTitle,
-        initialCategoryId: initialCategoryId,
-        initialWalletId: initialWalletId,
-        initialReceiptImagePath: initialReceiptImagePath,
-        initialNote: initialNote,
-        autoFocusNote: autoFocusNote,
-      ),
-    );
+    bool isStandaloneScreen = false,
+  }) async {
+    if (isOpen) return;
+    isOpen = true;
+    try {
+      await showDialog(
+        context: context,
+        builder: (context) => QuickAddTransactionDialog(
+          initialType: initialType,
+          initialAmount: initialAmount,
+          initialTitle: initialTitle,
+          initialCategoryId: initialCategoryId,
+          initialWalletId: initialWalletId,
+          initialReceiptImagePath: initialReceiptImagePath,
+          initialNote: initialNote,
+          autoFocusNote: autoFocusNote,
+          isStandaloneScreen: isStandaloneScreen,
+        ),
+      );
+    } finally {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        isOpen = false;
+      });
+    }
   }
 
   @override
@@ -71,8 +86,6 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   String? _selectedWalletId;
   String? _receiptImagePath;
   final DateTime _selectedDate = DateTime.now();
-
-  final List<double> _quickAmounts = [50, 100, 200, 500, 1000, 2000];
 
   @override
   void initState() {
@@ -128,21 +141,21 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     }
   }
 
-  void _addQuickAmount(double amt) {
-    final current = double.tryParse(_amountController.text.trim()) ?? 0.0;
-    final total = current + amt;
-    setState(() {
-      _amountController.text = total % 1 == 0 ? total.toInt().toString() : total.toStringAsFixed(2);
-    });
-  }
-
-  Future<void> _pickReceipt() async {
+  Future<void> _pickReceipt(ImageSource source) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    final picked = await picker.pickImage(source: source);
     if (picked != null) {
       setState(() {
         _receiptImagePath = picked.path;
       });
+    }
+  }
+
+  void _closeDialog() {
+    if (widget.isStandaloneScreen) {
+      SystemNavigator.pop();
+    } else {
+      Navigator.of(context).pop();
     }
   }
 
@@ -196,18 +209,20 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         );
 
     if (!mounted) return;
-    Navigator.of(context).pop();
+    _closeDialog();
 
     final settings = ref.read(settingsProvider);
     final currencySymbol = settings.currencySymbol;
     final currencyFormat = NumberFormat('#,##0.00');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added "$title" • $currencySymbol${currencyFormat.format(amount)} ✓'),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    if (!widget.isStandaloneScreen) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added "$title" • $currencySymbol${currencyFormat.format(amount)} ✓'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -239,10 +254,10 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final activeBudget = activeBudgetModel?.monthlyLimit;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
       surfaceTintColor: Colors.transparent,
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      titlePadding: const EdgeInsets.fromLTRB(20, 18, 16, 10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
       title: Row(
@@ -273,7 +288,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             icon: const Icon(Icons.close_rounded, size: 20),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: _closeDialog,
           ),
         ],
       ),
@@ -282,7 +297,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Attached Screenshot Preview Chip (if shared from UPI app)
+            // Attached Screenshot / Receipt Preview Chip
             if (_receiptImagePath != null) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -311,11 +326,11 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'UPI Screenshot Attached',
+                            'Receipt Attached',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
                           ),
                           Text(
-                            'Auto-scanned receipt attached to record',
+                            'Attached to this transaction record',
                             style: TextStyle(
                               fontSize: 10,
                               color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
@@ -416,50 +431,77 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 14),
 
-            // Amount Input Field
-            TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
-              ),
-              decoration: InputDecoration(
-                prefixText: '$currencySymbol ',
-                prefixStyle: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
-                ),
-                hintText: '0.00',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Quick Amount Presets
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _quickAmounts.map((amt) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ActionChip(
-                      label: Text('+$currencySymbol${amt.toInt()}'),
-                      labelStyle: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => _addQuickAmount(amt),
+            // Amount Input Field with auto-focus trigger
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _amountController,
+                    autofocus: widget.initialAmount == null || widget.initialAmount == 0,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
                     ),
-                  );
-                }).toList(),
-              ),
+                    decoration: InputDecoration(
+                      prefixText: '$currencySymbol ',
+                      prefixStyle: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+                      ),
+                      hintText: '0.00',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Camera / Receipt Attachment Icon Button
+                PopupMenuButton<ImageSource>(
+                  icon: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF242424) : const Color(0xFFEEEEEE),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _receiptImagePath != null ? AppColors.primaryGreenLight : Colors.transparent,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt_rounded,
+                      color: _receiptImagePath != null ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
+                      size: 20,
+                    ),
+                  ),
+                  tooltip: 'Attach Receipt / Bill',
+                  onSelected: (source) => _pickReceipt(source),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: ImageSource.camera,
+                      child: Row(
+                        children: [
+                          Icon(Icons.photo_camera_rounded, size: 18, color: AppColors.primaryGreenLight),
+                          SizedBox(width: 10),
+                          Text('Take Photo'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: ImageSource.gallery,
+                      child: Row(
+                        children: [
+                          Icon(Icons.photo_library_rounded, size: 18, color: AppColors.infoBlue),
+                          SizedBox(width: 10),
+                          Text('Choose from Gallery'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 12),
 
@@ -525,7 +567,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                 color: isSelected
                                     ? (_type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen)
-                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
                               ),
                             ),
                           ],
@@ -538,9 +580,9 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 12),
 
-            // Wallet Selector Dropdown
+            // Account & Wallet Selector
             Text(
-              'PAYMENT WALLET',
+              'PAY VIA ACCOUNT',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
@@ -549,74 +591,89 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               ),
             ),
             const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedWalletId,
-              isDense: true,
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              items: wallets.map((w) {
-                return DropdownMenuItem(
-                  value: w.id,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${w.icon} ${w.name}'),
-                      Text(
-                        '$currencySymbol${currencyFormat.format(w.currentBalance)}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: w.currentBalance >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: wallets.map((w) {
+                  final isSelected = _selectedWalletId == w.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedWalletId = w.id),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
+                              : (isDark ? const Color(0xFF222222) : const Color(0xFFF2F2F2)),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primaryGreenLight : Colors.transparent,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(w.icon, style: const TextStyle(fontSize: 14)),
+                            const SizedBox(width: 4),
+                            Text(
+                              w.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.primaryGreenLight : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedWalletId = val);
-              },
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 12),
 
-            // Notes / Description & Document Attach Section
+            // Optional Note / Reference ID
             TextField(
               controller: _notesController,
               focusNode: _notesFocusNode,
-              maxLines: 2,
               style: const TextStyle(fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Add description, notes, or tags (optional)...',
-                prefixIcon: const Icon(Icons.notes_rounded, size: 20),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.attach_file_rounded, size: 20, color: AppColors.primaryGreenLight),
-                  tooltip: 'Attach Receipt / Bill',
-                  onPressed: _pickReceipt,
-                ),
+              decoration: const InputDecoration(
+                hintText: 'Note or Ref No (Optional)...',
+                prefixIcon: Icon(Icons.note_alt_outlined, size: 18),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
 
-            // Category budget warning if applicable
-            if (activeBudget != null && activeBudget > 0 && currentAmount > 0) ...[
+            if (activeBudget != null && activeBudget > 0) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.accentOrange.withValues(alpha: 0.12),
+                  color: currentAmount > activeBudget
+                      ? AppColors.expenseRed.withValues(alpha: 0.12)
+                      : AppColors.primaryGreenLight.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.pie_chart_rounded, size: 14, color: AppColors.accentOrange),
+                    Icon(
+                      currentAmount > activeBudget ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                      size: 14,
+                      color: currentAmount > activeBudget ? AppColors.expenseRed : AppColors.primaryGreenLight,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Category Monthly Budget: $currencySymbol${currencyFormat.format(activeBudget)}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accentOrange),
+                        'Monthly Cap: $currencySymbol${currencyFormat.format(activeBudget)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: currentAmount > activeBudget ? AppColors.expenseRed : AppColors.primaryGreenLight,
+                        ),
                       ),
                     ),
                   ],
@@ -627,50 +684,57 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         ),
       ),
       actions: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton.icon(
-              onPressed: () {
-                final enteredAmount = double.tryParse(_amountController.text.trim()) ?? widget.initialAmount;
-                final enteredTitle = _titleController.text.trim();
-                final enteredNote = _notesController.text.trim();
-
-                Navigator.of(context).pop();
-                context.push(
-                  '/add-transaction',
-                  extra: {
-                    'amount': enteredAmount,
-                    'title': enteredTitle.isNotEmpty ? enteredTitle : widget.initialTitle,
-                    'type': _type,
-                    'categoryId': _selectedCategoryId ?? widget.initialCategoryId,
-                    'walletId': _selectedWalletId,
-                    'note': enteredNote.isNotEmpty ? enteredNote : widget.initialNote,
-                    'receiptImagePath': _receiptImagePath ?? widget.initialReceiptImagePath,
-                  },
-                );
-              },
-              icon: const Icon(Icons.open_in_full_rounded, size: 14),
-              label: const Text('More Details', style: TextStyle(fontSize: 12)),
+        if (!widget.isStandaloneScreen)
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              final amount = double.tryParse(_amountController.text.trim());
+              context.push(
+                '/add-transaction',
+                extra: {
+                  'type': _type,
+                  'amount': amount,
+                  'title': _titleController.text.trim(),
+                  'categoryId': _selectedCategoryId,
+                  'walletId': _selectedWalletId,
+                  'note': _notesController.text.trim(),
+                  'receiptImagePath': _receiptImagePath,
+                },
+              );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            ElevatedButton(
-              onPressed: _quickSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: const Text('More Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
+        ElevatedButton(
+          onPressed: _quickSave,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryGreenLight,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_rounded, size: 18, color: Colors.black),
+              SizedBox(width: 6),
+              Text(
+                'Quick Save',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
               ),
-              child: const Text('Quick Save', style: TextStyle(fontWeight: FontWeight.w700)),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-extension _StringExtension on String {
+extension on String {
   String capitalize() {
     if (isEmpty) return this;
     return '${this[0].toUpperCase()}${substring(1)}';

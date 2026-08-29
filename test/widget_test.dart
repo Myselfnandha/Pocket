@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Skip'), findsNothing); // Skip button removed
   });
 
-  testWidgets('QuickAddTransactionDialog renders correctly with presets and switches type', (WidgetTester tester) async {
+  testWidgets('QuickAddTransactionDialog renders correctly with camera attachment and switches type', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() {
@@ -88,15 +88,14 @@ void main() {
     expect(find.text('Quick Transaction'), findsOneWidget);
     expect(find.text('- Expense'), findsOneWidget);
     expect(find.text('+ Income'), findsOneWidget);
-    expect(find.text('+₹50'), findsOneWidget);
-    expect(find.text('+₹100'), findsOneWidget);
+    expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
     expect(find.text('Quick Save'), findsOneWidget);
     expect(find.text('More Details'), findsOneWidget);
 
-    // Tap a quick amount preset
-    await tester.tap(find.text('+₹50'));
+    // Enter amount directly in autofocus TextField
+    await tester.enterText(find.byType(TextField).first, '150');
     await tester.pumpAndSettle();
-    expect(find.text('50'), findsOneWidget);
+    expect(find.text('150'), findsOneWidget);
 
     // Switch to Income
     await tester.tap(find.text('+ Income'));

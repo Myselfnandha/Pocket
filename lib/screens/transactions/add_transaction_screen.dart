@@ -315,7 +315,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         behavior: HitTestBehavior.opaque,
         onTap: () {
           _titleFocus.unfocus();
-          setState(() => _showNumpad = true);
+          FocusScope.of(context).unfocus();
+          setState(() => _showNumpad = false);
         },
         child: Column(
           children: [

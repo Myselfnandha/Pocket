@@ -62,11 +62,13 @@ class _PocketAppState extends ConsumerState<PocketApp> {
   void _handleWidgetLaunch(Uri uri) {
     final uriStr = uri.toString();
     if (uri.host == 'quick-add' || uri.path.contains('quick-add') || uriStr.contains('quick-add')) {
+      if (QuickAddTransactionDialog.isOpen) return;
+
       final typeParam = uri.queryParameters['type'];
       final initialType = typeParam == 'income' ? TransactionType.income : TransactionType.expense;
 
       void showPopup([int retries = 0]) {
-        if (!mounted) return;
+        if (!mounted || QuickAddTransactionDialog.isOpen) return;
         final navContext = rootNavigatorKey.currentContext;
         if (navContext != null && navContext.mounted) {
           QuickAddTransactionDialog.show(navContext, initialType: initialType);
