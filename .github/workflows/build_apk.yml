@@ -27,6 +27,8 @@ jobs:
   build:
     name: Build & Release Universal APK (Turbo)
     runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:+UseG1GC -XX:MaxMetaspaceSize=1024m' -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.daemon=false"
 
     steps:
       - name: Fast Shallow Checkout
@@ -57,7 +59,7 @@ jobs:
           echo "Building Version: $VERSION_NAME+$BUILD_NUMBER ($VERSION_TAG)"
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -67,35 +69,23 @@ jobs:
         with:
           cache-read-only: false
 
-      - name: Set up Flutter Environment
+      - name: Set up Flutter Environment (Cached)
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
           cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
 
-      - name: Cache Pub Dependencies & Native Artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            .dart_tool/
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: build-cache-${{ runner.os }}-${{ hashFiles('**/pubspec.lock', 'android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            build-cache-${{ runner.os }}-
-
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Quick Static Analysis
+      - name: Fast Static Analysis
         run: flutter analyze --no-fatal-infos
 
       - name: Run Tests in Parallel
         run: flutter test --concurrency=4
 
-      - name: Configure Production Release Keystore (Permanent Signature)
+      - name: Configure Production Release Keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/pocket-release-key.jks
@@ -109,6 +99,7 @@ jobs:
         run: |
           if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
           flutter build apk --release --no-pub --tree-shake-icons \
+            --android-skip-build-dependency-validation \
             --build-name="${{ steps.versioning.outputs.VERSION_NAME }}" \
             --build-number="${{ steps.versioning.outputs.BUILD_NUMBER }}"
 
@@ -117,11 +108,12 @@ jobs:
           mkdir -p dist/
           cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
 
-      - name: Upload Universal APK Artifact
+      - name: Upload Universal APK Artifact (Fast)
         uses: actions/upload-artifact@v4
         with:
           name: Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-APK
           path: dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk
+          compression-level: 0
           retention-days: 30
 
       - name: Publish GitHub Release
@@ -134,5 +126,6 @@ jobs:
           prerelease: false
           generate_release_notes: true
           make_latest: true
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
