@@ -1,9 +1,12 @@
 package com.pocket.pocket
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
@@ -15,6 +18,7 @@ import org.json.JSONArray
 class MainActivity : FlutterActivity() {
     private val CONTACT_CHANNEL = "com.pocket.pocket/contact_picker"
     private val UPI_DETECTOR_CHANNEL = "com.pocket.pocket/upi_detector"
+    private val WIDGET_CHANNEL = "com.pocket.pocket/system_widget"
     private val REQUEST_CODE_PICK_CONTACT = 1001
     private var pendingContactResult: MethodChannel.Result? = null
     private var upiDetectorChannel: MethodChannel? = null
@@ -124,6 +128,43 @@ class MainActivity : FlutterActivity() {
                     }
                     else -> result.notImplemented()
                 }
+            }
+        }
+
+        // 3. System Home Screen Widget Channel (Pinning)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isPinWidgetSupported" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        try {
+                            val appWidgetManager = AppWidgetManager.getInstance(this)
+                            result.success(appWidgetManager.isRequestPinAppWidgetSupported)
+                        } catch (_: Exception) {
+                            result.success(false)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
+                "requestPinWidget" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        try {
+                            val appWidgetManager = AppWidgetManager.getInstance(this)
+                            val provider = ComponentName(this, PocketWidgetProvider::class.java)
+                            if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                                val pinned = appWidgetManager.requestPinAppWidget(provider, null, null)
+                                result.success(pinned)
+                            } else {
+                                result.success(false)
+                            }
+                        } catch (e: Exception) {
+                            result.error("PIN_FAILED", "Failed to pin widget: ${e.localizedMessage}", null)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
     }

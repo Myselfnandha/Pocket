@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 
 class SystemWidgetService {
   static const String androidWidgetName = 'PocketWidgetProvider';
+  static const MethodChannel _channel = MethodChannel('com.pocket.pocket/system_widget');
   static StreamSubscription<Uri?>? _widgetSubscription;
 
   /// Updates the Android System Home Screen App Widget with real-time balance and today's spend
@@ -29,6 +31,26 @@ class SystemWidgetService {
       );
     } catch (e) {
       debugPrint('SystemWidgetService update error: $e');
+    }
+  }
+
+  /// Check if pinning the widget programmatically to the home screen is supported by the Android launcher
+  static Future<bool> isPinWidgetSupported() async {
+    try {
+      final supported = await _channel.invokeMethod<bool>('isPinWidgetSupported');
+      return supported ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Request the Android OS / Launcher to pin the Pocket Widget to the user's home screen
+  static Future<bool> requestPinWidget() async {
+    try {
+      final success = await _channel.invokeMethod<bool>('requestPinWidget');
+      return success ?? false;
+    } catch (_) {
+      return false;
     }
   }
 

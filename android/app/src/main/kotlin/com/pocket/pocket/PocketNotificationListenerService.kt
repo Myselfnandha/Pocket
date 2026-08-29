@@ -23,26 +23,8 @@ class PocketNotificationListenerService : NotificationListenerService() {
         const val PREFS_NAME = "pocket_detected_transactions"
         const val KEY_PENDING_LIST = "pending_list"
         const val CHANNEL_ID = "pocket_detected_payments"
-        const val CHANNEL_NAME = "Detected UPI Payments"
+        const val CHANNEL_NAME = "Pocket Transaction Reminders"
         const val ACTION_QUICK_SAVE = "com.pocket.pocket.ACTION_QUICK_SAVE"
-
-        val MONITORED_PACKAGES = mapOf(
-            "com.google.android.apps.nbu.paisa.user" to "Google Pay",
-            "com.phonepe.app" to "PhonePe",
-            "net.one97.paytm" to "Paytm",
-            "com.dreamplug.androidapp" to "CRED",
-            "in.org.npci.upiapp" to "BHIM",
-            "in.amazon.mShop.android.shopping" to "Amazon Pay",
-            "com.snapwork.hdfc" to "HDFC Bank",
-            "com.sbi.lotusintouch" to "SBI Yono",
-            "com.sbi.SBIFreedomPlus" to "SBI Yono Lite",
-            "com.csam.icici.bank.imobile" to "ICICI Bank",
-            "com.axis.mobile" to "Axis Bank",
-            "com.msf.kbank.mobile" to "Kotak Bank",
-            "com.fss.pnb" to "PNB ONE",
-            "com.canarabank.mobility" to "Canara Bank",
-            "com.bankofbaroda.mconnect" to "Bank of Baroda"
-        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -50,7 +32,8 @@ class PocketNotificationListenerService : NotificationListenerService() {
         if (sbn == null) return
 
         val packageName = sbn.packageName ?: return
-        val appName = MONITORED_PACKAGES[packageName] ?: return
+        // Do not self-capture notifications from Pocket itself
+        if (packageName == applicationContext.packageName) return
 
         val extras: Bundle = sbn.notification.extras ?: return
         val title = extras.getString("android.title") ?: ""
@@ -60,7 +43,28 @@ class PocketNotificationListenerService : NotificationListenerService() {
         val fullContent = "$title $text $bigText".trim()
         if (fullContent.isEmpty()) return
 
+        // Verify if notification contains financial transaction indicators
+        if (!isFinancialTransaction(fullContent)) return
+
+        // Resolve friendly application label
+        val appName = try {
+            val pm = packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (_: Exception) {
+            "Payment"
+        }
+
         parseAndProcessTransaction(appName, title, fullContent)
+    }
+
+    private fun isFinancialTransaction(text: String): Boolean {
+        val lower = text.lowercase()
+        val hasCurrency = lower.contains("₹") || lower.contains("rs") || lower.contains("inr") || lower.contains("$")
+        val hasPaymentAction = lower.contains("paid") || lower.contains("spent") || lower.contains("debited") ||
+                lower.contains("credited") || lower.contains("received") || lower.contains("sent") ||
+                lower.contains("transferred") || lower.contains("refund")
+        return hasCurrency && hasPaymentAction
     }
 
     private fun parseAndProcessTransaction(appName: String, rawTitle: String, content: String) {
@@ -144,7 +148,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return cleanMerchantName(title)
         }
 
-        return "UPI Payment"
+        return "Payment"
     }
 
     private fun cleanMerchantName(name: String): String {
@@ -195,7 +199,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         // Create Channel on Android 8.0+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Real-time alerts for incoming UPI and banking payments"
+                description = "Reminders to log transactions into Pocket"
                 enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)

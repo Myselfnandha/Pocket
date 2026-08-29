@@ -18,6 +18,45 @@ void main() async {
   // Process any due recurring transactions automatically
   await storageService.processDueRecurringRules();
 
+  // Sync initial home screen widget data immediately on app start
+  try {
+    final initialWallets = storageService.getWallets();
+    final initialTxs = storageService.getTransactions();
+    final settings = storageService.getSettings();
+
+    double initialTotalBalance = 0.0;
+    for (final w in initialWallets) {
+      double b = w.initialBalance;
+      for (final tx in initialTxs) {
+        if (tx.walletId == w.id) {
+          if (tx.type == TransactionType.income) {
+            b += tx.amount;
+          } else {
+            b -= tx.amount;
+          }
+        }
+      }
+      initialTotalBalance += b;
+    }
+
+    final now = DateTime.now();
+    double initialTodayExpense = 0.0;
+    for (final tx in initialTxs) {
+      if (tx.type == TransactionType.expense &&
+          tx.date.year == now.year &&
+          tx.date.month == now.month &&
+          tx.date.day == now.day) {
+        initialTodayExpense += tx.amount;
+      }
+    }
+
+    await SystemWidgetService.updateWidgetData(
+      totalBalance: initialTotalBalance,
+      todayExpense: initialTodayExpense,
+      currencySymbol: settings.currencySymbol,
+    );
+  } catch (_) {}
+
   runApp(
     ProviderScope(
       overrides: [

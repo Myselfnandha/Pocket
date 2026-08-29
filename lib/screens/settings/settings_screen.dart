@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/system_widget_service.dart';
 import '../../services/upi_detection_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -185,6 +186,43 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 4.5 Section: Home Screen App Widget
+          _buildSectionHeader('HOME SCREEN APP WIDGET'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.widgets_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Add Widget to Home Screen', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('View live balance & log expenses directly from home screen'),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreenLight,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    final pinned = await SystemWidgetService.requestPinWidget();
+                    if (!context.mounted) return;
+                    if (pinned) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('✓ Pocket widget added to home screen')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Long press on your home screen -> select "Widgets" -> find "Pocket"')),
+                      );
+                    }
+                  },
+                  child: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                ),
               ),
             ],
           ),
