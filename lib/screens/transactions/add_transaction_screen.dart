@@ -15,7 +15,24 @@ import '../../theme/app_theme.dart';
 import '../../widgets/numpad.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  const AddTransactionScreen({super.key});
+  final double? initialAmount;
+  final String? initialTitle;
+  final TransactionType? initialType;
+  final String? initialCategoryId;
+  final String? initialWalletId;
+  final String? initialNote;
+  final String? initialReceiptImagePath;
+
+  const AddTransactionScreen({
+    super.key,
+    this.initialAmount,
+    this.initialTitle,
+    this.initialType,
+    this.initialCategoryId,
+    this.initialWalletId,
+    this.initialNote,
+    this.initialReceiptImagePath,
+  });
 
   @override
   ConsumerState<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -44,6 +61,29 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null) {
+      _type = widget.initialType!;
+    }
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      _amountStr = widget.initialAmount! % 1 == 0
+          ? widget.initialAmount!.toInt().toString()
+          : widget.initialAmount!.toString();
+    }
+    if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+      _titleController.text = widget.initialTitle!;
+    }
+    if (widget.initialCategoryId != null) {
+      _selectedCategoryId = widget.initialCategoryId;
+    }
+    if (widget.initialWalletId != null) {
+      _selectedWalletId = widget.initialWalletId;
+    }
+    if (widget.initialReceiptImagePath != null && widget.initialReceiptImagePath!.isNotEmpty) {
+      final f = File(widget.initialReceiptImagePath!);
+      if (f.existsSync()) {
+        _receiptFile = f;
+      }
+    }
     _titleController.addListener(_onTitleChanged);
     _titleFocus.addListener(() {
       if (_titleFocus.hasFocus) {

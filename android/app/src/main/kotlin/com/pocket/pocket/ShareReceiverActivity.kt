@@ -117,12 +117,18 @@ class ShareReceiverActivity : Activity() {
             lower.contains("sbi") || lower.contains("yono") -> appSource = "SBI"
             lower.contains("icici") || lower.contains("imobile") -> appSource = "ICICI Bank"
             lower.contains("axis") -> appSource = "Axis Bank"
+            lower.contains("kotak") -> appSource = "Kotak Bank"
+            lower.contains("super.money") || lower.contains("supermoney") -> appSource = "Super.money"
+            lower.contains("famapp") || lower.contains("fampay") -> appSource = "FamPay"
         }
 
-        // 2. Detect Amount (₹, Rs, INR)
+        // 2. Multi-Stage Amount Scanner (Stage 1: Explicit Currency & Action Verbs)
         val amountPatterns = listOf(
-            Pattern.compile("""(?:[₹₹]|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred)\s*(?:[₹₹]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            // Direct currency prefixes (₹ 1500, Rs. 1500.00, INR 1500)
+            Pattern.compile("""(?:[₹₹]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            // Action verbs (Paid 1500, Sent Rs 1500, Debited ₹1500, Total ₹1500)
+            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent)\s*(?:[₹₹]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            // Trailing currency (1500 ₹, 1500.00 INR)
             Pattern.compile("""([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:[₹₹]|INR|Rs)""", Pattern.CASE_INSENSITIVE)
         )
 
@@ -130,11 +136,48 @@ class ShareReceiverActivity : Activity() {
             val matcher = pattern.matcher(text)
             if (matcher.find()) {
                 val candidate = matcher.group(1)?.replace(",", "") ?: ""
-                if (candidate.isNotEmpty() && candidate.toDoubleOrNull() != null) {
-                    val num = candidate.toDouble()
-                    if (num > 0 && num < 10000000) {
+                val num = candidate.toDoubleOrNull()
+                if (num != null && num > 0 && num < 10000000) {
+                    amount = candidate
+                    break
+                }
+            }
+        }
+
+        // Stage 2: Line-by-Line Contextual Scanner (handles ₹ on one line, amount on next line)
+        if (amount.isEmpty()) {
+            val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+            for (i in lines.indices) {
+                val line = lines[i]
+                // Look for standalone number on its own line: e.g. "450.00" or "450"
+                val lineAmountMatch = Pattern.compile("""^[₹₹RsINR\s]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$""", Pattern.CASE_INSENSITIVE).matcher(line)
+                if (lineAmountMatch.find()) {
+                    val candidate = lineAmountMatch.group(1)?.replace(",", "") ?: ""
+                    val num = candidate.toDoubleOrNull()
+                    if (num != null && num > 0 && num < 10000000) {
+                        // Check if previous or current line has currency or payment indicator
+                        val prevLine = if (i > 0) lines[i - 1].lowercase() else ""
+                        if (prevLine.contains("₹") || prevLine.contains("rs") || prevLine.contains("paid") || prevLine.contains("sent") || prevLine.contains("amount") || line.contains("₹")) {
+                            amount = candidate
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stage 3: Fallback largest decimal monetary amount found on screen (e.g. 250.00)
+        if (amount.isEmpty()) {
+            val decimalPattern = Pattern.compile("""\b([0-9]{1,6}\.[0-9]{2})\b""")
+            val matcher = decimalPattern.matcher(text)
+            var maxCandidate = 0.0
+            while (matcher.find()) {
+                val candidate = matcher.group(1) ?: ""
+                val num = candidate.toDoubleOrNull()
+                if (num != null && num > 0 && num < 10000000) {
+                    if (num > maxCandidate) {
+                        maxCandidate = num
                         amount = candidate
-                        break
                     }
                 }
             }
@@ -150,18 +193,24 @@ class ShareReceiverActivity : Activity() {
             val matcher = pattern.matcher(text)
             if (matcher.find()) {
                 val candidate = matcher.group(1)?.trim() ?: ""
-                if (candidate.isNotEmpty() && candidate.length > 1 && !candidate.lowercase().contains("google pay")) {
+                if (candidate.isNotEmpty() && candidate.length > 1 && !candidate.lowercase().contains("google pay") && !candidate.lowercase().contains("phonepe")) {
                     merchant = cleanMerchantName(candidate)
                     break
                 }
             }
         }
 
-        // 4. UPI Ref / Transaction ID
-        val refPattern = Pattern.compile("""(?:UPI (?:Ref(?:erence)?|Txn|Transaction)?\s*(?:No|ID)?[:\s]*|UTR[:\s]*)([0-9A-Za-z]{8,22})""", Pattern.CASE_INSENSITIVE)
+        // 4. UPI Ref / Transaction ID / UTR Scanner
+        val refPattern = Pattern.compile("""(?:UPI\s*(?:Ref(?:erence)?|Txn|Transaction)?\s*(?:No|ID|Num)?[:\s]*|UTR[:\s]*|Txn\s*ID[:\s]*|Transaction\s*ID[:\s]*|Ref\s*(?:No|ID)?[:\s]*|Google transaction ID[:\s]*|PhonePe transaction ID[:\s]*)([0-9A-Za-z]{8,24})""", Pattern.CASE_INSENSITIVE)
         val refMatcher = refPattern.matcher(text)
         if (refMatcher.find()) {
-            refId = refMatcher.group(1) ?: ""
+            refId = refMatcher.group(1)?.trim() ?: ""
+        } else {
+            // Standalone 12-digit standard UPI UTR pattern
+            val utr12Matcher = Pattern.compile("""\b([0-9]{12})\b""").matcher(text)
+            if (utr12Matcher.find()) {
+                refId = utr12Matcher.group(1) ?: ""
+            }
         }
 
         if (merchant.isEmpty()) {
@@ -216,16 +265,24 @@ class ShareReceiverActivity : Activity() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
-        val pendingIntent = PendingIntent.getActivity(
+        val logPendingIntent = PendingIntent.getActivity(
             this,
             System.currentTimeMillis().toInt(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
+        val dismissIntent = Intent(this, NotificationDismissReceiver::class.java)
+        val dismissPendingIntent = PendingIntent.getBroadcast(
+            this,
+            (System.currentTimeMillis() + 1).toInt(),
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+
         val amountDisplay = if (parsedData.amount.isNotEmpty()) "₹${parsedData.amount}" else "Receipt"
         val title = "💳 $amountDisplay at ${parsedData.merchant}"
-        val body = "Paid via ${parsedData.appSource} • Tap to complete & log transaction"
+        val body = "Paid via ${parsedData.appSource} • Tap to log transaction"
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -234,7 +291,9 @@ class ShareReceiverActivity : Activity() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(logPendingIntent)
+            .addAction(R.mipmap.ic_launcher, "⚡ Log Now", logPendingIntent)
+            .addAction(R.mipmap.ic_launcher, "✕ Dismiss", dismissPendingIntent)
             .build()
 
         notificationManager.notify(1099, notification)

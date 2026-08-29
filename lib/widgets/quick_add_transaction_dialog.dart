@@ -632,8 +632,23 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           children: [
             TextButton.icon(
               onPressed: () {
+                final enteredAmount = double.tryParse(_amountController.text.trim()) ?? widget.initialAmount;
+                final enteredTitle = _titleController.text.trim();
+                final enteredNote = _notesController.text.trim();
+
                 Navigator.of(context).pop();
-                context.push('/add-transaction');
+                context.push(
+                  '/add-transaction',
+                  extra: {
+                    'amount': enteredAmount,
+                    'title': enteredTitle.isNotEmpty ? enteredTitle : widget.initialTitle,
+                    'type': _type,
+                    'categoryId': _selectedCategoryId ?? widget.initialCategoryId,
+                    'walletId': _selectedWalletId,
+                    'note': enteredNote.isNotEmpty ? enteredNote : widget.initialNote,
+                    'receiptImagePath': _receiptImagePath ?? widget.initialReceiptImagePath,
+                  },
+                );
               },
               icon: const Icon(Icons.open_in_full_rounded, size: 14),
               label: const Text('More Details', style: TextStyle(fontSize: 12)),

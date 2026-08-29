@@ -9,7 +9,7 @@ void main() {
         "amount": 450.00,
         "merchant": "Zomato",
         "app_source": "Google Pay",
-        "ref_id": "UPI423984729384",
+        "ref_id": "423984729384",
         "image_path": "/data/user/0/com.pocket.pocket/files/receipts/upi_shared_1.jpg",
         "raw_text": "Paid ₹450 to Zomato Completed UPI Transaction ID 423984729384"
       }
@@ -19,7 +19,7 @@ void main() {
       expect(parsed.amount, 450.0);
       expect(parsed.merchant, 'Zomato');
       expect(parsed.appSource, 'Google Pay');
-      expect(parsed.refId, 'UPI423984729384');
+      expect(parsed.refId, '423984729384');
       expect(parsed.imagePath, '/data/user/0/com.pocket.pocket/files/receipts/upi_shared_1.jpg');
       expect(parsed.suggestedCategoryId, 'cat_food');
     });
@@ -40,6 +40,37 @@ void main() {
       expect(parsed.merchant, 'Blinkit Groceries');
       expect(parsed.appSource, 'PhonePe');
       expect(parsed.suggestedCategoryId, 'cat_groceries');
+    });
+
+    test('Recovers amount and ref from raw OCR text when JSON amount is empty', () {
+      const gpayMultiLineJson = '''
+      {
+        "amount": "",
+        "merchant": "Swiggy",
+        "app_source": "Google Pay",
+        "ref_id": "",
+        "raw_text": "Paid to Swiggy\\n₹\\n385.00\\nCompleted\\nUPI Ref No: 489201948291"
+      }
+      ''';
+
+      final parsed = UpiParsedTransaction.fromPayloadString(gpayMultiLineJson);
+      expect(parsed.amount, 385.0);
+      expect(parsed.merchant, 'Swiggy');
+      expect(parsed.refId, '489201948291');
+      expect(parsed.suggestedCategoryId, 'cat_food');
+    });
+
+    test('Extracts diverse amount formats in Dart fallback parser', () {
+      expect(UpiScreenshotParserService.extractAmount('Debited ₹2,400.00 from A/c'), 2400.0);
+      expect(UpiScreenshotParserService.extractAmount('Sent Rs 500 to Alex'), 500.0);
+      expect(UpiScreenshotParserService.extractAmount('Total amount: INR 125.50'), 125.50);
+      expect(UpiScreenshotParserService.extractAmount('Payment of 750 successful'), 750.0);
+    });
+
+    test('Extracts 12-digit reference numbers from raw text', () {
+      expect(UpiScreenshotParserService.extractRefId('UTR: 423984729384'), '423984729384');
+      expect(UpiScreenshotParserService.extractRefId('Txn ID: CIC9284729184'), 'CIC9284729184');
+      expect(UpiScreenshotParserService.extractRefId('Payment completed 492019482910 via SBI'), '492019482910');
     });
 
     test('Correctly predicts categories for diverse merchants', () {

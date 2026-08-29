@@ -83,7 +83,7 @@ class _PocketAppState extends ConsumerState<PocketApp> {
           initialTitle: tx.merchant,
           initialCategoryId: tx.suggestedCategoryId,
           initialReceiptImagePath: tx.imagePath,
-          initialNote: tx.refId != null ? 'Ref: ${tx.refId}' : null,
+          initialNote: tx.refId,
           autoFocusNote: true,
         );
       }

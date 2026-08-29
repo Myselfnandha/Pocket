@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/transaction_model.dart';
+import '../models/category_model.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/transactions/transactions_list_screen.dart';
 import '../screens/transactions/add_transaction_screen.dart';
@@ -22,7 +23,14 @@ GoRouter createRouter(bool isOnboarded) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: isOnboarded ? '/home' : '/onboarding',
+    errorBuilder: (context, state) => const HomeScreen(),
     routes: [
+      // Root Redirect Route (Fixes deep links sending '/' or '/?')
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => isOnboarded ? '/home' : '/onboarding',
+      ),
+
       // Onboarding Route
       GoRoute(
         path: '/onboarding',
@@ -30,11 +38,25 @@ GoRouter createRouter(bool isOnboarded) {
         builder: (context, state) => const OnboardingScreen(),
       ),
 
-      // Add Transaction (Full Screen Modal)
+      // Add Transaction (Full Screen Modal with Pre-fill Support)
       GoRoute(
         path: '/add-transaction',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const AddTransactionScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return AddTransactionScreen(
+              initialAmount: extra['amount'] as double?,
+              initialTitle: extra['title'] as String?,
+              initialType: extra['type'] as TransactionType?,
+              initialCategoryId: extra['categoryId'] as String?,
+              initialWalletId: extra['walletId'] as String?,
+              initialNote: extra['note'] as String?,
+              initialReceiptImagePath: extra['receiptImagePath'] as String?,
+            );
+          }
+          return const AddTransactionScreen();
+        },
       ),
 
       // Full Transactions List (Dedicated Screen)
@@ -84,8 +106,12 @@ GoRouter createRouter(bool isOnboarded) {
         path: '/transaction-detail',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          final tx = state.extra as TransactionModel;
-          return TransactionDetailScreen(transaction: tx);
+          final extra = state.extra;
+          if (extra is TransactionModel) {
+            return TransactionDetailScreen(transaction: extra);
+          }
+          // Safe fallback if navigated without extra
+          return const HomeScreen();
         },
       ),
 
