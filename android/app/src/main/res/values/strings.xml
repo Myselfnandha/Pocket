@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Pocket Balance &amp; Quick Add</string>
+    <string name="widget_description">View real-time balance, today\'s expenses, and instantly log transactions.</string>
+</resources>

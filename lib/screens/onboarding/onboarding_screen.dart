@@ -501,13 +501,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             icon: Icons.schedule_rounded,
             iconColor: AppColors.infoBlue,
             isSelected: _selectedThemeMode == AppThemeMode.autoTime,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.autoTime;
-                _selectedThemeStyle = ManualThemeStyle.pureBlack;
-                _isPureBlack = true;
-              });
-            },
+            onTap: () => _onThemeSelected(AppThemeMode.autoTime, ManualThemeStyle.pureBlack, true),
             isDark: isDark,
           ),
           const SizedBox(height: 12),
@@ -518,13 +512,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             icon: Icons.brightness_2_rounded,
             iconColor: AppColors.primaryGreenLight,
             isSelected: _selectedThemeMode == AppThemeMode.manual && _isPureBlack,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.manual;
-                _selectedThemeStyle = ManualThemeStyle.pureBlack;
-                _isPureBlack = true;
-              });
-            },
+            onTap: () => _onThemeSelected(AppThemeMode.manual, ManualThemeStyle.pureBlack, true),
             isDark: isDark,
           ),
           const SizedBox(height: 12),
@@ -535,13 +523,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             icon: Icons.dark_mode_rounded,
             iconColor: AppColors.accentOrange,
             isSelected: _selectedThemeMode == AppThemeMode.manual && !_isPureBlack && _selectedThemeStyle == ManualThemeStyle.dark,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.manual;
-                _selectedThemeStyle = ManualThemeStyle.dark;
-                _isPureBlack = false;
-              });
-            },
+            onTap: () => _onThemeSelected(AppThemeMode.manual, ManualThemeStyle.dark, false),
             isDark: isDark,
           ),
           const SizedBox(height: 12),
@@ -552,18 +534,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             icon: Icons.light_mode_rounded,
             iconColor: AppColors.accentOrange,
             isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.light,
-            onTap: () {
-              setState(() {
-                _selectedThemeMode = AppThemeMode.manual;
-                _selectedThemeStyle = ManualThemeStyle.light;
-                _isPureBlack = false;
-              });
-            },
+            onTap: () => _onThemeSelected(AppThemeMode.manual, ManualThemeStyle.light, false),
             isDark: isDark,
           ),
         ],
       ),
     );
+  }
+
+  void _onThemeSelected(AppThemeMode mode, ManualThemeStyle style, bool isPureBlack) {
+    setState(() {
+      _selectedThemeMode = mode;
+      _selectedThemeStyle = style;
+      _isPureBlack = isPureBlack;
+    });
+    ref.read(settingsProvider.notifier).updateSettings(
+          ref.read(settingsProvider).copyWith(
+                themeMode: mode,
+                manualThemeStyle: style,
+                isPureBlackEnabled: isPureBlack,
+              ),
+        );
   }
 
   Widget _buildThemeCard({

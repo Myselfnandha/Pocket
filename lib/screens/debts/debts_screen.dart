@@ -413,23 +413,90 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Type selector with rich labels
-                Row(
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Lent (You gave)'),
-                      selected: selectedType == DebtType.lent,
-                      selectedColor: AppColors.incomeGreen.withValues(alpha: 0.25),
-                      onSelected: (_) => setDialogState(() => selectedType = DebtType.lent),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Borrowed (You took)'),
-                      selected: selectedType == DebtType.borrowed,
-                      selectedColor: AppColors.expenseRed.withValues(alpha: 0.25),
-                      onSelected: (_) => setDialogState(() => selectedType = DebtType.borrowed),
-                    ),
-                  ],
+                // Full-width edge-to-edge segmented toggle (prevents overflow on all screen sizes)
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E1E1E)
+                        : const Color(0xFFEBEBEB),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setDialogState(() => selectedType = DebtType.lent),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selectedType == DebtType.lent
+                                  ? AppColors.incomeGreen.withValues(alpha: 0.22)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: selectedType == DebtType.lent
+                                    ? AppColors.incomeGreen
+                                    : Colors.transparent,
+                                width: 1.2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Lent (You gave)',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: selectedType == DebtType.lent ? FontWeight.w800 : FontWeight.w600,
+                                  color: selectedType == DebtType.lent
+                                      ? AppColors.incomeGreen
+                                      : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setDialogState(() => selectedType = DebtType.borrowed),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selectedType == DebtType.borrowed
+                                  ? AppColors.expenseRed.withValues(alpha: 0.22)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: selectedType == DebtType.borrowed
+                                    ? AppColors.expenseRed
+                                    : Colors.transparent,
+                                width: 1.2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Borrowed (You took)',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: selectedType == DebtType.borrowed ? FontWeight.w800 : FontWeight.w600,
+                                  color: selectedType == DebtType.borrowed
+                                      ? AppColors.expenseRed
+                                      : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
 
@@ -572,6 +639,14 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     );
 
                 Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Added ${selectedType == DebtType.lent ? "Lent to" : "Borrowed from"} $name ✓'),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
               },
               child: const Text('Save'),
             ),
@@ -645,6 +720,14 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     );
 
                 Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Recorded payment of $currencySymbol${amt.toStringAsFixed(2)} for ${debt.personName} ✓'),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
               },
               child: const Text('Record Payment'),
             ),
@@ -699,6 +782,14 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                       updateWallet: updateWallet,
                     );
                 Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Settled debt with ${debt.personName} ✓'),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
               },
               child: const Text('Settle Up'),
             ),

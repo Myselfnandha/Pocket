@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
 import '../../widgets/transaction_tile.dart';
+import '../../widgets/quick_add_transaction_dialog.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -121,13 +122,18 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(width: 6),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/add-transaction'),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => QuickAddTransactionDialog.show(context),
         backgroundColor: AppColors.primaryGreenLight,
+        foregroundColor: Colors.black,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        tooltip: 'Add Transaction',
-        child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
+        tooltip: 'Quick Add Transaction',
+        icon: const Icon(Icons.add_rounded, size: 24),
+        label: const Text(
+          'Quick Add',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
@@ -319,27 +325,61 @@ class HomeScreen extends ConsumerWidget {
                           : AppColors.lightTextPrimary,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/transactions'),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'See All',
-                          style: TextStyle(
-                            color: AppColors.primaryGreenLight,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => QuickAddTransactionDialog.show(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 14, color: AppColors.primaryGreenLight),
+                              SizedBox(width: 4),
+                              Text(
+                                'Quick Log',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryGreenLight,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 14,
-                          color: AppColors.primaryGreenLight,
+                      ),
+                      const SizedBox(width: 6),
+                      TextButton(
+                        onPressed: () => context.push('/transactions'),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'See All',
+                              style: TextStyle(
+                                color: AppColors.primaryGreenLight,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 14,
+                              color: AppColors.primaryGreenLight,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),

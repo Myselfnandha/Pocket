@@ -15,74 +15,74 @@ import '../screens/debts/debts_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import 'app_scaffold.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey =
+final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
 
 GoRouter createRouter(bool isOnboarded) {
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: isOnboarded ? '/home' : '/onboarding',
     routes: [
       // Onboarding Route
       GoRoute(
         path: '/onboarding',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
       ),
 
       // Add Transaction (Full Screen Modal)
       GoRoute(
         path: '/add-transaction',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AddTransactionScreen(),
       ),
 
       // Full Transactions List (Dedicated Screen)
       GoRoute(
         path: '/transactions',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const TransactionsListScreen(),
       ),
 
       // Settings (Dedicated Screen)
       GoRoute(
         path: '/settings',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
 
       // Recurring Rules (Dedicated Screen)
       GoRoute(
         path: '/recurring-rules',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RecurringRulesScreen(),
       ),
 
       // Notification Center (Dedicated Screen)
       GoRoute(
         path: '/notifications',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const NotificationCenterScreen(),
       ),
 
       // Data & Account Management (Dedicated Screen)
       GoRoute(
         path: '/data-management',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DataManagementScreen(),
       ),
 
       // Debts & Loans (Dedicated Screen)
       GoRoute(
         path: '/debts',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DebtsScreen(),
       ),
 
       // Transaction Detail
       GoRoute(
         path: '/transaction-detail',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final tx = state.extra as TransactionModel;
           return TransactionDetailScreen(transaction: tx);

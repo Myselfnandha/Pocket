@@ -51,7 +51,10 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(
+          content: Text('Please enter a valid amount'),
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
