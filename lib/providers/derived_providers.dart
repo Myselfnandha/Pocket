@@ -224,3 +224,11 @@ final financialHealthReportProvider = Provider<FinancialHealthReport>((ref) {
     goals: goals,
   );
 });
+
+/// Total remaining budget across all categories for the current month
+final totalBudgetRemainingProvider = Provider<double>((ref) {
+  final totalLimit = ref.watch(totalCategoryBudgetLimitProvider);
+  final monthlyStats = ref.watch(monthlyStatsProvider);
+  final remaining = totalLimit - monthlyStats.totalExpense;
+  return remaining > 0 ? remaining : 0.0;
+});

@@ -58,35 +58,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     {'symbol': 'A\$', 'code': 'AUD', 'name': 'Australian Dollar'},
   ];
 
+  String _selectedCountryCode = '+91';
+  String _selectedCountryFlag = '🇮🇳';
+
+  final List<Map<String, String>> _countryCodes = [
+    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
+    {'code': '+1', 'flag': '🇺🇸', 'name': 'United States / Canada'},
+    {'code': '+44', 'flag': '🇬🇧', 'name': 'United Kingdom'},
+    {'code': '+971', 'flag': '🇦🇪', 'name': 'United Arab Emirates'},
+    {'code': '+61', 'flag': '🇦🇺', 'name': 'Australia'},
+    {'code': '+81', 'flag': '🇯🇵', 'name': 'Japan'},
+    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germany'},
+    {'code': '+65', 'flag': '🇸🇬', 'name': 'Singapore'},
+    {'code': '+33', 'flag': '🇫🇷', 'name': 'France'},
+    {'code': '+966', 'flag': '🇸🇦', 'name': 'Saudi Arabia'},
+    {'code': '+86', 'flag': '🇨🇳', 'name': 'China'},
+    {'code': '+7', 'flag': '🇷🇺', 'name': 'Russia'},
+    {'code': '+55', 'flag': '🇧🇷', 'name': 'Brazil'},
+    {'code': '+27', 'flag': '🇿🇦', 'name': 'South Africa'},
+    {'code': '+60', 'flag': '🇲🇾', 'name': 'Malaysia'},
+  ];
+
   @override
   void initState() {
     super.initState();
     _onboardingCategories = List.from(defaultCategories);
-    
-    // Pre-populate smart starter accounts
-    _onboardingWallets.addAll([
-      const WalletModel(
-        id: 'bank_primary',
-        name: 'Main Bank Account',
-        icon: '🏦',
-        colorValue: 0xFF2E7D32,
-        initialBalance: 0.0,
-        currentBalance: 0.0,
-        walletType: WalletType.bank,
-        accountNumber: '4821',
-        isDefault: true,
-      ),
-      const WalletModel(
-        id: 'cash_hand',
-        name: 'Cash in Hand',
-        icon: '💵',
-        colorValue: 0xFF4CAF50,
-        initialBalance: 0.0,
-        currentBalance: 0.0,
-        walletType: WalletType.cash,
-        isDefault: false,
-      ),
-    ]);
+    // Starts with clean slate for Wallet Setup
   }
 
   @override
@@ -148,9 +145,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     if (_onboardingWallets.isEmpty) {
+      _pageController.animateToPage(3, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please create at least 1 account to get started'),
+          behavior: SnackBarBehavior.floating,
+          content: Text('Please add at least 1 account to get started'),
           duration: Duration(seconds: 3),
         ),
       );
@@ -158,7 +157,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
 
     final name = _nameController.text.trim();
-    final phone = _phoneController.text.trim();
+    final rawPhone = _phoneController.text.trim();
+    final phone = rawPhone.isNotEmpty ? '$_selectedCountryCode $rawPhone' : null;
     final currencySymbol = _selectedCurrencySymbol ?? '₹';
     final currencyCode = _selectedCurrencyCode ?? 'INR';
 
@@ -166,7 +166,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await ref.read(settingsProvider.notifier).updateSettings(
           ref.read(settingsProvider).copyWith(
                 userName: name,
-                userPhoneNumber: phone.isNotEmpty ? phone : null,
+                userPhoneNumber: phone,
                 currencySymbol: currencySymbol,
                 currencyCode: currencyCode,
                 themeMode: _selectedThemeMode,
@@ -466,9 +466,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              hintText: 'e.g. 9876543210',
-              prefixText: '+91 ',
-              prefixIcon: const Icon(Icons.phone_iphone_rounded, color: AppColors.primaryGreenLight),
+              hintText: '9876543210',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white30 : Colors.black26,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+              ),
+              prefixIcon: InkWell(
+                onTap: () => _showCountryCodePicker(isDark),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_selectedCountryFlag, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 4),
+                      Text(
+                        _selectedCountryCode,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.arrow_drop_down_rounded, size: 18, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Container(height: 20, width: 1, color: isDark ? Colors.white24 : Colors.black12),
+                      const SizedBox(width: 6),
+                    ],
+                  ),
+                ),
+              ),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
@@ -737,7 +767,86 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 4: Smart Starter Accounts Setup ---
+  void _showCountryCodePicker(bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Select Country Code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.separated(
+                itemCount: _countryCodes.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                ),
+                itemBuilder: (context, index) {
+                  final item = _countryCodes[index];
+                  final isSelected = _selectedCountryCode == item['code'];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    leading: Text(item['flag']!, style: const TextStyle(fontSize: 22)),
+                    title: Text(
+                      item['name']!,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? AppColors.primaryGreenLight : null,
+                      ),
+                    ),
+                    trailing: Text(
+                      item['code']!,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? AppColors.primaryGreenLight : Colors.grey,
+                      ),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _selectedCountryCode = item['code']!;
+                        _selectedCountryFlag = item['flag']!;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Slide 4: Wallet Setup ---
   Widget _buildSlide4Wallets(bool isDark) {
     final symbol = _selectedCurrencySymbol ?? '₹';
 
@@ -753,7 +862,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Starter Accounts',
+                    'Wallet Setup',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -762,7 +871,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Pre-configured accounts with instant inline balance editing.',
+                    'Add your bank accounts, cash in hand, UPI, or cards.',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -774,7 +883,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Pre-populated & Added Wallets List
+          if (_onboardingWallets.isEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Text('💳', style: TextStyle(fontSize: 32)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No accounts added yet',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap below to add your primary bank, cash, or UPI.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // Added Wallets List
           ..._onboardingWallets.map((w) {
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -852,22 +1000,79 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           }),
           const SizedBox(height: 8),
 
-          // Add Extra Wallet Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryGreenLight,
-                side: const BorderSide(color: AppColors.primaryGreenLight, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          // Quick Template Add Buttons
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickWalletButton(
+                  icon: Icons.account_balance_rounded,
+                  label: '+ Bank',
+                  onTap: () => _showAddWalletDialog(isDark, initialType: WalletType.bank),
+                  isDark: isDark,
+                ),
               ),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add Another Account / UPI / Card', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              onPressed: () => _showAddWalletDialog(isDark),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickWalletButton(
+                  icon: Icons.payments_outlined,
+                  label: '+ Cash',
+                  onTap: () => _showAddWalletDialog(isDark, initialType: WalletType.cash),
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickWalletButton(
+                  icon: Icons.qr_code_2_rounded,
+                  label: '+ UPI',
+                  onTap: () => _showAddWalletDialog(isDark, initialType: WalletType.upi),
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickWalletButton(
+                  icon: Icons.credit_card_rounded,
+                  label: '+ Card',
+                  onTap: () => _showAddWalletDialog(isDark, initialType: WalletType.creditCard),
+                  isDark: isDark,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickWalletButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.35)),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 14, color: AppColors.primaryGreenLight),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5, color: AppColors.primaryGreenLight),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -924,12 +1129,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  void _showAddWalletDialog(bool isDark) {
-    final nameCtrl = TextEditingController(text: 'Bank Account');
+  void _showAddWalletDialog(bool isDark, {WalletType? initialType}) {
+    final initial = initialType ?? WalletType.bank;
+    WalletType selectedType = initial;
+    String selectedIcon = '🏦';
+    String defaultName = 'Bank Account';
+    if (initial == WalletType.cash) {
+      selectedIcon = '💵';
+      defaultName = 'Cash in Hand';
+    } else if (initial == WalletType.upi) {
+      selectedIcon = '📱';
+      defaultName = 'UPI Wallet';
+    } else if (initial == WalletType.creditCard) {
+      selectedIcon = '💳';
+      defaultName = 'Credit Card';
+    } else if (initial == WalletType.savings) {
+      selectedIcon = '💰';
+      defaultName = 'Savings Vault';
+    }
+    final nameCtrl = TextEditingController(text: defaultName);
     final balanceCtrl = TextEditingController();
     final last4Ctrl = TextEditingController();
-    WalletType selectedType = WalletType.bank;
-    String selectedIcon = '🏦';
 
     showModalBottomSheet(
       context: context,

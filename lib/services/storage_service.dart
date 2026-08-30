@@ -25,6 +25,8 @@ class StorageService {
   static const _kBudgets = 'pocket_category_budgets';
   static const _kGoals = 'pocket_goals';
   static const _kEncryptionKeyName = 'pocket_storage_aes_key_v1';
+  static const _kIsOnboardedFastFlag = 'pocket_is_onboarded_flag';
+  static const _kEncryptionKeyBackup = 'pocket_storage_aes_key_v1_backup';
 
   final SharedPreferences _prefs;
   final enc.Encrypter? _encrypter;
@@ -48,15 +50,24 @@ class StorageService {
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
     final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
-    final effectiveSecureStorage = secureStorage ?? const FlutterSecureStorage();
+    final effectiveSecureStorage = secureStorage ??
+        const FlutterSecureStorage(
+          aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        );
 
     enc.Encrypter? encrypter;
     try {
       String? keyBase64 = await effectiveSecureStorage.read(key: _kEncryptionKeyName);
       if (keyBase64 == null || keyBase64.isEmpty) {
+        keyBase64 = effectivePrefs.getString(_kEncryptionKeyBackup);
+      }
+      if (keyBase64 == null || keyBase64.isEmpty) {
         final newKey = enc.Key.fromSecureRandom(32);
         keyBase64 = newKey.base64;
         await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
+        await effectivePrefs.setString(_kEncryptionKeyBackup, keyBase64);
+      } else {
+        await effectivePrefs.setString(_kEncryptionKeyBackup, keyBase64);
       }
       final key = enc.Key.fromBase64(keyBase64);
       encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
@@ -216,27 +227,30 @@ class StorageService {
     await _prefs.setString(_kWallets, _encryptString(raw));
   }
 
-  // --- Settings ---
-
   UserSettingsModel getSettings() {
     if (_cachedSettings != null) return _cachedSettings!;
+    UserSettingsModel settings = const UserSettingsModel();
     final raw = _decryptString(_prefs.getString(_kSettings));
-    if (raw == null) {
-      _cachedSettings = const UserSettingsModel();
-      return _cachedSettings!;
+    if (raw != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(raw);
+        settings = UserSettingsModel.fromJson(decoded);
+      } catch (_) {
+        settings = const UserSettingsModel();
+      }
     }
-    try {
-      final Map<String, dynamic> decoded = jsonDecode(raw);
-      _cachedSettings = UserSettingsModel.fromJson(decoded);
-      return _cachedSettings!;
-    } catch (_) {
-      _cachedSettings = const UserSettingsModel();
-      return _cachedSettings!;
+    // Fast flag sync for cold restarts
+    final fastOnboarded = _prefs.getBool(_kIsOnboardedFastFlag);
+    if (fastOnboarded != null && fastOnboarded && !settings.isOnboarded) {
+      settings = settings.copyWith(isOnboarded: true);
     }
+    _cachedSettings = settings;
+    return _cachedSettings!;
   }
 
   Future<void> saveSettings(UserSettingsModel settings) async {
     _cachedSettings = settings;
+    await _prefs.setBool(_kIsOnboardedFastFlag, settings.isOnboarded);
     final raw = jsonEncode(settings.toJson());
     await _prefs.setString(_kSettings, _encryptString(raw));
   }

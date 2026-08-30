@@ -93,6 +93,7 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         backgroundColor: const Color(0xFF1E1E1E),
         content: Text('Added $title (${settings.currencySymbol}${_parsed!.amount!.toStringAsFixed(0)}) ✓'),
@@ -147,29 +148,13 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
           ),
           const SizedBox(height: 14),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const Row(
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'Natural Language Entry',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'NLP AI',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primaryGreenLight),
-                ),
+              Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Natural Language Entry',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
             ],
           ),

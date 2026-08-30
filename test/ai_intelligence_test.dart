@@ -147,6 +147,47 @@ void main() {
       expect(parsedSalary.type, equals(TransactionType.income));
       expect(parsedSalary.categoryId, equals('salary'));
 
+      final customWallets = [
+        const WalletModel(
+          id: 'w_custom_bank',
+          name: 'dd',
+          icon: '🏦',
+          colorValue: 0xFF2E7D32,
+          initialBalance: 0.0,
+          currentBalance: 5000.0,
+          walletType: WalletType.bank,
+          accountNumber: '4482',
+        ),
+        const WalletModel(
+          id: 'w_custom_cash',
+          name: 'Cash in Hand',
+          icon: '💵',
+          colorValue: 0xFF4CAF50,
+          initialBalance: 0.0,
+          currentBalance: 1200.0,
+          walletType: WalletType.cash,
+        ),
+      ];
+
+      // Test "dinner yesterday through bank account" matches bank wallet "dd"
+      final parsedBankPhrase = NlpTransactionParser.parse(
+        'dinner yesterday through bank account 1200',
+        categories: defaultCategories,
+        wallets: customWallets,
+      );
+      expect(parsedBankPhrase.amount, equals(1200.0));
+      expect(parsedBankPhrase.walletId, equals('w_custom_bank'));
+      expect(parsedBankPhrase.title, equals('Dinner'));
+
+      // Test account last 4 digits matching
+      final parsedByDigits = NlpTransactionParser.parse(
+        'paid 500 for coffee via 4482',
+        categories: defaultCategories,
+        wallets: customWallets,
+      );
+      expect(parsedByDigits.amount, equals(500.0));
+      expect(parsedByDigits.walletId, equals('w_custom_bank'));
+
       final parsedK = NlpTransactionParser.parse(
         'paid 2.5k electricity bill via bank',
         categories: defaultCategories,

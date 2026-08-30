@@ -65,6 +65,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     try {
       await showDialog(
         context: context,
+        useRootNavigator: true,
         builder: (context) => QuickAddTransactionDialog(
           initialType: initialType,
           initialAmount: initialAmount,

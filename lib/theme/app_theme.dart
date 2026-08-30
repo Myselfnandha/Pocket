@@ -236,6 +236,7 @@ class AppTheme {
         contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
+        insetPadding: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
       ),
     );
   }
@@ -352,6 +353,7 @@ class AppTheme {
         contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
+        insetPadding: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
       ),
     );
   }

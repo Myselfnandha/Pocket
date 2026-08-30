@@ -77,10 +77,11 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
-            tooltip: 'Natural Language Entry (NLP)',
+            tooltip: 'Natural Language Entry',
             onPressed: () {
               showModalBottomSheet(
                 context: context,
+                useRootNavigator: true,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (ctx) => const NlpQuickAddModal(),
@@ -277,7 +278,7 @@ class HomeScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Today's Transactions",
+                    todayTxs.isNotEmpty ? "Today's Transactions" : "Recent Activity",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -346,88 +347,96 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
 
-              // 4. Today's Transaction List or Empty State
-              if (todayTxs.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurfaceVariant
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isDark
-                          ? AppColors.darkCardBorder
-                          : AppColors.lightCardBorder,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        '🌿',
-                        style: TextStyle(fontSize: 42),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No transactions today',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+              // 4. Today's Transaction List, Recent Activity, or Empty State
+              Consumer(
+                builder: (context, ref, _) {
+                  final allTxs = ref.watch(transactionsProvider);
+                  final displayList = todayTxs.isNotEmpty ? todayTxs : allTxs.take(5).toList();
+
+                  if (displayList.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
                           color: isDark
-                              ? AppColors.darkTextPrimary
-                              : AppColors.lightTextPrimary,
+                              ? AppColors.darkCardBorder
+                              : AppColors.lightCardBorder,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tap the + button below to log an expense or income',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
-                        ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            '🌿',
+                            style: TextStyle(fontSize: 42),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No transactions logged yet',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap Quick Log or + button to record an entry',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurfaceVariant
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
+                    );
+                  }
+
+                  return Container(
+                    decoration: BoxDecoration(
                       color: isDark
-                          ? AppColors.darkCardBorder
-                          : AppColors.lightCardBorder,
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.darkCardBorder
+                            : AppColors.lightCardBorder,
+                      ),
                     ),
-                  ),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: todayTxs.length,
-                    separatorBuilder: (context, index) => Divider(
-                      height: 1,
-                      color: isDark
-                          ? AppColors.darkCardBorder
-                          : AppColors.lightCardBorder,
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayList.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        color: isDark
+                            ? AppColors.darkCardBorder
+                            : AppColors.lightCardBorder,
+                      ),
+                      itemBuilder: (context, index) {
+                        final tx = displayList[index];
+                        return TransactionTile(
+                          transaction: tx,
+                          onTap: () => context.push(
+                            '/transaction-detail',
+                            extra: tx,
+                          ),
+                        );
+                      },
                     ),
-                    itemBuilder: (context, index) {
-                      final tx = todayTxs[index];
-                      return TransactionTile(
-                        transaction: tx,
-                        onTap: () => context.push(
-                          '/transaction-detail',
-                          extra: tx,
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                  );
+                },
+              ),
 
               const SizedBox(height: 16),
             ],

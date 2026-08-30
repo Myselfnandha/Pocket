@@ -6,7 +6,7 @@ import 'providers/app_providers.dart';
 import 'services/notification_service.dart';
 import 'services/shared_transaction_handler.dart';
 import 'services/storage_service.dart';
-import 'services/supabase_sync_service.dart';
+import 'services/cloud_sync_service.dart';
 import 'services/system_widget_service.dart';
 import 'services/upi_screenshot_parser_service.dart';
 import 'widgets/quick_add_transaction_dialog.dart';
@@ -16,7 +16,7 @@ void main() async {
 
   final storageService = await StorageService.init();
   await NotificationService().init();
-  await SupabaseSyncService().init();
+  await CloudSyncService().init();
 
   // Process any due recurring transactions automatically
   await storageService.processDueRecurringRules();
@@ -135,12 +135,20 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
     final monthlyStats = ref.read(monthlyStatsProvider);
     final settings = ref.read(settingsProvider);
     final wallets = ref.read(walletsWithBalancesProvider);
+    final netWorthSummary = ref.read(netWorthSummaryProvider);
+    final budgetRemaining = ref.read(totalBudgetRemainingProvider);
+    final forecast = ref.read(monthSpendForecastProvider);
 
     SystemWidgetService.updateWidgetData(
       totalBalance: totalBalance,
       todayExpense: monthlyStats.todayExpense,
       currencySymbol: settings.currencySymbol,
       wallets: wallets,
+      statType: settings.homeScreenWidgetStat,
+      netWorth: netWorthSummary.totalNetWorth,
+      monthlySavings: monthlyStats.netSavings,
+      budgetRemaining: budgetRemaining,
+      forecast: forecast,
     );
   }
 
@@ -155,19 +163,12 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
     ref.listen<MonthlyStats>(monthlyStatsProvider, (prev, next) => _syncWidget());
     ref.listen(walletsWithBalancesProvider, (prev, next) => _syncWidget());
     ref.listen(settingsProvider, (prev, next) => _syncWidget());
-
-    final totalBalance = ref.watch(totalBalanceProvider);
-    final monthlyStats = ref.watch(monthlyStatsProvider);
-    final settings = ref.watch(settingsProvider);
-    final wallets = ref.watch(walletsWithBalancesProvider);
+    ref.listen(netWorthSummaryProvider, (prev, next) => _syncWidget());
+    ref.listen(categoryBudgetsProvider, (prev, next) => _syncWidget());
+    ref.listen(monthSpendForecastProvider, (prev, next) => _syncWidget());
 
     // Initial sync
-    SystemWidgetService.updateWidgetData(
-      totalBalance: totalBalance,
-      todayExpense: monthlyStats.todayExpense,
-      currencySymbol: settings.currencySymbol,
-      wallets: wallets,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncWidget());
 
     return MaterialApp.router(
       title: 'Pocket',

@@ -337,10 +337,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight),
-            tooltip: 'Natural Language Entry (NLP)',
+            tooltip: 'Natural Language Entry',
             onPressed: () {
               showModalBottomSheet(
                 context: context,
+                useRootNavigator: true,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (ctx) => const NlpQuickAddModal(),

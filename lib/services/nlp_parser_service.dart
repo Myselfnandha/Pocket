@@ -122,15 +122,89 @@ class NlpTransactionParser {
 
     // 4. Extract Wallet
     if (wallets.isNotEmpty) {
+      // Pass 1: Check specific account last 4 digits
       for (final w in wallets) {
-        final nameLower = w.name.toLowerCase();
-        if (lower.contains(nameLower) ||
-            (nameLower.contains('cash') && lower.contains('cash')) ||
-            (nameLower.contains('bank') && (lower.contains('bank') || lower.contains('account'))) ||
-            (nameLower.contains('upi') && (lower.contains('upi') || lower.contains('gpay') || lower.contains('phonepe')))) {
+        if (w.accountNumber != null && w.accountNumber!.isNotEmpty && lower.contains(w.accountNumber!)) {
           extractedWalletId = w.id;
-          workingText = workingText.replaceAll(RegExp('(?:via|from|using|in|through)?\\s*${w.name.toLowerCase()}'), ' ');
+          workingText = workingText.replaceAll(w.accountNumber!, ' ');
           break;
+        }
+      }
+
+      // Pass 2: Check explicit wallet name & individual word tokens (e.g. "Canara", "Axis", "Salary", "dd")
+      if (extractedWalletId == null) {
+        const stopWords = {'and', 'the', 'for', 'account', 'in', 'to', 'on', 'at', 'my', 'is', 'an', 'as', 'by', 'of', 'or', 'no', 'up', 'so', 'hand'};
+        for (final w in wallets) {
+          final nameLower = w.name.toLowerCase().trim();
+          if (nameLower.length >= 2 && RegExp(r'\b' + RegExp.escape(nameLower) + r'\b').hasMatch(lower)) {
+            extractedWalletId = w.id;
+            workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(nameLower) + r'\b'), ' ');
+            break;
+          }
+          final tokens = nameLower.split(RegExp(r'\s+')).where((t) => t.length >= 2);
+          for (final token in tokens) {
+            if (!stopWords.contains(token) && RegExp(r'\b' + RegExp.escape(token) + r'\b').hasMatch(lower)) {
+              extractedWalletId = w.id;
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(token) + r'\b'), ' ');
+              break;
+            }
+          }
+          if (extractedWalletId != null) break;
+        }
+      }
+
+      // Pass 3: Check wallet type keywords (e.g. "bank account", "bank", "cash", "upi", "card", "savings")
+      if (extractedWalletId == null) {
+        final bankKeywords = ['bank account', 'bank', 'neft', 'rtgs', 'imps', 'transfer', 'hdfc', 'sbi', 'icici', 'axis', 'kotak', 'pnb'];
+        final upiKeywords = ['upi', 'gpay', 'google pay', 'phonepe', 'paytm', 'bhim', 'qr'];
+        final cardKeywords = ['credit card', 'debit card', 'card', 'visa', 'mastercard', 'amex'];
+        final cashKeywords = ['cash in hand', 'cash', 'hard cash', 'physical cash'];
+        final savingsKeywords = ['savings', 'vault', 'emergency fund'];
+
+        bool matchesKeywords(List<String> keywords) {
+          return keywords.any((kw) => RegExp(r'\b' + RegExp.escape(kw) + r'\b').hasMatch(lower));
+        }
+
+        if (matchesKeywords(bankKeywords)) {
+          final bankWallet = wallets.where((w) => w.walletType == WalletType.bank).firstOrNull;
+          if (bankWallet != null) {
+            extractedWalletId = bankWallet.id;
+            for (final kw in bankKeywords) {
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(kw) + r'\b'), ' ');
+            }
+          }
+        } else if (matchesKeywords(upiKeywords)) {
+          final upiWallet = wallets.where((w) => w.walletType == WalletType.upi).firstOrNull;
+          if (upiWallet != null) {
+            extractedWalletId = upiWallet.id;
+            for (final kw in upiKeywords) {
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(kw) + r'\b'), ' ');
+            }
+          }
+        } else if (matchesKeywords(cardKeywords)) {
+          final cardWallet = wallets.where((w) => w.walletType == WalletType.creditCard).firstOrNull;
+          if (cardWallet != null) {
+            extractedWalletId = cardWallet.id;
+            for (final kw in cardKeywords) {
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(kw) + r'\b'), ' ');
+            }
+          }
+        } else if (matchesKeywords(cashKeywords)) {
+          final cashWallet = wallets.where((w) => w.walletType == WalletType.cash).firstOrNull;
+          if (cashWallet != null) {
+            extractedWalletId = cashWallet.id;
+            for (final kw in cashKeywords) {
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(kw) + r'\b'), ' ');
+            }
+          }
+        } else if (matchesKeywords(savingsKeywords)) {
+          final savingsWallet = wallets.where((w) => w.walletType == WalletType.savings).firstOrNull;
+          if (savingsWallet != null) {
+            extractedWalletId = savingsWallet.id;
+            for (final kw in savingsKeywords) {
+              workingText = workingText.replaceAll(RegExp(r'(?:via|from|using|in|through|to)?\s*\b' + RegExp.escape(kw) + r'\b'), ' ');
+            }
+          }
         }
       }
     }
@@ -170,9 +244,9 @@ class NlpTransactionParser {
     }
 
     // 6. Clean Title / Description
-    // Remove filler prepositions like "for", "paid", "spent", "on", "at", "via", "with", "from"
+    // Remove filler prepositions like "for", "paid", "spent", "on", "at", "via", "with", "from", "through", "account", "bank"
     String cleanTitle = workingText
-        .replaceAll(RegExp(r'\b(spent|paid|bought|for|on|at|via|using|from|received|got|earned|credited|to|in|rs|inr|usd|bucks)\b', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'\b(spent|paid|bought|for|on|at|via|using|from|through|with|received|got|earned|credited|to|in|by|account|bank|cash|upi|card|rs|inr|usd|bucks|yesterday|today|tomorrow)\b', caseSensitive: false), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
 

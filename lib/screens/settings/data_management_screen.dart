@@ -3,7 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
-import '../../services/supabase_sync_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../services/system_widget_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -17,7 +17,6 @@ class DataManagementScreen extends ConsumerStatefulWidget {
 class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   bool _isSignedIn = false;
   String? _userEmail;
-  String? _userId;
   String? _lastSyncTime;
   bool _isSyncing = false;
 
@@ -28,18 +27,16 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   }
 
   Future<void> _checkAuthStatus() async {
-    final service = SupabaseSyncService();
+    final service = CloudSyncService();
     await service.init();
     final signedIn = service.isSignedIn;
     final email = service.userEmail;
-    final uid = service.userId;
     final lastSync = await service.getLastSyncTime();
 
     if (mounted) {
       setState(() {
         _isSignedIn = signedIn;
         _userEmail = email;
-        _userId = uid;
         _lastSyncTime = lastSync;
       });
     }
@@ -187,35 +184,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                         elevation: 1,
                       ),
                       onPressed: _signInWithGoogle,
-                      icon: const Icon(Icons.g_mobiledata_rounded, size: 24, color: Color(0xFF4285F4)),
-                      label: const Text('Sign In with Google OAuth', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Email/Password or OTP Sign-In
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: palette.primary,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 0,
-                      ),
-                      onPressed: _showEmailAuthDialog,
-                      icon: const Icon(Icons.mail_lock_rounded, size: 18, color: Colors.black),
-                      label: const Text('Sign In with Email & Password / OTP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _showCustomServerDialog,
-                      icon: const Icon(Icons.settings_ethernet_rounded, size: 13, color: Colors.grey),
-                      label: const Text('Custom Supabase Server', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 28, color: Color(0xFF4285F4)),
+                      label: const Text('Sign In with Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
                   ),
                 ] else ...[
@@ -234,37 +204,33 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                           icon: _isSyncing
                               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                               : const Icon(Icons.cloud_upload_rounded, size: 18),
-                          label: Text(_isSyncing ? 'Syncing...' : 'Backup to Cloud', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text(_isSyncing ? 'Syncing...' : 'Backup to Drive', style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.infoBlue,
-                            side: const BorderSide(color: AppColors.infoBlue),
+                            foregroundColor: palette.primary,
+                            side: BorderSide(color: palette.primary),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
                           onPressed: _isSyncing ? null : _restoreFromCloud,
                           icon: const Icon(Icons.cloud_download_rounded, size: 18),
-                          label: const Text('Restore Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: const Text('Restore Drive', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (_userId != null)
-                        Text('UID: ${_userId!.substring(0, 8)}...', style: const TextStyle(fontSize: 10, color: Colors.grey))
-                      else
-                        const SizedBox.shrink(),
                       TextButton.icon(
                         onPressed: _signOut,
                         icon: const Icon(Icons.logout_rounded, size: 14, color: AppColors.expenseRed),
-                        label: const Text('Sign Out', style: TextStyle(fontSize: 11, color: AppColors.expenseRed)),
+                        label: const Text('Disconnect Account', style: TextStyle(fontSize: 11.5, color: AppColors.expenseRed)),
                       ),
                     ],
                   ),
@@ -387,266 +353,126 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    final success = await SupabaseSyncService().signInWithGoogle();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(success ? 'Opening Google OAuth window...' : 'Google OAuth initiated'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    await _checkAuthStatus();
-  }
-
-  void _showEmailAuthDialog() {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    bool isSignUp = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
-          title: Row(
-            children: [
-              const Icon(Icons.lock_person_rounded, color: AppColors.primaryGreenLight),
-              const SizedBox(width: 10),
-              Text(isSignUp ? 'Create Cloud Account' : 'Sign In to Cloud', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Email Address',
-                  hintText: 'name@example.com',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setDialogState(() => isSignUp = !isSignUp);
-                    },
-                    child: Text(isSignUp ? 'Already registered? Sign In' : 'Need an account? Sign Up', style: const TextStyle(fontSize: 11)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGreenLight,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final email = emailController.text.trim();
-                final pass = passwordController.text.trim();
-                if (email.isEmpty || pass.isEmpty) return;
-
-                try {
-                  if (isSignUp) {
-                    await SupabaseSyncService().signUpWithEmailPassword(email: email, password: pass);
-                  } else {
-                    await SupabaseSyncService().signInWithEmailPassword(email: email, password: pass);
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  await _checkAuthStatus();
-
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      content: Text(isSignUp ? 'Account registered! Please check email to verify ✓' : 'Signed in to Cloud successfully ✓'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        content: Text('Auth error: $e'),
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: Text(isSignUp ? 'Sign Up' : 'Sign In', style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCustomServerDialog() {
-    final urlController = TextEditingController();
-    final keyController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
-        title: const Row(
-          children: [
-            Icon(Icons.settings_ethernet_rounded, color: AppColors.primaryGreenLight),
-            SizedBox(width: 10),
-            Text('Custom Cloud Server', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Optional for self-hosted instances:',
-              style: TextStyle(fontSize: 12.5),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                labelText: 'Server URL',
-                hintText: 'https://custom.supabase.co',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: keyController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Anon Key',
-                hintText: 'ey...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                isDense: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreenLight,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () async {
-              final url = urlController.text.trim();
-              final key = keyController.text.trim();
-              if (url.isEmpty || key.isEmpty) return;
-
-              final success = await SupabaseSyncService().connect(url: url, anonKey: key);
-              if (ctx.mounted) Navigator.pop(ctx);
-              _checkAuthStatus();
-
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  content: Text(success ? 'Connected to Custom Server ✓' : 'Failed to connect. Check credentials.'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: const Text('Connect', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _syncToCloud() async {
-    setState(() => _isSyncing = true);
-    final storage = ref.read(storageServiceProvider);
-    final success = await SupabaseSyncService().backupToCloud(storage);
-    await _checkAuthStatus();
-    if (mounted) {
-      setState(() => _isSyncing = false);
+    try {
+      final success = await CloudSyncService().signInWithGoogle();
+      await _checkAuthStatus();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Synced database to Cloud ✓' : 'Sync failed. Please check connection.'),
+          content: Text(success ? 'Connected to Google Drive successfully ✓' : 'Google sign-in cancelled'),
           duration: const Duration(seconds: 2),
         ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Google Sign-In error: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _syncToCloud() async {
+    setState(() => _isSyncing = true);
+    try {
+      final storage = ref.read(storageServiceProvider);
+      final success = await CloudSyncService().uploadBackupToCloud(storage);
+      await _checkAuthStatus();
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(success ? 'Zero-knowledge backup saved to Google Drive ✓' : 'Sync failed.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Backup error: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _restoreFromCloud() async {
     setState(() => _isSyncing = true);
-    final storage = ref.read(storageServiceProvider);
-    final success = await SupabaseSyncService().restoreFromCloud(storage);
+    try {
+      final backup = await CloudSyncService().downloadBackupFromCloud();
+      if (backup != null) {
+        final storage = ref.read(storageServiceProvider);
+        await storage.restoreDatabase(backup);
 
-    if (success) {
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(walletsProvider);
-      ref.invalidate(categoriesProvider);
-      ref.invalidate(settingsProvider);
-      ref.invalidate(recurringRulesProvider);
-      ref.invalidate(debtsProvider);
-      ref.invalidate(categoryBudgetsProvider);
-    }
+        ref.invalidate(transactionsProvider);
+        ref.invalidate(walletsProvider);
+        ref.invalidate(categoriesProvider);
+        ref.invalidate(settingsProvider);
+        ref.invalidate(recurringRulesProvider);
+        ref.invalidate(debtsProvider);
+        ref.invalidate(categoryBudgetsProvider);
+        ref.invalidate(goalsProvider);
 
-    await _checkAuthStatus();
+        final updatedSettings = storage.getSettings();
+        SystemWidgetService.updateWidgetData(
+          totalBalance: storage.getWallets().fold(0.0, (sum, w) => sum + w.currentBalance),
+          todayExpense: 0.0,
+          currencySymbol: updatedSettings.currencySymbol,
+          wallets: storage.getWallets(),
+        );
+      }
 
-    if (mounted) {
-      setState(() => _isSyncing = false);
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Restored all data from Cloud ✓' : 'Restore failed. No cloud backup found.'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      await _checkAuthStatus();
+
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(backup != null ? 'Restored all data from Google Drive ✓' : 'No cloud backup found on Google Drive.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Restore error: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _signOut() async {
-    await SupabaseSyncService().signOut();
+    await CloudSyncService().signOut();
     await _checkAuthStatus();
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Signed out from Cloud'),
+          content: Text('Disconnected from Google Drive'),
           duration: Duration(seconds: 2),
         ),
       );
