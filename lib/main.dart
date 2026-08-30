@@ -94,12 +94,17 @@ class _PocketAppState extends ConsumerState<PocketApp> {
       if (navContext != null) {
         QuickAddTransactionDialog.show(
           navContext,
+          initialType: tx.isIncome ? TransactionType.income : TransactionType.expense,
           initialAmount: tx.amount,
           initialTitle: tx.merchant,
           initialCategoryId: tx.suggestedCategoryId,
           initialReceiptImagePath: tx.imagePath,
-          initialNote: tx.refId,
-          autoFocusNote: true,
+          initialSenderName: tx.senderName,
+          initialReceiverName: tx.receiverName,
+          initialRefId: tx.refId,
+          initialCounterpartyLast4: tx.counterpartyLast4,
+          initialNote: null, // Note field remains completely clean for user
+          autoFocusNote: false,
         );
       }
     });

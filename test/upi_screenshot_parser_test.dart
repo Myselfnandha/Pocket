@@ -82,6 +82,14 @@ void main() {
       expect(UpiScreenshotParserService.predictCategory('Airtel Prepaid', 'Recharge bill'), 'cat_bills');
     });
 
+    test('Extracts sender, receiver, and last 4 digits from raw OCR text', () {
+      const ocrIncomeText = 'Received from John Doe\\n₹ 500.00\\nTo: My Account\\nPaid to +91 98765 43210\\nUPI Ref 123456789012';
+      expect(UpiScreenshotParserService.detectIsIncome(ocrIncomeText), true);
+      expect(UpiScreenshotParserService.extractSender(ocrIncomeText), 'John Doe');
+      expect(UpiScreenshotParserService.extractLast4(ocrIncomeText), '3210');
+      expect(UpiScreenshotParserService.extractRefId(ocrIncomeText), '123456789012');
+    });
+
     test('Handles malformed or empty payloads gracefully', () {
       final parsed = UpiParsedTransaction.fromPayloadString('invalid json');
       expect(parsed.merchant, 'UPI Payment');

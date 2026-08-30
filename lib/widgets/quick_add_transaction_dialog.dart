@@ -18,6 +18,10 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
   final String? initialWalletId;
   final String? initialReceiptImagePath;
   final String? initialNote;
+  final String? initialSenderName;
+  final String? initialReceiverName;
+  final String? initialRefId;
+  final String? initialCounterpartyLast4;
   final bool autoFocusNote;
   final bool isStandaloneScreen;
 
@@ -30,6 +34,10 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     this.initialWalletId,
     this.initialReceiptImagePath,
     this.initialNote,
+    this.initialSenderName,
+    this.initialReceiverName,
+    this.initialRefId,
+    this.initialCounterpartyLast4,
     this.autoFocusNote = false,
     this.isStandaloneScreen = false,
   });
@@ -45,6 +53,10 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     String? initialWalletId,
     String? initialReceiptImagePath,
     String? initialNote,
+    String? initialSenderName,
+    String? initialReceiverName,
+    String? initialRefId,
+    String? initialCounterpartyLast4,
     bool autoFocusNote = false,
     bool isStandaloneScreen = false,
   }) async {
@@ -61,6 +73,10 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
           initialWalletId: initialWalletId,
           initialReceiptImagePath: initialReceiptImagePath,
           initialNote: initialNote,
+          initialSenderName: initialSenderName,
+          initialReceiverName: initialReceiverName,
+          initialRefId: initialRefId,
+          initialCounterpartyLast4: initialCounterpartyLast4,
           autoFocusNote: autoFocusNote,
           isStandaloneScreen: isStandaloneScreen,
         ),
@@ -86,6 +102,10 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   String? _selectedCategoryId;
   String? _selectedWalletId;
   String? _receiptImagePath;
+  String? _senderName;
+  String? _receiverName;
+  String? _refId;
+  String? _counterpartyLast4;
   final DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
 
@@ -101,13 +121,17 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           ? widget.initialAmount!.toInt().toString()
           : widget.initialAmount!.toStringAsFixed(2);
     }
-    if (widget.initialNote != null) {
+    if (widget.initialNote != null && widget.initialNote!.isNotEmpty) {
       _notesController.text = widget.initialNote!;
     }
 
     _selectedCategoryId = widget.initialCategoryId;
     _selectedWalletId = widget.initialWalletId;
     _receiptImagePath = widget.initialReceiptImagePath;
+    _senderName = widget.initialSenderName;
+    _receiverName = widget.initialReceiverName;
+    _refId = widget.initialRefId;
+    _counterpartyLast4 = widget.initialCounterpartyLast4;
 
     _titleController.addListener(_onTitleChanged);
 
@@ -212,6 +236,10 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           date: _selectedDate,
           note: note,
           receiptImagePath: _receiptImagePath,
+          senderName: _senderName,
+          receiverName: _receiverName,
+          refId: _refId,
+          counterpartyLast4: _counterpartyLast4,
         );
 
     if (!mounted) return;
@@ -330,7 +358,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             // Attached Screenshot / Receipt Preview Chip
             if (_receiptImagePath != null) ...[
               Container(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: AppColors.primaryGreenLight.withValues(alpha: 0.1),
@@ -360,7 +388,9 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
                           ),
                           Text(
-                            'Attached to this transaction record',
+                            _refId != null && _refId!.isNotEmpty
+                                ? 'Ref: $_refId'
+                                : 'Attached to this transaction record',
                             style: TextStyle(
                               fontSize: 10,
                               color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
@@ -374,6 +404,39 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () => setState(() => _receiptImagePath = null),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Sender & Receiver OCR Badge (if detected)
+            if (_senderName != null || _receiverName != null || _counterpartyLast4 != null) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF222222) : const Color(0xFFEFEFEF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz_rounded, size: 16, color: AppColors.infoBlue),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (_senderName != null) 'From: $_senderName',
+                          if (_receiverName != null) 'To: $_receiverName',
+                          if (_counterpartyLast4 != null) '•••• $_counterpartyLast4',
+                        ].join('  •  '),
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -665,13 +728,13 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 12),
 
-            // Optional Note / Reference ID
+            // User Note Field (100% clean for user custom note)
             TextField(
               controller: _notesController,
               focusNode: _notesFocusNode,
               style: const TextStyle(fontSize: 13),
               decoration: const InputDecoration(
-                hintText: 'Note or Ref No (Optional)...',
+                hintText: 'Add a note (e.g. Split with Alex)...',
                 prefixIcon: Icon(Icons.note_alt_outlined, size: 18),
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -729,6 +792,10 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                   'walletId': _selectedWalletId,
                   'note': _notesController.text.trim(),
                   'receiptImagePath': _receiptImagePath,
+                  'senderName': _senderName,
+                  'receiverName': _receiverName,
+                  'refId': _refId,
+                  'counterpartyLast4': _counterpartyLast4,
                 },
               );
             },

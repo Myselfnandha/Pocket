@@ -197,6 +197,10 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
     required DateTime date,
     String? note,
     String? receiptImagePath,
+    String? senderName,
+    String? receiverName,
+    String? refId,
+    String? counterpartyLast4,
   }) async {
     final newTx = TransactionModel(
       id: const Uuid().v4(),
@@ -208,6 +212,10 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
       date: date,
       note: note,
       receiptImagePath: receiptImagePath,
+      senderName: senderName,
+      receiverName: receiverName,
+      refId: refId,
+      counterpartyLast4: counterpartyLast4,
       createdAt: DateTime.now(),
     );
 

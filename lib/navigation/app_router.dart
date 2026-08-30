@@ -15,6 +15,7 @@ import '../screens/notifications/notification_center_screen.dart';
 import '../screens/debts/debts_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/transactions/quick_add_dialog_screen.dart';
+import '../screens/splash/splash_screen.dart';
 import 'app_scaffold.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -23,13 +24,20 @@ final GlobalKey<NavigatorState> rootNavigatorKey =
 GoRouter createRouter(bool isOnboarded) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: isOnboarded ? '/home' : '/onboarding',
+    initialLocation: '/splash',
     errorBuilder: (context, state) => const HomeScreen(),
     routes: [
-      // Root Redirect Route (Fixes deep links sending '/' or '/?')
+      // Splash Screen with glow effect
+      GoRoute(
+        path: '/splash',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SplashScreen(),
+      ),
+
+      // Root Redirect Route
       GoRoute(
         path: '/',
-        redirect: (context, state) => isOnboarded ? '/home' : '/onboarding',
+        redirect: (context, state) => '/splash',
       ),
 
       // Standalone Floating Quick Add Dialog (Widget Target)

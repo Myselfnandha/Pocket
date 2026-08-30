@@ -9,6 +9,10 @@ class UpiParsedTransaction {
   final String? imagePath;
   final String? rawText;
   final String? suggestedCategoryId;
+  final String? senderName;
+  final String? receiverName;
+  final String? counterpartyLast4;
+  final bool isIncome;
   final DateTime date;
 
   const UpiParsedTransaction({
@@ -19,6 +23,10 @@ class UpiParsedTransaction {
     this.imagePath,
     this.rawText,
     this.suggestedCategoryId,
+    this.senderName,
+    this.receiverName,
+    this.counterpartyLast4,
+    this.isIncome = false,
     required this.date,
   });
 
@@ -46,10 +54,23 @@ class UpiParsedTransaction {
     final appSource = (json['app_source'] as String?)?.trim() ?? 'UPI App';
     var refId = (json['ref_id'] as String?)?.trim();
     final imagePath = (json['image_path'] as String?)?.trim();
+    var senderName = (json['sender_name'] as String?)?.trim();
+    var receiverName = (json['receiver_name'] as String?)?.trim();
+    var counterpartyLast4 = (json['counterparty_last4'] as String?)?.trim();
+    bool isIncome = json['is_income'] == true;
 
     if (refId == null || refId.isEmpty) {
       if (rawText != null && rawText.isNotEmpty) {
         refId = UpiScreenshotParserService.extractRefId(rawText);
+      }
+    }
+
+    if (rawText != null && rawText.isNotEmpty) {
+      senderName ??= UpiScreenshotParserService.extractSender(rawText);
+      receiverName ??= UpiScreenshotParserService.extractReceiver(rawText);
+      counterpartyLast4 ??= UpiScreenshotParserService.extractLast4(rawText);
+      if (!isIncome) {
+        isIncome = UpiScreenshotParserService.detectIsIncome(rawText);
       }
     }
 
@@ -61,6 +82,10 @@ class UpiParsedTransaction {
       imagePath: (imagePath != null && imagePath.isNotEmpty) ? imagePath : null,
       rawText: rawText,
       suggestedCategoryId: UpiScreenshotParserService.predictCategory(merchant, rawText ?? ''),
+      senderName: (senderName != null && senderName.isNotEmpty) ? senderName : null,
+      receiverName: (receiverName != null && receiverName.isNotEmpty) ? receiverName : null,
+      counterpartyLast4: (counterpartyLast4 != null && counterpartyLast4.isNotEmpty) ? counterpartyLast4 : null,
+      isIncome: isIncome,
       date: DateTime.now(),
     );
   }
@@ -80,7 +105,7 @@ class UpiParsedTransaction {
 
   @override
   String toString() =>
-      'UpiParsedTransaction(amount: $amount, merchant: $merchant, app: $appSource, ref: $refId, image: $imagePath)';
+      'UpiParsedTransaction(amount: $amount, merchant: $merchant, app: $appSource, ref: $refId, sender: $senderName, receiver: $receiverName, last4: $counterpartyLast4, isIncome: $isIncome, image: $imagePath)';
 }
 
 class UpiScreenshotParserService {
@@ -153,6 +178,68 @@ class UpiScreenshotParserService {
       }
     }
     return null;
+  }
+
+  /// Extracts Sender / Payer Name
+  static String? extractSender(String text) {
+    final patterns = [
+      RegExp(r'(?:Received from|From:|Sent by|Payer:|Paid by|Transferred from)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
+    ];
+    for (final p in patterns) {
+      final m = p.firstMatch(text);
+      if (m != null) {
+        final candidate = m.group(1)?.trim() ?? '';
+        if (candidate.isNotEmpty && !candidate.toLowerCase().contains('google pay') && !candidate.toLowerCase().contains('phonepe')) {
+          return candidate;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Extracts Receiver / Payee Name
+  static String? extractReceiver(String text) {
+    final patterns = [
+      RegExp(r'(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
+    ];
+    for (final p in patterns) {
+      final m = p.firstMatch(text);
+      if (m != null) {
+        final candidate = m.group(1)?.trim() ?? '';
+        if (candidate.isNotEmpty && !candidate.toLowerCase().contains('google pay') && !candidate.toLowerCase().contains('phonepe')) {
+          return candidate;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Extracts Last 4 digits of phone number or bank account
+  static String? extractLast4(String text) {
+    // 1. Phone numbers with +91 or 10-digits (including spaces and dashes: +91 98765 43210, 98765-43210)
+    final phoneMatch = RegExp(r'(?:\+?91[\s\-]*)?[6-9]\d{4}[\s\-]?\d{4,5}\b').firstMatch(text) ??
+        RegExp(r'(?:\+?91[\s\-]*)?[6-9]\d{2}[\s\-]?\d{3}[\s\-]?\d{4}\b').firstMatch(text) ??
+        RegExp(r'\b[6-9]\d{9}\b').firstMatch(text);
+    if (phoneMatch != null) {
+      final digits = phoneMatch.group(0)!.replaceAll(RegExp(r'\D'), '');
+      if (digits.length >= 10) {
+        return digits.substring(digits.length - 4);
+      }
+    }
+
+    // 2. Masked Account / Card (e.g. A/c ...1234 or XX5678 or •••• 1234)
+    final acctMatch = RegExp(r'(?:A/c|Account|Card|Bank)?\s*(?:[xX*•]+|\.{2,})\s*(\d{4})\b', caseSensitive: false).firstMatch(text);
+    if (acctMatch != null) {
+      return acctMatch.group(1);
+    }
+
+    return null;
+  }
+
+  /// Detects whether transaction is Income (Received / Credited)
+  static bool detectIsIncome(String text) {
+    final lower = text.toLowerCase();
+    return RegExp(r'\b(received from|received|credited|deposit|cashback|refund|money received)\b').hasMatch(lower);
   }
 
   /// Matches merchant keywords to default categories

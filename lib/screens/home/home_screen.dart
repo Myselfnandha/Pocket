@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
 import '../../widgets/transaction_tile.dart';
 import '../../widgets/quick_add_transaction_dialog.dart';
+import '../../widgets/waving_hand_emoji.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,16 +23,15 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutCubic,
-          builder: (context, val, child) {
-            return Opacity(
-              opacity: val,
-              child: Transform.translate(
-                offset: Offset(0, (1 - val) * 8),
+        title: Consumer(
+          builder: (context, ref, child) {
+            return InkWell(
+              onTap: () => context.push('/settings'),
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 38,
@@ -56,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Hi, ${settings.userName} 👋',
+                      'Hi, ${settings.userName} ',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -65,6 +65,7 @@ class HomeScreen extends ConsumerWidget {
                             : AppColors.lightTextPrimary,
                       ),
                     ),
+                    const WavingHandEmoji(fontSize: 18),
                   ],
                 ),
               ),

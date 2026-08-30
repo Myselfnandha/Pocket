@@ -14,7 +14,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
-    final recurring = ref.watch(recurringRulesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -94,29 +93,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 2. Section: Automated Recurring Expenses & Debts
-          _buildSectionHeader('FINANCIAL TOOLS & AUTOMATION'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.autorenew_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Recurring Expenses', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${recurring.where((r) => r.isActive).length} active rules (Rent, EMI, OTT...)'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/recurring-rules'),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.handshake_outlined, color: AppColors.infoBlue),
-                title: const Text('Lend & Borrow / Debt Tracker', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Track money given or owed to contacts with settlements'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/debts'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+
 
           // 3. Section: Notifications & Reminders
           _buildSectionHeader('NOTIFICATIONS & ALERTS'),
@@ -217,7 +194,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.3.2 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.3.3 • Material 3 Transaction Tracker'),
               ),
             ],
           ),

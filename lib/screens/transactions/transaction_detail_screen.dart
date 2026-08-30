@@ -182,6 +182,66 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
+            // Dedicated Transfer & Payment Details Card (Sender, Receiver, UTR, Last 4)
+            if (currentTx.senderName != null ||
+                currentTx.receiverName != null ||
+                currentTx.refId != null ||
+                currentTx.counterpartyLast4 != null) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty) ...[
+                      _buildDetailRow(
+                        context,
+                        icon: Icons.person_outline_rounded,
+                        label: 'Paid by (Sender)',
+                        value: currentTx.senderName!,
+                        isDark: isDark,
+                      ),
+                    ],
+                    if (currentTx.receiverName != null && currentTx.receiverName!.isNotEmpty) ...[
+                      if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty) _buildDivider(isDark),
+                      _buildDetailRow(
+                        context,
+                        icon: Icons.person_pin_circle_outlined,
+                        label: 'Paid to (Receiver)',
+                        value: currentTx.receiverName!,
+                        isDark: isDark,
+                      ),
+                    ],
+                    if (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty) ...[
+                      _buildDivider(isDark),
+                      _buildDetailRow(
+                        context,
+                        icon: Icons.phone_android_rounded,
+                        label: 'Account / Mobile',
+                        value: '•••• ${currentTx.counterpartyLast4}',
+                        isDark: isDark,
+                      ),
+                    ],
+                    if (currentTx.refId != null && currentTx.refId!.isNotEmpty) ...[
+                      _buildDivider(isDark),
+                      _buildDetailRow(
+                        context,
+                        icon: Icons.tag_rounded,
+                        label: 'Ref / UTR ID',
+                        value: currentTx.refId!,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             // Attached Receipt Image Section
             if (currentTx.receiptImagePath != null &&
                 currentTx.receiptImagePath!.isNotEmpty &&

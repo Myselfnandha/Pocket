@@ -332,6 +332,7 @@ class _TransactionsListScreenState
                                 final tx = items[i];
                                 return TransactionTile(
                                   transaction: tx,
+                                  showSignPrefix: false,
                                   onTap: () => context.push(
                                     '/transaction-detail',
                                     extra: tx,

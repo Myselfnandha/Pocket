@@ -11,12 +11,14 @@ class TransactionTile extends ConsumerWidget {
   final TransactionModel transaction;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final bool showSignPrefix;
 
   const TransactionTile({
     super.key,
     required this.transaction,
     this.onTap,
     this.onDelete,
+    this.showSignPrefix = true,
   });
 
   @override
@@ -42,7 +44,7 @@ class TransactionTile extends ConsumerWidget {
 
     final isIncome = transaction.type == TransactionType.income;
     final amountColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
-    final prefix = isIncome ? '+' : '-';
+    final prefix = showSignPrefix ? (isIncome ? '+' : '-') : '';
     final formattedAmount = NumberFormat('#,##0.00').format(transaction.amount);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;

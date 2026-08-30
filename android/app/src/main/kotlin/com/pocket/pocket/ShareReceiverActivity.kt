@@ -95,7 +95,11 @@ class ShareReceiverActivity : Activity() {
         val merchant: String,
         val appSource: String,
         val dateTime: String,
-        val refId: String
+        val refId: String,
+        val senderName: String = "",
+        val receiverName: String = "",
+        val counterpartyLast4: String = "",
+        val isIncome: Boolean = false
     )
 
     private fun parseUpiText(text: String): ParsedData {
@@ -103,6 +107,10 @@ class ShareReceiverActivity : Activity() {
         var merchant = ""
         var appSource = "UPI App"
         var refId = ""
+        var senderName = ""
+        var receiverName = ""
+        var counterpartyLast4 = ""
+        var isIncome = false
 
         // 1. Detect UPI App Name
         val lower = text.lowercase()
@@ -122,14 +130,16 @@ class ShareReceiverActivity : Activity() {
             lower.contains("famapp") || lower.contains("fampay") -> appSource = "FamPay"
         }
 
-        // 2. Multi-Stage Amount Scanner (Stage 1: Explicit Currency & Action Verbs)
+        // 2. Detect Income (Money Received)
+        if (Pattern.compile("""\b(received from|received|credited|deposit|cashback|refund|money received)\b""", Pattern.CASE_INSENSITIVE).matcher(lower).find()) {
+            isIncome = true
+        }
+
+        // 3. Multi-Stage Amount Scanner (Stage 1: Explicit Currency & Action Verbs)
         val amountPatterns = listOf(
-            // Direct currency prefixes (₹ 1500, Rs. 1500.00, INR 1500)
-            Pattern.compile("""(?:[₹₹]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
-            // Action verbs (Paid 1500, Sent Rs 1500, Debited ₹1500, Total ₹1500)
-            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent)\s*(?:[₹₹]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
-            // Trailing currency (1500 ₹, 1500.00 INR)
-            Pattern.compile("""([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:[₹₹]|INR|Rs)""", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("""(?:[₹\u20B9]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent|Received)\s*(?:[₹\u20B9]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("""([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:[₹\u20B9]|INR|Rs)""", Pattern.CASE_INSENSITIVE)
         )
 
         for (pattern in amountPatterns) {
@@ -144,20 +154,18 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // Stage 2: Line-by-Line Contextual Scanner (handles ₹ on one line, amount on next line)
+        // Stage 2: Line-by-Line Contextual Scanner
         if (amount.isEmpty()) {
             val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
             for (i in lines.indices) {
                 val line = lines[i]
-                // Look for standalone number on its own line: e.g. "450.00" or "450"
-                val lineAmountMatch = Pattern.compile("""^[₹₹RsINR\s]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$""", Pattern.CASE_INSENSITIVE).matcher(line)
+                val lineAmountMatch = Pattern.compile("""^[₹\u20B9RsINR\s]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$""", Pattern.CASE_INSENSITIVE).matcher(line)
                 if (lineAmountMatch.find()) {
                     val candidate = lineAmountMatch.group(1)?.replace(",", "") ?: ""
                     val num = candidate.toDoubleOrNull()
                     if (num != null && num > 0 && num < 10000000) {
-                        // Check if previous or current line has currency or payment indicator
                         val prevLine = if (i > 0) lines[i - 1].lowercase() else ""
-                        if (prevLine.contains("₹") || prevLine.contains("rs") || prevLine.contains("paid") || prevLine.contains("sent") || prevLine.contains("amount") || line.contains("₹")) {
+                        if (prevLine.contains("₹") || prevLine.contains("rs") || prevLine.contains("paid") || prevLine.contains("sent") || prevLine.contains("received") || prevLine.contains("amount") || line.contains("₹")) {
                             amount = candidate
                             break
                         }
@@ -166,7 +174,7 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // Stage 3: Fallback largest decimal monetary amount found on screen (e.g. 250.00)
+        // Stage 3: Fallback largest decimal monetary amount
         if (amount.isEmpty()) {
             val decimalPattern = Pattern.compile("""\b([0-9]{1,6}\.[0-9]{2})\b""")
             val matcher = decimalPattern.matcher(text)
@@ -183,30 +191,46 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // 3. Detect Merchant / Recipient
-        val merchantPatterns = listOf(
-            Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to)\s+([A-Za-z0-9\s&.\-_]+?)(?:\n|\r|UPI|Banking|Completed|Successful|Ref|₹|Rs|$)""", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("""(?:at|towards|merchant)\s+([A-Za-z0-9\s&.\-_]{2,35}?)(?:\n|\r|UPI|on|via|ref|$)""", Pattern.CASE_INSENSITIVE)
-        )
+        // 4. Detect Sender & Receiver
+        val senderPattern = Pattern.compile("""(?:Received from|From:|Sent by|Payer:|Paid by|Transferred from)\s+([A-Za-z0-9\s&.\-_]{2,35}?)(?:\n|\r|UPI|Banking|A/c|Account|Ref|₹|Rs|$)""", Pattern.CASE_INSENSITIVE)
+        val senderMatcher = senderPattern.matcher(text)
+        if (senderMatcher.find()) {
+            senderName = cleanMerchantName(senderMatcher.group(1) ?: "")
+        }
 
-        for (pattern in merchantPatterns) {
-            val matcher = pattern.matcher(text)
-            if (matcher.find()) {
-                val candidate = matcher.group(1)?.trim() ?: ""
-                if (candidate.isNotEmpty() && candidate.length > 1 && !candidate.lowercase().contains("google pay") && !candidate.lowercase().contains("phonepe")) {
-                    merchant = cleanMerchantName(candidate)
-                    break
-                }
+        val receiverPattern = Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35}?)(?:\n|\r|UPI|Banking|A/c|Account|Ref|₹|Rs|$)""", Pattern.CASE_INSENSITIVE)
+        val receiverMatcher = receiverPattern.matcher(text)
+        if (receiverMatcher.find()) {
+            receiverName = cleanMerchantName(receiverMatcher.group(1) ?: "")
+        }
+
+        merchant = if (isIncome && senderName.isNotEmpty()) {
+            senderName
+        } else if (receiverName.isNotEmpty()) {
+            receiverName
+        } else {
+            ""
+        }
+
+        // 5. Detect Phone number or Account last 4 digits
+        val phonePattern = Pattern.compile("""(?:\+91\s*|91\s*)?[6-9]\d{5}\s*(\d{4})\b""")
+        val phoneMatcher = phonePattern.matcher(text)
+        if (phoneMatcher.find()) {
+            counterpartyLast4 = phoneMatcher.group(1) ?: ""
+        } else {
+            val acctPattern = Pattern.compile("""(?:A/c|Account|Card)?\s*(?:[xX*•]+|\.{2,})\s*(\d{4})\b""", Pattern.CASE_INSENSITIVE)
+            val acctMatcher = acctPattern.matcher(text)
+            if (acctMatcher.find()) {
+                counterpartyLast4 = acctMatcher.group(1) ?: ""
             }
         }
 
-        // 4. UPI Ref / Transaction ID / UTR Scanner
+        // 6. UPI Ref / Transaction ID / UTR Scanner
         val refPattern = Pattern.compile("""(?:UPI\s*(?:Ref(?:erence)?|Txn|Transaction)?\s*(?:No|ID|Num)?[:\s]*|UTR[:\s]*|Txn\s*ID[:\s]*|Transaction\s*ID[:\s]*|Ref\s*(?:No|ID)?[:\s]*|Google transaction ID[:\s]*|PhonePe transaction ID[:\s]*)([0-9A-Za-z]{8,24})""", Pattern.CASE_INSENSITIVE)
         val refMatcher = refPattern.matcher(text)
         if (refMatcher.find()) {
             refId = refMatcher.group(1)?.trim() ?: ""
         } else {
-            // Standalone 12-digit standard UPI UTR pattern
             val utr12Matcher = Pattern.compile("""\b([0-9]{12})\b""").matcher(text)
             if (utr12Matcher.find()) {
                 refId = utr12Matcher.group(1) ?: ""
@@ -222,13 +246,17 @@ class ShareReceiverActivity : Activity() {
             merchant = merchant,
             appSource = appSource,
             dateTime = "",
-            refId = refId
+            refId = refId,
+            senderName = senderName,
+            receiverName = receiverName,
+            counterpartyLast4 = counterpartyLast4,
+            isIncome = isIncome
         )
     }
 
     private fun cleanMerchantName(name: String): String {
         return name.replace(Regex("""(?i)@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi"""), "")
-            .replace(Regex("""(?i)\b(completed|successful|paid|to|ref|no|verified merchant)\b"""), "")
+            .replace(Regex("""(?i)\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe)\b"""), "")
             .trim()
             .take(35)
     }
@@ -254,13 +282,18 @@ class ShareReceiverActivity : Activity() {
             put("merchant", parsedData.merchant)
             put("app_source", parsedData.appSource)
             put("ref_id", parsedData.refId)
+            put("sender_name", parsedData.senderName)
+            put("receiver_name", parsedData.receiverName)
+            put("counterparty_last4", parsedData.counterpartyLast4)
+            put("is_income", parsedData.isIncome)
             put("image_path", imagePath)
             put("raw_text", rawText)
         }.toString()
 
-        val intent = Intent(this, MainActivity::class.java).apply {
+        // Launch QuickAddActivity directly as a transparent floating popup over system home screen
+        val intent = Intent(this, QuickAddActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            setData(Uri.parse("pocket://log_shared_transaction"))
+            setData(Uri.parse("pocket://quick-add-dialog"))
             putExtra("shared_transaction_payload", payloadJson)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -281,8 +314,8 @@ class ShareReceiverActivity : Activity() {
         )
 
         val amountDisplay = if (parsedData.amount.isNotEmpty()) "₹${parsedData.amount}" else "Receipt"
-        val title = "💳 $amountDisplay at ${parsedData.merchant}"
-        val body = "Paid via ${parsedData.appSource} • Tap to log transaction"
+        val title = if (parsedData.isIncome) "💰 Received $amountDisplay from ${parsedData.merchant}" else "💳 $amountDisplay at ${parsedData.merchant}"
+        val body = "via ${parsedData.appSource} • Tap to log transaction"
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
