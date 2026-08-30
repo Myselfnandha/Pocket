@@ -29,6 +29,25 @@ class RecurringRulesNotifier extends StateNotifier<List<RecurringRuleModel>> {
     await _storage.saveRecurringRules(state);
   }
 
+  Future<void> togglePauseRule(String id) async {
+    state = [
+      for (final r in state)
+        if (r.id == id) r.copyWith(isPaused: !r.isPaused) else r,
+    ];
+    await _storage.saveRecurringRules(state);
+  }
+
+  Future<void> skipNextCycle(String id) async {
+    state = [
+      for (final r in state)
+        if (r.id == id)
+          r.copyWith(nextDueDate: r.calculateNextDueDateAfter(r.nextDueDate))
+        else
+          r,
+    ];
+    await _storage.saveRecurringRules(state);
+  }
+
   Future<void> deleteRule(String id) async {
     state = state.where((r) => r.id != id).toList();
     await _storage.saveRecurringRules(state);

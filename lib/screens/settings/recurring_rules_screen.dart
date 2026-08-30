@@ -136,13 +136,31 @@ class RecurringRulesScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  '${rule.frequency.name.toUpperCase()} • Due: ${DateFormat('d MMM yyyy').format(rule.nextDueDate)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.accentOrange,
-                                  ),
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  children: [
+                                    Text(
+                                      '${rule.frequency.name.toUpperCase()} • Due: ${DateFormat('d MMM yyyy').format(rule.nextDueDate)}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: rule.isPaused ? AppColors.accentOrange : AppColors.primaryGreenLight,
+                                      ),
+                                    ),
+                                    if (rule.isPaused)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentOrange.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'PAUSED',
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.accentOrange),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -152,7 +170,7 @@ class RecurringRulesScreen extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: rule.isActive ? AppColors.expenseRed : Colors.grey,
+                              color: rule.isActive && !rule.isPaused ? AppColors.expenseRed : Colors.grey,
                             ),
                           ),
                         ],
@@ -189,11 +207,44 @@ class RecurringRulesScreen extends ConsumerWidget {
                             ],
                           ),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Switch(
-                                value: rule.isActive,
-                                activeThumbColor: AppColors.primaryGreenLight,
-                                onChanged: (_) => ref.read(recurringRulesProvider.notifier).toggleRuleActive(rule.id),
+                              Tooltip(
+                                message: 'Skip next due date',
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    side: BorderSide(
+                                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.skip_next_rounded, size: 16),
+                                  label: const Text('Skip', style: TextStyle(fontSize: 11)),
+                                  onPressed: () {
+                                    ref.read(recurringRulesProvider.notifier).skipNextCycle(rule.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Skipped 1 cycle for ${rule.title}'),
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: rule.isPaused ? 'Resume auto-processing' : 'Pause auto-processing',
+                                child: IconButton(
+                                  icon: Icon(
+                                    rule.isPaused ? Icons.play_circle_outline_rounded : Icons.pause_circle_outline_rounded,
+                                    size: 22,
+                                    color: rule.isPaused ? AppColors.primaryGreenLight : AppColors.accentOrange,
+                                  ),
+                                  onPressed: () => ref.read(recurringRulesProvider.notifier).togglePauseRule(rule.id),
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.expenseRed),

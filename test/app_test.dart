@@ -5,6 +5,7 @@ import 'package:pocket/models/recurring_model.dart';
 import 'package:pocket/models/notification_model.dart';
 import 'package:pocket/models/debt_model.dart';
 import 'package:pocket/models/budget_model.dart';
+import 'package:pocket/models/goal_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:pocket/services/backup_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -282,6 +283,58 @@ void main() {
       // Verify the raw string in SharedPreferences has been upgraded to encrypted
       final migratedRaw = prefs.getString('pocket_wallets');
       expect(migratedRaw != null && migratedRaw.startsWith('enc:v1:'), isTrue);
+    });
+
+    test('Savings Goals calculation, progress, and persistence works properly', () async {
+      final goal = GoalModel(
+        id: 'goal_1',
+        title: 'Emergency Fund',
+        targetAmount: 50000.0,
+        currentSavedAmount: 20000.0,
+        targetDate: DateTime.now().add(const Duration(days: 60)),
+        createdAt: DateTime.now(),
+      );
+
+      expect(goal.progress, equals(0.4));
+      expect(goal.remainingAmount, equals(30000.0));
+      expect(goal.isCompleted, isFalse);
+      expect(goal.daysRemaining, greaterThanOrEqualTo(59));
+
+      // Persist and reload
+      await storage.saveGoals([goal]);
+      final loaded = storage.getGoals();
+      expect(loaded.length, equals(1));
+      expect(loaded.first.title, equals('Emergency Fund'));
+      expect(loaded.first.targetAmount, equals(50000.0));
+      expect(loaded.first.currentSavedAmount, equals(20000.0));
+    });
+
+    test('Recurring Rules skipNextCycle advances due date and paused rules are not auto-processed', () async {
+      final now = DateTime(2026, 8, 30);
+      final rule = RecurringRuleModel(
+        id: 'rule_ott',
+        title: 'Netflix Subscription',
+        amount: 649.0,
+        type: TransactionType.expense,
+        categoryId: 'entertainment',
+        walletId: 'bank_main',
+        dueDay: 30,
+        nextDueDate: now,
+        frequency: RecurringFrequency.monthly,
+        isPaused: true,
+        createdAt: now,
+      );
+
+      await storage.saveRecurringRules([rule]);
+
+      // When rule is paused, processDueRecurringRules should skip it
+      final generated = await storage.processDueRecurringRules();
+      expect(generated, equals(0));
+
+      // Test calculateNextDueDateAfter for skip
+      final nextDue = rule.calculateNextDueDateAfter(rule.nextDueDate);
+      expect(nextDue.month, equals(9));
+      expect(nextDue.day, equals(30));
     });
   });
 }

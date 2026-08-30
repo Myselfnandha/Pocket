@@ -218,4 +218,74 @@ class NotificationService {
       }
     }
   }
+
+  // Schedule local reminders for upcoming debt due dates
+  Future<void> scheduleDebtReminder({
+    required String debtId,
+    required String personName,
+    required double amount,
+    required String currencySymbol,
+    required bool isLent,
+    required DateTime dueDate,
+  }) async {
+    try {
+      await init();
+      final idBase = debtId.hashCode.abs() % 100000;
+      final actionText = isLent ? 'Collection from $personName' : 'Repayment to $personName';
+      final formattedAmount = '$currencySymbol${amount.toStringAsFixed(2)}';
+
+      // 1. Reminder 1 day prior at 9:00 AM
+      final oneDayPrior = dueDate.subtract(const Duration(days: 1));
+      final scheduledDayPrior = DateTime(oneDayPrior.year, oneDayPrior.month, oneDayPrior.day, 9, 0);
+      if (scheduledDayPrior.isAfter(DateTime.now())) {
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          idBase,
+          'Due Tomorrow: $actionText',
+          '$actionText of $formattedAmount is due tomorrow.',
+          tz.TZDateTime.from(scheduledDayPrior, tz.local),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'pocket_debt_channel_id',
+              'Debt & Loan Due Reminders',
+              channelDescription: 'Timely reminders for upcoming debt collections and loan repayments',
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      }
+
+      // 2. Reminder on Due Date at 9:00 AM
+      final scheduledDueDate = DateTime(dueDate.year, dueDate.month, dueDate.day, 9, 0);
+      if (scheduledDueDate.isAfter(DateTime.now())) {
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          idBase + 1,
+          'Due Today: $actionText',
+          '$actionText of $formattedAmount is due today.',
+          tz.TZDateTime.from(scheduledDueDate, tz.local),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'pocket_debt_channel_id',
+              'Debt & Loan Due Reminders',
+              channelDescription: 'Timely reminders for upcoming debt collections and loan repayments',
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> cancelDebtReminder(String debtId) async {
+    try {
+      final idBase = debtId.hashCode.abs() % 100000;
+      await _flutterLocalNotificationsPlugin.cancel(idBase);
+      await _flutterLocalNotificationsPlugin.cancel(idBase + 1);
+    } catch (_) {}
+  }
 }

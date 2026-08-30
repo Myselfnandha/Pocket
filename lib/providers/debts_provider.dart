@@ -3,7 +3,9 @@ import 'package:uuid/uuid.dart';
 import '../models/debt_model.dart';
 import '../models/category_model.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 import 'core_providers.dart';
+import 'settings_provider.dart';
 import 'transactions_provider.dart';
 
 class DebtsNotifier extends StateNotifier<List<DebtModel>> {
@@ -39,6 +41,18 @@ class DebtsNotifier extends StateNotifier<List<DebtModel>> {
     state = [newDebt, ...state];
     await _storage.saveDebts(state);
 
+    if (dueDate != null) {
+      final settings = _ref.read(settingsProvider);
+      await NotificationService().scheduleDebtReminder(
+        debtId: newDebt.id,
+        personName: newDebt.personName,
+        amount: newDebt.remainingAmount,
+        currencySymbol: settings.currencySymbol,
+        isLent: newDebt.type == DebtType.lent,
+        dueDate: dueDate,
+      );
+    }
+
     if (updateWallet && walletId != null) {
       await _ref.read(transactionsProvider.notifier).addTransaction(
             title: type == DebtType.lent ? 'Lent to $personName' : 'Borrowed from $personName',
@@ -71,6 +85,10 @@ class DebtsNotifier extends StateNotifier<List<DebtModel>> {
         if (d.id == debtId) updatedDebt else d,
     ];
     await _storage.saveDebts(state);
+
+    if (updatedDebt.isSettled) {
+      await NotificationService().cancelDebtReminder(debtId);
+    }
 
     if (updateWallet && walletId != null) {
       await _ref.read(transactionsProvider.notifier).addTransaction(
@@ -105,6 +123,7 @@ class DebtsNotifier extends StateNotifier<List<DebtModel>> {
   Future<void> deleteDebt(String id) async {
     state = state.where((d) => d.id != id).toList();
     await _storage.saveDebts(state);
+    await NotificationService().cancelDebtReminder(id);
   }
 }
 

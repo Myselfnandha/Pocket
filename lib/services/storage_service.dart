@@ -12,6 +12,7 @@ import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
 import '../models/debt_model.dart';
 import '../models/budget_model.dart';
+import '../models/goal_model.dart';
 
 class StorageService {
   static const _kTransactions = 'pocket_transactions';
@@ -22,6 +23,7 @@ class StorageService {
   static const _kNotifications = 'pocket_notifications';
   static const _kDebts = 'pocket_debts';
   static const _kBudgets = 'pocket_category_budgets';
+  static const _kGoals = 'pocket_goals';
   static const _kEncryptionKeyName = 'pocket_storage_aes_key_v1';
 
   final SharedPreferences _prefs;
@@ -107,6 +109,7 @@ class StorageService {
       _kNotifications,
       _kDebts,
       _kBudgets,
+      _kGoals,
     ];
 
     for (final key in keys) {
@@ -268,6 +271,24 @@ class StorageService {
     await _prefs.setString(_kBudgets, _encryptString(raw));
   }
 
+  // --- Savings Goals ---
+
+  List<GoalModel> getGoals() {
+    final raw = _decryptString(_prefs.getString(_kGoals));
+    if (raw == null) return [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.map((e) => GoalModel.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveGoals(List<GoalModel> list) async {
+    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    await _prefs.setString(_kGoals, _encryptString(raw));
+  }
+
   // --- Process Due Recurring Rules ---
 
   Future<int> processDueRecurringRules() async {
@@ -283,7 +304,7 @@ class StorageService {
     final List<AppNotificationModel> newNotifications = [];
 
     for (final rule in rules) {
-      if (!rule.isActive) {
+      if (!rule.isActive || rule.isPaused) {
         updatedRules.add(rule);
         continue;
       }
@@ -352,6 +373,7 @@ class StorageService {
     await _prefs.remove(_kNotifications);
     await _prefs.remove(_kDebts);
     await _prefs.remove(_kBudgets);
+    await _prefs.remove(_kGoals);
     await _seedInitialDataIfNeeded();
   }
 
@@ -419,6 +441,7 @@ class StorageService {
     await saveNotifications([]);
     await saveDebts([]);
     await saveCategoryBudgets([]);
+    await saveGoals([]);
   }
 
   Future<void> restoreDatabase(Map<String, dynamic> data) async {
@@ -451,6 +474,12 @@ class StorageService {
           .map((e) => CategoryBudgetModel.fromJson(e as Map<String, dynamic>))
           .toList();
       await saveCategoryBudgets(list);
+    }
+    if (data['goals'] is List) {
+      final list = (data['goals'] as List)
+          .map((e) => GoalModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveGoals(list);
     }
   }
 }

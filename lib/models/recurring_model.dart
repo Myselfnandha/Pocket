@@ -91,6 +91,7 @@ class RecurringRuleModel {
   final DateTime? lastCreatedDate;
   final DateTime nextDueDate;
   final bool isActive;
+  final bool isPaused;
   final RecurringTemplatePreset templatePreset;
   final String? note;
   final DateTime createdAt;
@@ -107,6 +108,7 @@ class RecurringRuleModel {
     this.lastCreatedDate,
     required this.nextDueDate,
     this.isActive = true,
+    this.isPaused = false,
     this.templatePreset = RecurringTemplatePreset.custom,
     this.note,
     required this.createdAt,
@@ -124,6 +126,7 @@ class RecurringRuleModel {
     DateTime? lastCreatedDate,
     DateTime? nextDueDate,
     bool? isActive,
+    bool? isPaused,
     RecurringTemplatePreset? templatePreset,
     String? note,
     DateTime? createdAt,
@@ -140,6 +143,7 @@ class RecurringRuleModel {
       lastCreatedDate: lastCreatedDate ?? this.lastCreatedDate,
       nextDueDate: nextDueDate ?? this.nextDueDate,
       isActive: isActive ?? this.isActive,
+      isPaused: isPaused ?? this.isPaused,
       templatePreset: templatePreset ?? this.templatePreset,
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
@@ -158,6 +162,7 @@ class RecurringRuleModel {
         'lastCreatedDate': lastCreatedDate?.toIso8601String(),
         'nextDueDate': nextDueDate.toIso8601String(),
         'isActive': isActive,
+        'isPaused': isPaused,
         'templatePreset': templatePreset.name,
         'note': note,
         'createdAt': createdAt.toIso8601String(),
@@ -182,6 +187,7 @@ class RecurringRuleModel {
             : null,
         nextDueDate: DateTime.parse(json['nextDueDate'] as String),
         isActive: json['isActive'] as bool? ?? true,
+        isPaused: json['isPaused'] as bool? ?? false,
         templatePreset: RecurringTemplatePreset.values.byName(
           json['templatePreset'] as String? ?? 'custom',
         ),
