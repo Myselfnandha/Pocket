@@ -188,6 +188,15 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                       label: const Text('Sign In with Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _showOAuthTokenDialog,
+                      icon: const Icon(Icons.key_rounded, size: 13, color: Colors.grey),
+                      label: const Text('Connect via Google Token / Key', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    ),
+                  ),
                 ] else ...[
                   // User is Authenticated: Backup & Restore
                   Row(
@@ -365,17 +374,122 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+    } on GoogleAuthException catch (e) {
+      if (!mounted) return;
+      if (e.isDeveloperError10) {
+        _showOAuthTokenDialog();
+      } else {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(e.message),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Google Sign-In error: $e'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      _showOAuthTokenDialog();
     }
+  }
+
+  void _showOAuthTokenDialog() {
+    final emailController = TextEditingController(text: _userEmail ?? '');
+    final tokenController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+        title: const Row(
+          children: [
+            Icon(Icons.cloud_done_rounded, color: AppColors.primaryGreenLight),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Google Drive Authorization',
+                style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sign in directly with your Google account email and OAuth Access Token (Bearer Token) to enable zero-knowledge cloud backup.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Google Account Email',
+                  hintText: 'user@gmail.com',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tokenController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Google Drive Access Token',
+                  hintText: 'ya29.a0A...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreenLight,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final email = emailController.text.trim();
+              final token = tokenController.text.trim();
+              if (email.isEmpty || token.isEmpty) return;
+
+              await CloudSyncService().setManualAccessToken(token: token, email: email);
+              if (ctx.mounted) Navigator.pop(ctx);
+              await _checkAuthStatus();
+
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  content: Text('Connected to Google Drive successfully ✓'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Connect & Authorize', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _syncToCloud() async {

@@ -1241,6 +1241,11 @@ class WalletsScreen extends ConsumerWidget {
                       decoration: InputDecoration(
                         labelText: 'Account Last 4 Digits',
                         hintText: 'e.g. 4821',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white30 : Colors.black26,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
                         prefixText: '•••• ',
                         counterText: '',
                         filled: true,
@@ -1564,6 +1569,11 @@ class WalletsScreen extends ConsumerWidget {
                       decoration: InputDecoration(
                         labelText: 'Account Last 4 Digits',
                         hintText: 'e.g. 4821',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white30 : Colors.black26,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
                         prefixText: '•••• ',
                         counterText: '',
                         filled: true,

@@ -107,7 +107,7 @@ Mobile app UI screen design, no device frame, 9:16 aspect ratio, pure black (#00
 
 Pocket app onboarding setup screen. Material 3 design.
 
-Top: Back arrow icon (white) on the left. Centered title "Set Up Your Profile" in white, 20sp, bold.
+Top: Back arrow icon (white) on the left. Centered title "Set Up Profile Setup" in white, 20sp, bold.
 
 Main content area with generous padding (24dp):
 
@@ -127,7 +127,7 @@ Mobile app UI screen design, no device frame, 9:16 aspect ratio, white (#FAFAFA)
 
 Pocket app onboarding setup screen. Material 3 design.
 
-Top: Back arrow icon (dark) on the left. Centered title "Set Up Your Profile" in dark (#1B1B1B), 20sp, bold.
+Top: Back arrow icon (dark) on the left. Centered title "Set Up Profile Setup" in dark (#1B1B1B), 20sp, bold.
 
 Main content area with generous padding (24dp):
 

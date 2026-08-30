@@ -5,11 +5,22 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'storage_service.dart';
 
+class GoogleAuthException implements Exception {
+  final String message;
+  final bool isDeveloperError10;
+
+  const GoogleAuthException(this.message, {this.isDeveloperError10 = false});
+
+  @override
+  String toString() => message;
+}
+
 class CloudSyncService {
   static const _kLastSyncTime = 'pocket_google_last_sync';
   static const _kCloudUserEmail = 'pocket_google_user_email';
   static const _kCloudUserId = 'pocket_google_user_id';
   static const _kLocalCloudCache = 'pocket_google_cloud_cache';
+  static const _kManualAccessToken = 'pocket_google_access_token';
 
   static final CloudSyncService _instance = CloudSyncService._internal();
   factory CloudSyncService() => _instance;
@@ -23,13 +34,20 @@ class CloudSyncService {
   );
 
   GoogleSignInAccount? _currentUser;
+  String? _manualAccessToken;
+  String? _manualEmail;
+
   GoogleSignInAccount? get currentUser => _currentUser;
-  bool get isSignedIn => _currentUser != null;
-  String? get userEmail => _currentUser?.email;
-  String? get userId => _currentUser?.id;
+  bool get isSignedIn => _currentUser != null || (_manualAccessToken != null && _manualAccessToken!.isNotEmpty);
+  String? get userEmail => _currentUser?.email ?? _manualEmail;
+  String? get userId => _currentUser?.id ?? _manualEmail;
 
   Future<void> init() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _manualAccessToken = prefs.getString(_kManualAccessToken);
+      _manualEmail = prefs.getString(_kCloudUserEmail);
+
       _googleSignIn.onCurrentUserChanged.listen((account) {
         _currentUser = account;
         if (account != null) {
@@ -48,9 +66,30 @@ class CloudSyncService {
     await prefs.setString(_kCloudUserId, id);
   }
 
+  Future<void> setManualAccessToken({required String token, required String email}) async {
+    _manualAccessToken = token.trim();
+    _manualEmail = email.trim();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kManualAccessToken, _manualAccessToken!);
+    await prefs.setString(_kCloudUserEmail, _manualEmail!);
+  }
+
   Future<String?> getLastSyncTime() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_kLastSyncTime);
+  }
+
+  Future<Map<String, String>> getAuthHeaders() async {
+    if (_manualAccessToken != null && _manualAccessToken!.isNotEmpty) {
+      return {
+        'Authorization': 'Bearer $_manualAccessToken',
+      };
+    }
+    final account = _currentUser ?? await _googleSignIn.signInSilently();
+    if (account != null) {
+      return account.authHeaders;
+    }
+    throw const GoogleAuthException('No authenticated Google account found. Please sign in or provide a token.');
   }
 
   Future<bool> signInWithGoogle() async {
@@ -64,7 +103,14 @@ class CloudSyncService {
       return false;
     } catch (e) {
       debugPrint('Google Sign-In error: $e');
-      rethrow;
+      final errStr = e.toString();
+      if (errStr.contains('10') || errStr.contains('sign_in_failed') || errStr.contains('DEVELOPER_ERROR')) {
+        throw const GoogleAuthException(
+          'Google Play Services returned Developer Error 10 (OAuth Client ID / SHA-1 mismatch). Please use the Web OAuth Token option to connect your Google Drive.',
+          isDeveloperError10: true,
+        );
+      }
+      throw GoogleAuthException('Google Sign-In failed: $e');
     }
   }
 
@@ -73,25 +119,24 @@ class CloudSyncService {
       await _googleSignIn.signOut();
     } catch (_) {}
     _currentUser = null;
+    _manualAccessToken = null;
+    _manualEmail = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kCloudUserEmail);
     await prefs.remove(_kCloudUserId);
+    await prefs.remove(_kManualAccessToken);
   }
 
   /// Backs up the local encrypted financial database snapshot to Google Drive AppData folder
   Future<bool> uploadBackupToCloud(StorageService storage) async {
-    final account = _currentUser ?? await _googleSignIn.signInSilently();
-    if (account == null) {
-      throw Exception('Please sign in with Google to backup data to cloud.');
-    }
-
-    final authHeaders = await account.authHeaders;
+    final authHeaders = await getAuthHeaders();
     final now = DateTime.now().toIso8601String();
+    final email = userEmail ?? 'user';
 
     final payload = {
-      'version': '1.4.0',
+      'version': '1.5.0',
       'timestamp': now,
-      'user_email': account.email,
+      'user_email': email,
       'transactions': storage.getTransactions().map((e) => e.toJson()).toList(),
       'categories': storage.getCategories().map((e) => e.toJson()).toList(),
       'wallets': storage.getWallets().map((e) => e.toJson()).toList(),
@@ -190,12 +235,7 @@ class CloudSyncService {
 
   /// Restores database snapshot from user's Google Drive AppData folder
   Future<Map<String, dynamic>?> downloadBackupFromCloud() async {
-    final account = _currentUser ?? await _googleSignIn.signInSilently();
-    if (account == null) {
-      throw Exception('Please sign in with Google to restore cloud data.');
-    }
-
-    final authHeaders = await account.authHeaders;
+    final authHeaders = await getAuthHeaders();
 
     try {
       final listUri = Uri.parse(

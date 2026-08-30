@@ -58,7 +58,8 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Welcome to Pocket'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Skip'), findsNothing); // Skip button removed

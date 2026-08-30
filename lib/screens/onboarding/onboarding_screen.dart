@@ -18,9 +18,12 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+
+  late final AnimationController _iconAnimCtrl;
+  late final AnimationController _featuresAnimCtrl;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -82,16 +85,49 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    _iconAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _featuresAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..forward();
+
     _onboardingCategories = List.from(defaultCategories);
-    // Starts with clean slate for Wallet Setup
+    // Starts with clean slate for Profile and Wallet Setup
   }
 
   @override
   void dispose() {
+    _iconAnimCtrl.dispose();
+    _featuresAnimCtrl.dispose();
     _pageController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  void _applyThemeRealtime({
+    AppThemeMode? mode,
+    ManualThemeStyle? style,
+    bool? pureBlack,
+  }) {
+    setState(() {
+      if (mode != null) _selectedThemeMode = mode;
+      if (style != null) _selectedThemeStyle = style;
+      if (pureBlack != null) _isPureBlack = pureBlack;
+    });
+
+    final currentSettings = ref.read(settingsProvider);
+    ref.read(settingsProvider.notifier).updateSettings(
+          currentSettings.copyWith(
+            themeMode: _selectedThemeMode,
+            manualThemeStyle: _selectedThemeStyle,
+            isPureBlackEnabled: _isPureBlack,
+          ),
+        );
   }
 
   void _nextPage() {
@@ -336,22 +372,52 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
+    final features = [
+      {'icon': Icons.lock_rounded, 'label': '🔒 Hardware AES-256 Encryption • Zero-knowledge offline privacy'},
+      {'icon': Icons.auto_graph_rounded, 'label': '🔮 On-Device AI Forecasting • Confidence bands & burn rate predictions'},
+      {'icon': Icons.auto_fix_high_rounded, 'label': '✨ Natural Language Entry • Type or speak "1200 for dinner yesterday"'},
+      {'icon': Icons.alt_route_rounded, 'label': '🌊 Sankey Money Topology & 0–1000 Financial Health Score Gauge'},
+      {'icon': Icons.bolt_rounded, 'label': '⚡ Instant UPI Share-to-Log • Auto-parse payment receipts with OCR'},
+      {'icon': Icons.track_changes_rounded, 'label': '🎯 Savings Goals, Budget Rollover & Bill Due Calendar View'},
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         children: [
           const SizedBox(height: 12),
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3), width: 2),
-            ),
-            child: const Center(
-              child: Text('💳', style: TextStyle(fontSize: 44)),
-            ),
+          // Pulsing Animated Pocket Logo with Glowing Halo
+          AnimatedBuilder(
+            animation: _iconAnimCtrl,
+            builder: (context, child) {
+              final scale = 1.0 + (_iconAnimCtrl.value * 0.08);
+              final glowAlpha = 0.2 + (_iconAnimCtrl.value * 0.25);
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                      width: 2.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryGreenLight.withValues(alpha: glowAlpha),
+                        blurRadius: 28,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text('💳', style: TextStyle(fontSize: 48)),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           Text(
@@ -374,17 +440,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          _buildFeaturePill(Icons.lock_rounded, '🔒 Hardware AES-256 Encryption • Zero-knowledge offline privacy', isDark),
-          const SizedBox(height: 8),
-          _buildFeaturePill(Icons.auto_graph_rounded, '🔮 On-Device AI Forecasting • Confidence bands & burn rate predictions', isDark),
-          const SizedBox(height: 8),
-          _buildFeaturePill(Icons.auto_fix_high_rounded, '✨ Natural Language Entry • Type or speak "1200 for dinner yesterday"', isDark),
-          const SizedBox(height: 8),
-          _buildFeaturePill(Icons.alt_route_rounded, '🌊 Sankey Money Topology & 0–1000 Financial Health Score Gauge', isDark),
-          const SizedBox(height: 8),
-          _buildFeaturePill(Icons.bolt_rounded, '⚡ Instant UPI Share-to-Log • Auto-parse payment receipts with OCR', isDark),
-          const SizedBox(height: 8),
-          _buildFeaturePill(Icons.track_changes_rounded, '🎯 Savings Goals, Budget Rollover & Bill Due Calendar View', isDark),
+
+          // Staggered Feature Cards Cascading in
+          ...List.generate(features.length, (index) {
+            final start = (index * 0.12).clamp(0.0, 0.7);
+            final end = (start + 0.3).clamp(0.0, 1.0);
+            final animation = CurvedAnimation(
+              parent: _featuresAnimCtrl,
+              curve: Interval(start, end, curve: Curves.easeOutCubic),
+            );
+
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final offset = Offset(0, 30 * (1.0 - animation.value));
+                return Opacity(
+                  opacity: animation.value.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: offset,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildFeaturePill(
+                        features[index]['icon'] as IconData,
+                        features[index]['label'] as String,
+                        isDark,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
           const SizedBox(height: 16),
         ],
       ),
@@ -429,7 +515,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your Profile',
+            'Profile Setup',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -619,7 +705,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             subtitle: 'Automatically switches to Light (6AM-6PM) & Dark (6PM-6AM)',
             icon: Icons.auto_mode_rounded,
             isSelected: _selectedThemeMode == AppThemeMode.autoTime,
-            onTap: () => setState(() => _selectedThemeMode = AppThemeMode.autoTime),
+            onTap: () => _applyThemeRealtime(mode: AppThemeMode.autoTime),
             isDark: isDark,
           ),
           const SizedBox(height: 10),
@@ -629,10 +715,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             subtitle: 'Always dark background with soft mint green accents',
             icon: Icons.dark_mode_rounded,
             isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.dark,
-            onTap: () => setState(() {
-              _selectedThemeMode = AppThemeMode.manual;
-              _selectedThemeStyle = ManualThemeStyle.dark;
-            }),
+            onTap: () => _applyThemeRealtime(
+              mode: AppThemeMode.manual,
+              style: ManualThemeStyle.dark,
+            ),
             isDark: isDark,
           ),
           const SizedBox(height: 10),
@@ -642,10 +728,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             subtitle: 'Crisp, clean bright appearance with high contrast',
             icon: Icons.light_mode_rounded,
             isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.light,
-            onTap: () => setState(() {
-              _selectedThemeMode = AppThemeMode.manual;
-              _selectedThemeStyle = ManualThemeStyle.light;
-            }),
+            onTap: () => _applyThemeRealtime(
+              mode: AppThemeMode.manual,
+              style: ManualThemeStyle.light,
+            ),
             isDark: isDark,
           ),
           const SizedBox(height: 18),
@@ -697,7 +783,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Switch(
                   value: _isPureBlack,
                   activeThumbColor: AppColors.primaryGreenLight,
-                  onChanged: (val) => setState(() => _isPureBlack = val),
+                  onChanged: (val) => _applyThemeRealtime(pureBlack: val),
                 ),
               ],
             ),
@@ -1130,24 +1216,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _showAddWalletDialog(bool isDark, {WalletType? initialType}) {
-    final initial = initialType ?? WalletType.bank;
-    WalletType selectedType = initial;
+    final selectedType = initialType ?? WalletType.bank;
     String selectedIcon = '🏦';
-    String defaultName = 'Bank Account';
-    if (initial == WalletType.cash) {
+    String placeholderHint = 'e.g. Canara Bank, SBI, HDFC';
+    String dialogTitle = 'Add Bank Account';
+
+    if (selectedType == WalletType.cash) {
       selectedIcon = '💵';
-      defaultName = 'Cash in Hand';
-    } else if (initial == WalletType.upi) {
+      placeholderHint = 'e.g. Cash in Hand, Pocket Cash';
+      dialogTitle = 'Add Cash Account';
+    } else if (selectedType == WalletType.upi) {
       selectedIcon = '📱';
-      defaultName = 'UPI Wallet';
-    } else if (initial == WalletType.creditCard) {
+      placeholderHint = 'e.g. Google Pay, PhonePe, Paytm';
+      dialogTitle = 'Add UPI Account';
+    } else if (selectedType == WalletType.creditCard) {
       selectedIcon = '💳';
-      defaultName = 'Credit Card';
-    } else if (initial == WalletType.savings) {
+      placeholderHint = 'e.g. Amazon ICICI, HDFC Millennia';
+      dialogTitle = 'Add Credit Card';
+    } else if (selectedType == WalletType.savings) {
       selectedIcon = '💰';
-      defaultName = 'Savings Vault';
+      placeholderHint = 'e.g. Emergency Fund, Gold Vault';
+      dialogTitle = 'Add Savings Vault';
     }
-    final nameCtrl = TextEditingController(text: defaultName);
+
+    final nameCtrl = TextEditingController();
     final balanceCtrl = TextEditingController();
     final last4Ctrl = TextEditingController();
 
@@ -1173,54 +1265,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Add Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-
-                Wrap(
-                  spacing: 8,
-                  children: WalletType.values.map((type) {
-                    final isSel = selectedType == type;
-                    return ChoiceChip(
-                      label: Text(type.name.toUpperCase()),
-                      selected: isSel,
-                      selectedColor: AppColors.primaryGreenLight,
-                      labelStyle: TextStyle(
-                        color: isSel ? Colors.black : (isDark ? Colors.white : Colors.black87),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                      onSelected: (val) {
-                        setDialogState(() {
-                          selectedType = type;
-                          if (type == WalletType.cash) {
-                            selectedIcon = '💵';
-                            nameCtrl.text = 'Cash in Hand';
-                          } else if (type == WalletType.bank) {
-                            selectedIcon = '🏦';
-                            nameCtrl.text = 'Bank Account';
-                          } else if (type == WalletType.upi) {
-                            selectedIcon = '📱';
-                            nameCtrl.text = 'UPI';
-                          } else if (type == WalletType.creditCard) {
-                            selectedIcon = '💳';
-                            nameCtrl.text = 'Credit Card';
-                          } else if (type == WalletType.savings) {
-                            selectedIcon = '💰';
-                            nameCtrl.text = 'Savings';
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                Row(
+                  children: [
+                    Text(selectedIcon, style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 8),
+                    Text(dialogTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 const Text('Account Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. ICICI Bank, Cash in Wallet',
+                  decoration: InputDecoration(
+                    hintText: placeholderHint,
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white30 : Colors.black26,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1237,6 +1301,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       prefixText: '•••• ',
                       counterText: '',
                       hintText: 'e.g. 4821',
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.white30 : Colors.black26,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
                       filled: true,
                       fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -1253,6 +1322,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   decoration: InputDecoration(
                     prefixText: '${_selectedCurrencySymbol ?? '₹'} ',
                     hintText: '0.00',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white30 : Colors.black26,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -1509,8 +1583,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'e.g. Coffee, Subscriptions',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white30 : Colors.black26,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
