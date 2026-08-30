@@ -24,13 +24,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  String? _selectedCurrencySymbol;
-  String? _selectedCurrencyCode;
+  String? _selectedCurrencySymbol = '₹';
+  String? _selectedCurrencyCode = 'INR';
 
   // Theme preferences
   AppThemeMode _selectedThemeMode = AppThemeMode.autoTime;
   ManualThemeStyle _selectedThemeStyle = ManualThemeStyle.pureBlack;
   bool _isPureBlack = true;
+
+  // Budget Rollover
+  bool _isBudgetRolloverEnabled = true;
 
   // Notification Preferences
   bool _dailyReminderEnabled = true;
@@ -59,6 +62,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void initState() {
     super.initState();
     _onboardingCategories = List.from(defaultCategories);
+    
+    // Pre-populate smart starter accounts
+    _onboardingWallets.addAll([
+      const WalletModel(
+        id: 'bank_primary',
+        name: 'Main Bank Account',
+        icon: '🏦',
+        colorValue: 0xFF2E7D32,
+        initialBalance: 0.0,
+        currentBalance: 0.0,
+        walletType: WalletType.bank,
+        accountNumber: '4821',
+        isDefault: true,
+      ),
+      const WalletModel(
+        id: 'cash_hand',
+        name: 'Cash in Hand',
+        icon: '💵',
+        colorValue: 0xFF4CAF50,
+        initialBalance: 0.0,
+        currentBalance: 0.0,
+        walletType: WalletType.cash,
+        isDefault: false,
+      ),
+    ]);
   }
 
   @override
@@ -78,8 +106,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter your name'),
-            duration: Duration(seconds: 4),
+            content: Text('Please enter your name to personalize your matrix'),
+            duration: Duration(seconds: 3),
           ),
         );
         return;
@@ -88,7 +116,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please select your preferred currency'),
-            duration: Duration(seconds: 4),
+            duration: Duration(seconds: 3),
           ),
         );
         return;
@@ -100,8 +128,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (_onboardingWallets.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please add at least 1 wallet to get started'),
-            duration: Duration(seconds: 4),
+            content: Text('Please keep or add at least 1 account to proceed'),
+            duration: Duration(seconds: 3),
           ),
         );
         return;
@@ -122,8 +150,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_onboardingWallets.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please create at least 1 wallet to get started'),
-          duration: Duration(seconds: 4),
+          content: Text('Please create at least 1 account to get started'),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -164,7 +192,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await storage.saveCategories(_onboardingCategories);
     ref.invalidate(categoriesProvider);
 
-    // 4. Save configured category budgets
+    // 4. Save configured category budgets with rollover state
     final now = DateTime.now();
     final List<CategoryBudgetModel> budgetsToSave = [];
     _onboardingBudgets.forEach((catId, limit) {
@@ -174,6 +202,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             id: const Uuid().v4(),
             categoryId: catId,
             monthlyLimit: limit,
+            isRolloverEnabled: _isBudgetRolloverEnabled,
             createdAt: now,
             updatedAt: now,
           ),
@@ -200,7 +229,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Futuristic Animated Page Indicator Bar (7 steps)
+            // Top Futuristic Animated Step Indicator Bar (7 steps)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Row(
@@ -236,7 +265,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
 
-            // Page View (7 Slides)
+            // Page View (7 Responsive, Scroll-Safe Slides)
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -305,53 +334,58 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 1: Welcome ---
+  // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 12),
           Container(
-            width: 96,
-            height: 96,
+            width: 88,
+            height: 88,
             decoration: BoxDecoration(
               color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3), width: 2),
             ),
             child: const Center(
-              child: Text('💳', style: TextStyle(fontSize: 48)),
+              child: Text('💳', style: TextStyle(fontSize: 44)),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           Text(
             'Welcome to Pocket',
             style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            'Next-generation offline personal financial management suite with AMOLED Pure Black aesthetics.',
+            'Next-generation offline personal financial intelligence suite with AMOLED Pure Black aesthetics.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
+              fontSize: 13,
+              height: 1.4,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 28),
-          _buildFeaturePill(Icons.bolt_rounded, '⚡ Instant UPI Share-to-Log • Share payment screenshots to auto-parse & log', isDark),
-          const SizedBox(height: 10),
-          _buildFeaturePill(Icons.lock_outline_rounded, 'Zero cloud storage • 100% offline & private', isDark),
-          const SizedBox(height: 10),
-          _buildFeaturePill(Icons.autorenew_rounded, 'Automated recurring expenses & smart ledger', isDark),
-          const SizedBox(height: 10),
-          _buildFeaturePill(Icons.receipt_long_rounded, 'Private receipt capture & contact debt tracking', isDark),
+          const SizedBox(height: 20),
+          _buildFeaturePill(Icons.lock_rounded, '🔒 Hardware AES-256 Encryption • Zero-knowledge offline privacy', isDark),
+          const SizedBox(height: 8),
+          _buildFeaturePill(Icons.auto_graph_rounded, '🔮 On-Device AI Forecasting • Confidence bands & burn rate predictions', isDark),
+          const SizedBox(height: 8),
+          _buildFeaturePill(Icons.auto_fix_high_rounded, '✨ Natural Language Entry • Type or speak "1200 for dinner yesterday"', isDark),
+          const SizedBox(height: 8),
+          _buildFeaturePill(Icons.alt_route_rounded, '🌊 Sankey Money Topology & 0–1000 Financial Health Score Gauge', isDark),
+          const SizedBox(height: 8),
+          _buildFeaturePill(Icons.bolt_rounded, '⚡ Instant UPI Share-to-Log • Auto-parse payment receipts with OCR', isDark),
+          const SizedBox(height: 8),
+          _buildFeaturePill(Icons.track_changes_rounded, '🎯 Savings Goals, Budget Rollover & Bill Due Calendar View', isDark),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -359,7 +393,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildFeaturePill(IconData icon, String label, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -368,15 +403,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: AppColors.primaryGreenLight),
-          const SizedBox(width: 8),
-          Flexible(
+          const SizedBox(width: 10),
+          Expanded(
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
               ),
@@ -390,29 +424,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // --- Slide 2: User Profile & Currency ---
   Widget _buildSlide2Profile(bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Your Profile',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
-            'What should we call you, and which currency do you transact in?',
+            'Personalize your name and preferred global currency.',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12.5,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 24),
-          const Text('Your Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
+          const Text('Your Name', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
           TextField(
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
@@ -423,11 +457,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // User Mobile Number Input
-          const Text('Mobile Number (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const Text('Mobile Number (Optional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
@@ -441,16 +475,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 20),
 
-          const Text('Select Currency', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
+          const Text('Select Currency', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 2.2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.3,
             ),
             itemCount: _currencies.length,
             itemBuilder: (context, index) {
@@ -465,7 +499,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
@@ -483,12 +517,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       Text(
                         c['symbol']!,
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +531,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             Text(
                               c['code']!,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                               ),
@@ -507,7 +541,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9.5,
                                 color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                               ),
                             ),
@@ -528,27 +562,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // --- Slide 3: Theme Preferences ---
   Widget _buildSlide3Theme(bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Theme & Display',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             'Choose your visual appearance and AMOLED display optimization.',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12.5,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           _buildThemeModeCard(
             title: 'Auto Mode (Time-Based)',
@@ -558,7 +592,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             onTap: () => setState(() => _selectedThemeMode = AppThemeMode.autoTime),
             isDark: isDark,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           _buildThemeModeCard(
             title: 'Dark Theme',
@@ -571,7 +605,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             }),
             isDark: isDark,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           _buildThemeModeCard(
             title: 'Light Theme',
@@ -584,11 +618,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             }),
             isDark: isDark,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
 
           // AMOLED Pure Black Toggle
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -615,7 +649,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         'Midnight Pure Black (#000000)',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
+                          fontSize: 13,
                           color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
                       ),
@@ -623,7 +657,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       Text(
                         'True #000000 pixels for maximum battery savings',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
@@ -655,7 +689,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryGreenLight.withValues(alpha: 0.12)
@@ -671,7 +705,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: Row(
           children: [
             Icon(icon, color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87)),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,7 +714,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: 13.5,
                       color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
                     ),
                   ),
@@ -688,7 +722,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -696,116 +730,194 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 20),
+              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
           ],
         ),
       ),
     );
   }
 
-  // --- Slide 4: Wallets / Accounts Setup ---
+  // --- Slide 4: Smart Starter Accounts Setup ---
   Widget _buildSlide4Wallets(bool isDark) {
     final symbol = _selectedCurrencySymbol ?? '₹';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Add Your Accounts',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Create your bank accounts or cash in hand to track transactions.',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Created Wallets List
-          if (_onboardingWallets.isNotEmpty) ...[
-            ..._onboardingWallets.map((w) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Starter Accounts',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pre-configured accounts with instant inline balance editing.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Pre-populated & Added Wallets List
+          ..._onboardingWallets.map((w) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                 ),
-                child: Row(
-                  children: [
-                    Text(w.icon, style: const TextStyle(fontSize: 24)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                              if (w.maskedAccountNumber.isNotEmpty) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    w.maskedAccountNumber,
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-                                  ),
+              ),
+              child: Row(
+                children: [
+                  Text(w.icon, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                w.name,
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (w.maskedAccountNumber.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                              ],
+                                child: Text(
+                                  w.maskedAccountNumber,
+                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        InkWell(
+                          onTap: () => _showEditBalanceDialog(w, isDark),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Starting: $symbol${w.currentBalance.toStringAsFixed(0)}',
+                                style: const TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.w700, fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit_outlined, size: 12, color: AppColors.primaryGreenLight),
                             ],
                           ),
-                          Text(
-                            '$symbol${w.currentBalance.toStringAsFixed(2)}',
-                            style: const TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.w600, fontSize: 12),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
-                      onPressed: () {
-                        setState(() {
-                          _onboardingWallets.removeWhere((item) => item.id == w.id);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              );
-            }),
-            const SizedBox(height: 12),
-          ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
+                    onPressed: () {
+                      setState(() {
+                        _onboardingWallets.removeWhere((item) => item.id == w.id);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
 
-          // Add Wallet Button
+          // Add Extra Wallet Button
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primaryGreenLight,
                 side: const BorderSide(color: AppColors.primaryGreenLight, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Add Account / Wallet', style: TextStyle(fontWeight: FontWeight.w700)),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add Another Account / UPI / Card', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               onPressed: () => _showAddWalletDialog(isDark),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditBalanceDialog(WalletModel wallet, bool isDark) {
+    final symbol = _selectedCurrencySymbol ?? '₹';
+    final ctrl = TextEditingController(text: wallet.currentBalance > 0 ? wallet.currentBalance.toStringAsFixed(0) : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('${wallet.name} Balance', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            prefixText: '$symbol ',
+            hintText: '0.00',
+            filled: true,
+            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreenLight,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              final bal = double.tryParse(ctrl.text.trim()) ?? 0.0;
+              final idx = _onboardingWallets.indexWhere((w) => w.id == wallet.id);
+              if (idx != -1) {
+                setState(() {
+                  _onboardingWallets[idx] = wallet.copyWith(
+                    initialBalance: bal,
+                    currentBalance: bal,
+                  );
+                });
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save Balance', style: TextStyle(fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -844,7 +956,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const Text('Add Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
 
-                // Account Type Chips
                 Wrap(
                   spacing: 8,
                   children: WalletType.values.map((type) {
@@ -894,7 +1005,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Last 4 Digits of Account Number (Required for Bank & Card)
                 if (selectedType == WalletType.bank || selectedType == WalletType.creditCard || selectedType == WalletType.savings) ...[
                   const Text('Last 4 Digits of Account/Card (Required for Bank)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
@@ -947,7 +1057,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Please enter the last 4 digits to identify this bank account'),
-                            duration: Duration(seconds: 4),
+                            duration: Duration(seconds: 3),
                           ),
                         );
                         return;
@@ -981,7 +1091,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 5: Step 5a - Personalize Categories (Add, Edit, Remove) ---
+  // --- Slide 5: Personalize Categories (Add, Edit, Remove) ---
   Widget _buildSlide5Categories(bool isDark) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -995,21 +1105,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Personalize Categories',
+                    'Spending Categories',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Step 1 of 2: Customize spending tags',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryGreenLight,
-                    ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Customize icons, tags, and colors.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -1026,15 +1132,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Keep tags you need, remove ones you don\'t, or add custom tags.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           ListView.separated(
             shrinkWrap: true,
@@ -1044,7 +1142,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             itemBuilder: (context, index) {
               final cat = _onboardingCategories[index];
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -1055,16 +1153,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: Row(
                   children: [
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
                         color: Color(cat.colorValue).withValues(alpha: 0.18),
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: Text(cat.icon, style: const TextStyle(fontSize: 18)),
+                      child: Text(cat.icon, style: const TextStyle(fontSize: 17)),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1072,7 +1170,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           Text(
                             cat.name,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                             ),
@@ -1080,7 +1178,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           Text(
                             cat.type == TransactionType.expense ? 'Expense' : 'Income',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w600,
                               color: cat.type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
                             ),
@@ -1089,12 +1187,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                      icon: const Icon(Icons.edit_outlined, size: 17, color: Colors.grey),
                       tooltip: 'Edit category',
                       onPressed: () => _showAddOrEditCategoryModal(isDark, existing: cat),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 17, color: Colors.grey),
                       tooltip: 'Delete category',
                       onPressed: () {
                         setState(() {
@@ -1160,7 +1258,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Type Chips (Expense vs Income)
                 Row(
                   children: [
                     ChoiceChip(
@@ -1198,7 +1295,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Icon Picker
                 const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 SizedBox(
@@ -1233,7 +1329,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Color Picker
                 const Text('Select Color', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 SizedBox(
@@ -1313,7 +1408,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 6: Step 5b - Set Monthly Budgets with Custom Limits & Presets ---
+  // --- Slide 6: Monthly Budgets & Budget Rollover ---
   Widget _buildSlide6CategoryBudgets(bool isDark) {
     final symbol = _selectedCurrencySymbol ?? '₹';
     final expenseCategories = _onboardingCategories.where((c) => c.type == TransactionType.expense).toList();
@@ -1324,7 +1419,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Set Monthly Budgets',
+            'Monthly Budgets & Rollover',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -1333,19 +1428,68 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Step 2 of 2: Set custom spending caps or tap preset limits',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryGreenLight,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Tap amount to type any custom limit, or use quick presets below.',
+            'Set category spending limits & carry over unspent savings.',
             style: TextStyle(
               fontSize: 12.5,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Budget Rollover Master Toggle Card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF142918), const Color(0xFF191919)]
+                    : [const Color(0xFFE8F5E9), const Color(0xFFFAFAFA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreenLight.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.autorenew_rounded, color: AppColors.primaryGreenLight, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Budget Rollover Carry-Forward',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Unspent monthly budget balance carries over to expand next month\'s limit.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _isBudgetRolloverEnabled,
+                  activeThumbColor: AppColors.primaryGreenLight,
+                  onChanged: (val) => setState(() => _isBudgetRolloverEnabled = val),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -1364,11 +1508,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               final isEnabled = currentBudget > 0;
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isEnabled
                         ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
@@ -1383,29 +1527,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(cat.icon, style: const TextStyle(fontSize: 20)),
-                            const SizedBox(width: 10),
+                            Text(cat.icon, style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 8),
                             Text(
                               cat.name,
                               style: TextStyle(
-                                fontSize: 14.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                               ),
                             ),
                           ],
                         ),
-                        // Tap-to-edit inline amount button / chip
                         InkWell(
                           onTap: () => _showCustomBudgetDialog(cat, isDark),
-                          borderRadius: BorderRadius.circular(10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: isEnabled
                                   ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
                                   : (isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0)),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: isEnabled ? AppColors.primaryGreenLight : Colors.transparent,
                                 width: 1,
@@ -1415,23 +1557,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  isEnabled ? '$symbol${currentBudget.toStringAsFixed(0)} / mo' : 'Tap to set limit',
+                                  isEnabled ? '$symbol${currentBudget.toStringAsFixed(0)} / mo' : 'Set limit',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                     color: isEnabled ? AppColors.primaryGreenLight : Colors.grey,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Icon(Icons.edit_rounded, size: 12, color: isEnabled ? AppColors.primaryGreenLight : Colors.grey),
+                                Icon(Icons.edit_rounded, size: 10, color: isEnabled ? AppColors.primaryGreenLight : Colors.grey),
                               ],
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    // Preset Budget Chips
+                    const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -1448,17 +1589,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           const SizedBox(width: 6),
                           InkWell(
                             onTap: () => _showCustomBudgetDialog(cat, isDark),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                               decoration: BoxDecoration(
                                 color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3)),
                               ),
                               child: const Text(
                                 '✏️ Custom',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
                               ),
                             ),
                           ),
@@ -1544,19 +1685,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _onboardingBudgets[catId] = amount;
         });
       },
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryGreenLight
               : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF)),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
             color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
           ),
@@ -1565,34 +1706,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // --- Slide 7: Step 6 - Smart Preferences & Notification Alerts ---
+  // --- Slide 7: Smart Preferences & Notification Alerts ---
   Widget _buildSlide7Preferences(bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Smart Alerts & Automation',
+            'Smart Alerts & Launch',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
-            'Configure daily reminders and proactive budget warning notifications.',
+            'Configure daily reminders and proactive debt & budget alarms.',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12.5,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           // Daily Reminder Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -1621,7 +1762,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             'Daily Logging Reminder',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 14,
+                              fontSize: 13.5,
                               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                             ),
                           ),
@@ -1629,8 +1770,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           Text(
                             'Daily prompt to review spend',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11.5,
                               color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
                             ),
                           ),
@@ -1645,16 +1785,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ],
                 ),
                 if (_dailyReminderEnabled) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Reminder Time',
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
@@ -1685,11 +1825,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Budget Alerts Card
+          // Proactive Alerts Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -1708,9 +1848,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onChanged: (v) => setState(() => _budgetNearLimitEnabled = v),
                   isDark: isDark,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 _buildPreferenceSwitchRow(
                   icon: Icons.error_outline_rounded,
                   iconColor: AppColors.expenseRed,
@@ -1720,21 +1860,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onChanged: (v) => setState(() => _budgetExceededEnabled = v),
                   isDark: isDark,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 _buildPreferenceSwitchRow(
-                  icon: Icons.autorenew_rounded,
+                  icon: Icons.notifications_active_outlined,
                   iconColor: AppColors.primaryGreenLight,
-                  title: 'Recurring Bill Due Alerts',
-                  subtitle: 'Remind before recurring subscriptions & bills',
+                  title: 'Debt Due-Date Reminders',
+                  subtitle: 'Alarms 1-day prior & morning of due date',
                   value: _recurringDueEnabled,
                   onChanged: (v) => setState(() => _recurringDueEnabled = v),
                   isDark: isDark,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 _buildPreferenceSwitchRow(
                   icon: Icons.insights_rounded,
                   iconColor: AppColors.infoBlue,
@@ -1764,14 +1904,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
             color: iconColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 18),
+          child: Icon(icon, color: iconColor, size: 16),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1780,15 +1920,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 13.5,
+                  fontSize: 13,
                   color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF555555),
                 ),
