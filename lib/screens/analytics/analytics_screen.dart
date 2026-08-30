@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -157,6 +158,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final maxDaySpend = dayOfWeekSpending.values.fold(0.0, (m, v) => v > m ? v : m);
     final maxBarY = maxDaySpend > 0 ? (maxDaySpend * 1.25) : 1000.0;
 
+    final palette = ref.watch(activePaletteProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Analytics & Budgets'),
@@ -168,26 +171,145 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
           ),
           const SizedBox(width: 8),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primaryGreenLight,
-          labelColor: AppColors.primaryGreenLight,
-          unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-          tabs: const [
-            Tab(text: 'Insights & Charts', icon: Icon(Icons.insights_rounded, size: 18)),
-            Tab(text: 'Category Budgets', icon: Icon(Icons.track_changes_rounded, size: 18)),
-          ],
-        ),
       ),
       body: Column(
         children: [
+          // Segmented Button Navigation (Pills for Tab Switch)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECEB),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Button 1: Insights & Charts
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _tabController.animateTo(0);
+                        setState(() {});
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeInOut,
+                        decoration: BoxDecoration(
+                          color: _tabController.index == 0
+                              ? palette.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: _tabController.index == 0
+                              ? [
+                                  BoxShadow(
+                                    color: palette.primary.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.insights_rounded,
+                              size: 16,
+                              color: _tabController.index == 0
+                                  ? Colors.black
+                                  : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Insights & Charts',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: _tabController.index == 0 ? FontWeight.bold : FontWeight.w600,
+                                color: _tabController.index == 0
+                                    ? Colors.black
+                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Button 2: Category Budgets
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _tabController.animateTo(1);
+                        setState(() {});
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeInOut,
+                        decoration: BoxDecoration(
+                          color: _tabController.index == 1
+                              ? palette.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: _tabController.index == 1
+                              ? [
+                                  BoxShadow(
+                                    color: palette.primary.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.track_changes_rounded,
+                              size: 16,
+                              color: _tabController.index == 1
+                                  ? Colors.black
+                                  : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Category Budgets',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: _tabController.index == 1 ? FontWeight.bold : FontWeight.w600,
+                                color: _tabController.index == 1
+                                    ? Colors.black
+                                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Month Selector Bar (Only on Insights tab & hides on scroll)
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
             child: (_tabController.index == 0 && _isMonthBarVisible)
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
@@ -202,7 +324,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         children: [
                           IconButton(
                             icon: const Icon(Icons.chevron_left_rounded),
-                            color: canGoBack ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
+                            color: canGoBack ? palette.primary : Colors.grey.withValues(alpha: 0.4),
                             onPressed: canGoBack ? () => _previousMonth(minDate) : null,
                           ),
                           Text(
@@ -215,7 +337,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                           ),
                           IconButton(
                             icon: const Icon(Icons.chevron_right_rounded),
-                            color: canGoForward ? AppColors.primaryGreenLight : Colors.grey.withValues(alpha: 0.4),
+                            color: canGoForward ? palette.primary : Colors.grey.withValues(alpha: 0.4),
                             onPressed: canGoForward ? () => _nextMonth(maxDate) : null,
                           ),
                         ],
@@ -225,10 +347,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 : const SizedBox.shrink(),
           ),
 
-          // Tab Bar Views
+          // Tab Bar Views (NeverScrollable to prevent gesture conflict with screen swipe)
           Expanded(
             child: TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 // TAB 1: Insights & Charts
                 _buildInsightsTab(
