@@ -7,15 +7,19 @@ import 'package:pocket/models/debt_model.dart';
 import 'package:pocket/models/budget_model.dart';
 import 'package:pocket/services/storage_service.dart';
 import 'package:pocket/services/backup_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Pocket Data & Algorithm Tests', () {
     late StorageService storage;
     late BackupService backupService;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
       storage = await StorageService.init();
       backupService = BackupService(storage);
     });
@@ -256,6 +260,28 @@ void main() {
       expect(loaded.first.categoryId, equals('food'));
       expect(loaded.first.monthlyLimit, equals(6000.0));
       expect(loaded.first.isRolloverEnabled, isTrue);
+    });
+
+    test('Local Storage encrypts data blobs in SharedPreferences and migrates legacy plaintext', () async {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Verify saved data in SharedPreferences has encrypted prefix enc:v1:
+      final rawTransactions = prefs.getString('pocket_transactions');
+      if (rawTransactions != null) {
+        expect(rawTransactions.startsWith('enc:v1:'), isTrue);
+      }
+
+      // Test migration: simulate legacy plaintext stored in SharedPreferences
+      await prefs.setString('pocket_wallets', '[{"id":"cash","name":"Cash Wallet","type":"cash","colorValue":4281116248,"createdAt":"2026-08-30T00:00:00.000"}]');
+      
+      // Re-initialize StorageService which triggers migration
+      final reloadedStorage = await StorageService.init(prefs: prefs);
+      final migratedWallets = reloadedStorage.getWallets();
+      expect(migratedWallets.any((w) => w.id == 'cash'), isTrue);
+
+      // Verify the raw string in SharedPreferences has been upgraded to encrypted
+      final migratedRaw = prefs.getString('pocket_wallets');
+      expect(migratedRaw != null && migratedRaw.startsWith('enc:v1:'), isTrue);
     });
   });
 }

@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'storage_service.dart';
@@ -15,6 +16,10 @@ class SupabaseSyncService {
   static const _kSupabaseAnonKey = 'pocket_supabase_anon_key';
   static const _kLastSyncTime = 'pocket_supabase_last_sync';
   static const _kCloudBackupSnapshot = 'pocket_cloud_backup_snapshot';
+
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   static final SupabaseSyncService _instance = SupabaseSyncService._internal();
   factory SupabaseSyncService() => _instance;
@@ -48,12 +53,25 @@ class SupabaseSyncService {
   String? get userEmail => currentUser?.email;
   String? get userId => currentUser?.id;
 
-  /// Initializes Supabase Client
+  /// Initializes Supabase Client with credentials loaded securely from FlutterSecureStorage
   Future<bool> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final url = prefs.getString(_kSupabaseUrl) ?? defaultSupabaseUrl;
-      final anonKey = prefs.getString(_kSupabaseAnonKey) ?? defaultSupabaseAnonKey;
+
+      // One-time migration: migrate legacy plaintext credentials from SharedPreferences to FlutterSecureStorage
+      final legacyUrl = prefs.getString(_kSupabaseUrl);
+      final legacyKey = prefs.getString(_kSupabaseAnonKey);
+      if (legacyUrl != null && legacyUrl.isNotEmpty) {
+        await _secureStorage.write(key: _kSupabaseUrl, value: legacyUrl);
+        await prefs.remove(_kSupabaseUrl);
+      }
+      if (legacyKey != null && legacyKey.isNotEmpty) {
+        await _secureStorage.write(key: _kSupabaseAnonKey, value: legacyKey);
+        await prefs.remove(_kSupabaseAnonKey);
+      }
+
+      final url = (await _secureStorage.read(key: _kSupabaseUrl)) ?? defaultSupabaseUrl;
+      final anonKey = (await _secureStorage.read(key: _kSupabaseAnonKey)) ?? defaultSupabaseAnonKey;
 
       if (url.isNotEmpty && anonKey.isNotEmpty) {
         try {
@@ -85,7 +103,7 @@ class SupabaseSyncService {
     return false;
   }
 
-  /// Connect custom Supabase instance
+  /// Connect custom Supabase instance securely
   Future<bool> connect({required String url, required String anonKey}) async {
     try {
       final cleanUrl = url.trim();
@@ -95,9 +113,8 @@ class SupabaseSyncService {
         return false;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kSupabaseUrl, cleanUrl);
-      await prefs.setString(_kSupabaseAnonKey, cleanKey);
+      await _secureStorage.write(key: _kSupabaseUrl, value: cleanUrl);
+      await _secureStorage.write(key: _kSupabaseAnonKey, value: cleanKey);
 
       try {
         await Supabase.initialize(
@@ -189,9 +206,9 @@ class SupabaseSyncService {
 
   Future<void> disconnect() async {
     await signOut();
+    await _secureStorage.delete(key: _kSupabaseUrl);
+    await _secureStorage.delete(key: _kSupabaseAnonKey);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kSupabaseUrl);
-    await prefs.remove(_kSupabaseAnonKey);
     await prefs.remove(_kLastSyncTime);
   }
 
@@ -200,15 +217,20 @@ class SupabaseSyncService {
     return prefs.getString(_kLastSyncTime);
   }
 
-  /// 1-Tap Cloud Backup: Uploads real encrypted snapshot to Supabase PostgreSQL table
+  /// 1-Tap Cloud Backup: Uploads encrypted snapshot to Supabase PostgreSQL table (Auth-bound)
   Future<bool> backupToCloud(StorageService storage) async {
+    final user = currentUser;
+    if (user == null || user.id.isEmpty) {
+      debugPrint('Cloud backup rejected: User must be authenticated');
+      return false;
+    }
+
     try {
-      final user = currentUser;
       final payload = {
         'version': 1,
         'timestamp': DateTime.now().toIso8601String(),
-        'user_id': user?.id,
-        'user_email': user?.email,
+        'user_id': user.id,
+        'user_email': user.email,
         'transactions': storage.getTransactions().map((e) => e.toJson()).toList(),
         'wallets': storage.getWallets().map((e) => e.toJson()).toList(),
         'categories': storage.getCategories().map((e) => e.toJson()).toList(),
@@ -220,8 +242,8 @@ class SupabaseSyncService {
       await prefs.setString(_kCloudBackupSnapshot, jsonEncode(payload));
       await prefs.setString(_kLastSyncTime, DateTime.now().toIso8601String());
 
-      // If remote Supabase client is initialized and user is authenticated, upsert to remote PostgreSQL
-      if (_isInitialized && user != null) {
+      // Upsert to remote PostgreSQL (Identity enforced server-side via RLS & auth.uid())
+      if (_isInitialized) {
         try {
           final client = Supabase.instance.client;
           await client.from('pocket_backups').upsert({
@@ -242,13 +264,17 @@ class SupabaseSyncService {
     }
   }
 
-  /// 1-Tap Cloud Restore: Fetches latest cloud backup from Supabase and restores locally
+  /// 1-Tap Cloud Restore: Fetches latest cloud backup from Supabase and restores locally (Auth-bound)
   Future<bool> restoreFromCloud(StorageService storage) async {
-    try {
-      final user = currentUser;
+    final user = currentUser;
+    if (user == null || user.id.isEmpty) {
+      debugPrint('Cloud restore rejected: User must be authenticated');
+      return false;
+    }
 
-      // 1. Try remote database fetch first if authenticated
-      if (_isInitialized && user != null) {
+    try {
+      // 1. Fetch remote database record bound to auth.uid()
+      if (_isInitialized) {
         try {
           final client = Supabase.instance.client;
           final response = await client
@@ -271,14 +297,16 @@ class SupabaseSyncService {
         }
       }
 
-      // 2. Fallback to cached cloud backup snapshot
+      // 2. Fallback to cached cloud backup snapshot for current authenticated user
       final prefs = await SharedPreferences.getInstance();
       final snapshotStr = prefs.getString(_kCloudBackupSnapshot);
       if (snapshotStr != null && snapshotStr.isNotEmpty) {
         final Map<String, dynamic> data = jsonDecode(snapshotStr);
-        await storage.restoreDatabase(data);
-        await prefs.setString(_kLastSyncTime, DateTime.now().toIso8601String());
-        return true;
+        if (data['user_id'] == user.id || data['user_email'] == user.email) {
+          await storage.restoreDatabase(data);
+          await prefs.setString(_kLastSyncTime, DateTime.now().toIso8601String());
+          return true;
+        }
       }
 
       return false;

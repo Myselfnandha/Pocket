@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:encrypt/encrypt.dart' as enc;
+import 'package:flutter/widgets.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
@@ -19,14 +22,37 @@ class StorageService {
   static const _kNotifications = 'pocket_notifications';
   static const _kDebts = 'pocket_debts';
   static const _kBudgets = 'pocket_category_budgets';
+  static const _kEncryptionKeyName = 'pocket_storage_aes_key_v1';
 
   final SharedPreferences _prefs;
+  final enc.Encrypter? _encrypter;
 
-  StorageService(this._prefs);
+  StorageService(this._prefs, [FlutterSecureStorage? secureStorage, this._encrypter]);
 
-  static Future<StorageService> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final service = StorageService(prefs);
+  static Future<StorageService> init({
+    SharedPreferences? prefs,
+    FlutterSecureStorage? secureStorage,
+  }) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+    final effectiveSecureStorage = secureStorage ?? const FlutterSecureStorage();
+
+    enc.Encrypter? encrypter;
+    try {
+      String? keyBase64 = await effectiveSecureStorage.read(key: _kEncryptionKeyName);
+      if (keyBase64 == null || keyBase64.isEmpty) {
+        final newKey = enc.Key.fromSecureRandom(32);
+        keyBase64 = newKey.base64;
+        await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
+      }
+      final key = enc.Key.fromBase64(keyBase64);
+      encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+    } catch (e) {
+      debugPrint('Storage encryption init notice (fallback mode): $e');
+    }
+
+    final service = StorageService(effectivePrefs, effectiveSecureStorage, encrypter);
+    await service._migratePlaintextToEncrypted();
     await service._seedInitialDataIfNeeded();
     return service;
   }
@@ -35,10 +61,67 @@ class StorageService {
     await _prefs.reload();
   }
 
+  // --- Encryption Helpers ---
+
+  String _encryptString(String plaintext) {
+    final encrypter = _encrypter;
+    if (encrypter == null) return plaintext;
+    try {
+      final iv = enc.IV.fromSecureRandom(16);
+      final encrypted = encrypter.encrypt(plaintext, iv: iv);
+      return 'enc:v1:${iv.base64}:${encrypted.base64}';
+    } catch (e) {
+      debugPrint('Encryption error: $e');
+      return plaintext;
+    }
+  }
+
+  String? _decryptString(String? raw) {
+    if (raw == null) return null;
+    if (!raw.startsWith('enc:v1:')) {
+      // Legacy plaintext format
+      return raw;
+    }
+    final encrypter = _encrypter;
+    if (encrypter == null) return raw;
+    try {
+      final parts = raw.split(':');
+      if (parts.length == 4) {
+        final iv = enc.IV.fromBase64(parts[2]);
+        final encrypted = enc.Encrypted.fromBase64(parts[3]);
+        return encrypter.decrypt(encrypted, iv: iv);
+      }
+    } catch (e) {
+      debugPrint('Decryption error: $e');
+    }
+    return raw;
+  }
+
+  Future<void> _migratePlaintextToEncrypted() async {
+    const keys = [
+      _kTransactions,
+      _kCategories,
+      _kWallets,
+      _kSettings,
+      _kRecurringRules,
+      _kNotifications,
+      _kDebts,
+      _kBudgets,
+    ];
+
+    for (final key in keys) {
+      final raw = _prefs.getString(key);
+      if (raw != null && !raw.startsWith('enc:v1:')) {
+        final encrypted = _encryptString(raw);
+        await _prefs.setString(key, encrypted);
+      }
+    }
+  }
+
   // --- Transactions ---
 
   List<TransactionModel> getTransactions() {
-    final raw = _prefs.getString(_kTransactions);
+    final raw = _decryptString(_prefs.getString(_kTransactions));
     if (raw == null) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -50,13 +133,13 @@ class StorageService {
 
   Future<void> saveTransactions(List<TransactionModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kTransactions, raw);
+    await _prefs.setString(_kTransactions, _encryptString(raw));
   }
 
   // --- Categories ---
 
   List<CategoryModel> getCategories() {
-    final raw = _prefs.getString(_kCategories);
+    final raw = _decryptString(_prefs.getString(_kCategories));
     if (raw == null) return defaultCategories;
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -68,13 +151,13 @@ class StorageService {
 
   Future<void> saveCategories(List<CategoryModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kCategories, raw);
+    await _prefs.setString(_kCategories, _encryptString(raw));
   }
 
   // --- Wallets ---
 
   List<WalletModel> getWallets() {
-    final raw = _prefs.getString(_kWallets);
+    final raw = _decryptString(_prefs.getString(_kWallets));
     if (raw == null) return defaultWallets;
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -86,13 +169,13 @@ class StorageService {
 
   Future<void> saveWallets(List<WalletModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kWallets, raw);
+    await _prefs.setString(_kWallets, _encryptString(raw));
   }
 
   // --- Settings ---
 
   UserSettingsModel getSettings() {
-    final raw = _prefs.getString(_kSettings);
+    final raw = _decryptString(_prefs.getString(_kSettings));
     if (raw == null) return const UserSettingsModel();
     try {
       final Map<String, dynamic> decoded = jsonDecode(raw);
@@ -104,13 +187,13 @@ class StorageService {
 
   Future<void> saveSettings(UserSettingsModel settings) async {
     final raw = jsonEncode(settings.toJson());
-    await _prefs.setString(_kSettings, raw);
+    await _prefs.setString(_kSettings, _encryptString(raw));
   }
 
   // --- Recurring Rules ---
 
   List<RecurringRuleModel> getRecurringRules() {
-    final raw = _prefs.getString(_kRecurringRules);
+    final raw = _decryptString(_prefs.getString(_kRecurringRules));
     if (raw == null) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -122,13 +205,13 @@ class StorageService {
 
   Future<void> saveRecurringRules(List<RecurringRuleModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kRecurringRules, raw);
+    await _prefs.setString(_kRecurringRules, _encryptString(raw));
   }
 
   // --- In-App Notifications ---
 
   List<AppNotificationModel> getNotifications() {
-    final raw = _prefs.getString(_kNotifications);
+    final raw = _decryptString(_prefs.getString(_kNotifications));
     if (raw == null) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -140,7 +223,7 @@ class StorageService {
 
   Future<void> saveNotifications(List<AppNotificationModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kNotifications, raw);
+    await _prefs.setString(_kNotifications, _encryptString(raw));
   }
 
   Future<void> addNotification(AppNotificationModel notification) async {
@@ -152,7 +235,7 @@ class StorageService {
   // --- Debts & Loans (Lend & Borrow) ---
 
   List<DebtModel> getDebts() {
-    final raw = _prefs.getString(_kDebts);
+    final raw = _decryptString(_prefs.getString(_kDebts));
     if (raw == null) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -164,13 +247,13 @@ class StorageService {
 
   Future<void> saveDebts(List<DebtModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kDebts, raw);
+    await _prefs.setString(_kDebts, _encryptString(raw));
   }
 
   // --- Category Budgets ---
 
   List<CategoryBudgetModel> getCategoryBudgets() {
-    final raw = _prefs.getString(_kBudgets);
+    final raw = _decryptString(_prefs.getString(_kBudgets));
     if (raw == null) return [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -182,7 +265,7 @@ class StorageService {
 
   Future<void> saveCategoryBudgets(List<CategoryBudgetModel> list) async {
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kBudgets, raw);
+    await _prefs.setString(_kBudgets, _encryptString(raw));
   }
 
   // --- Process Due Recurring Rules ---

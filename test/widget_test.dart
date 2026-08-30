@@ -7,11 +7,16 @@ import 'package:pocket/services/storage_service.dart';
 import 'package:pocket/widgets/balance_card.dart';
 import 'package:pocket/widgets/quick_add_transaction_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+  });
+
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
   });
 
   testWidgets('BalanceCard renders total balance and metric labels', (WidgetTester tester) async {

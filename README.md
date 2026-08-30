@@ -57,7 +57,7 @@
 ### 4. ☁️ Supabase Free Cloud Database Sync
 - **Free PostgreSQL Cloud Backend**: Connect your free Supabase project in 1 tap with project URL and public key.
 - **1-Tap Cloud Backup & Restore**: Upload and download complete database state (transactions, wallets, categories, debts, budgets) across multiple devices.
-- **Zero Lock-In**: Works completely offline-first with local encrypted persistence; cloud sync is entirely optional and free.
+- **Zero Lock-In**: Works completely offline-first with AES-256 encrypted local persistence (hardware Keystore/Keychain-backed keys via FlutterSecureStorage); cloud sync is entirely optional and free.
 
 ### 5. 📊 Next-Gen Analytics & Financial Projections
 - **"Daily Avg Spend" Calculator**: Interactive metric calculating daily burning rate (`Total Spend ÷ Days Elapsed`) and projected month-end spend.
@@ -108,9 +108,9 @@
          │                  │              │              │                  │
          └──────────────────┴──────────────┼──────────────┴──────────────────┘
                                            │
-                      ┌────────────────────▼────────────────────┐
-                      │    Local Encrypted Storage (SharedPreferences) │
-                      └─────────────────────────────────────────┘
+                       ┌─────────────────────────────────────────────────────────┐
+                       │ Local AES-256 Encrypted Persistence (SecureStorage+AES) │
+                       └─────────────────────────────────────────────────────────┘
 ```
 
 ---
