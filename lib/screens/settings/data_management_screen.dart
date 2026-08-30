@@ -15,23 +15,31 @@ class DataManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
-  bool _isSupabaseConnected = false;
+  bool _isSignedIn = false;
+  String? _userEmail;
+  String? _userId;
   String? _lastSyncTime;
   bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
-    _checkSupabaseStatus();
+    _checkAuthStatus();
   }
 
-  Future<void> _checkSupabaseStatus() async {
+  Future<void> _checkAuthStatus() async {
     final service = SupabaseSyncService();
-    final connected = await service.init();
+    await service.init();
+    final signedIn = service.isSignedIn;
+    final email = service.userEmail;
+    final uid = service.userId;
     final lastSync = await service.getLastSyncTime();
+
     if (mounted) {
       setState(() {
-        _isSupabaseConnected = connected;
+        _isSignedIn = signedIn;
+        _userEmail = email;
+        _userId = uid;
         _lastSyncTime = lastSync;
       });
     }
@@ -45,8 +53,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     final recurring = ref.watch(recurringRulesProvider);
     final backupService = ref.watch(backupServiceProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final syncService = SupabaseSyncService();
-    final user = syncService.currentUser;
+    final palette = ref.watch(activePaletteProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -78,16 +85,16 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           ),
           const SizedBox(height: 20),
 
-          // 2. Section: Cloud Sync & Backup
-          _buildSectionHeader('CLOUD BACKUP & GOOGLE SYNC'),
+          // 2. Section: Real Authentication & Cloud Sync
+          _buildSectionHeader('CLOUD BACKUP & AUTHENTICATION'),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isSupabaseConnected
-                    ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
+                color: _isSignedIn
+                    ? palette.primary.withValues(alpha: 0.5)
                     : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ),
             ),
@@ -99,14 +106,14 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: _isSupabaseConnected
-                            ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                        color: _isSignedIn
+                            ? palette.primary.withValues(alpha: 0.15)
                             : Colors.grey.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _isSupabaseConnected ? Icons.cloud_done_rounded : Icons.cloud_outlined,
-                        color: _isSupabaseConnected ? AppColors.primaryGreenLight : Colors.grey,
+                        _isSignedIn ? Icons.cloud_done_rounded : Icons.cloud_sync_rounded,
+                        color: _isSignedIn ? palette.primary : Colors.grey,
                         size: 22,
                       ),
                     ),
@@ -118,7 +125,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                           Row(
                             children: [
                               Text(
-                                user != null ? 'Google Cloud Sync' : 'Cloud Database Sync',
+                                _isSignedIn ? 'Authenticated Cloud' : 'Cloud Database Sync',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -129,17 +136,17 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: _isSupabaseConnected
-                                      ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
+                                  color: _isSignedIn
+                                      ? palette.primary.withValues(alpha: 0.18)
                                       : Colors.grey.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  _isSupabaseConnected ? (user != null ? 'GOOGLE AUTH' : 'CONNECTED') : 'OFFLINE',
+                                  _isSignedIn ? 'AUTHENTICATED' : 'OFFLINE',
                                   style: TextStyle(
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.w800,
-                                    color: _isSupabaseConnected ? AppColors.primaryGreenLight : Colors.grey,
+                                    color: _isSignedIn ? palette.primary : Colors.grey,
                                   ),
                                 ),
                               ),
@@ -147,11 +154,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            user?.email != null
-                                ? 'Account: ${user!.email}'
+                            _userEmail != null
+                                ? 'User: $_userEmail'
                                 : (_lastSyncTime != null
                                     ? 'Last synced: ${_lastSyncTime!.substring(0, 16).replaceAll('T', ' ')}'
-                                    : '1-Tap Google Sign-in to sync database across devices'),
+                                    : 'Sign in to automatically sync database across all devices'),
                             style: TextStyle(
                               fontSize: 11.5,
                               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -165,37 +172,69 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                 const SizedBox(height: 14),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
                 const SizedBox(height: 12),
-                if (!_isSupabaseConnected) ...[
+
+                // Action Buttons for Sign-In vs Sync
+                if (!_isSignedIn) ...[
+                  // 1-Tap Google Sign-In
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreenLight,
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 1,
+                      ),
+                      onPressed: _signInWithGoogle,
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 24, color: Color(0xFF4285F4)),
+                      label: const Text('Sign In with Google OAuth', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Email/Password or OTP Sign-In
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: palette.primary,
                         foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
                       ),
-                      onPressed: _showSupabaseConfigDialog,
-                      icon: const Icon(Icons.cloud_sync_rounded, size: 18),
-                      label: const Text('Connect Free Cloud Database', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: _showEmailAuthDialog,
+                      icon: const Icon(Icons.mail_lock_rounded, size: 18, color: Colors.black),
+                      label: const Text('Sign In with Email & Password / OTP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _showCustomServerDialog,
+                      icon: const Icon(Icons.settings_ethernet_rounded, size: 13, color: Colors.grey),
+                      label: const Text('Custom Supabase Server', style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ),
                   ),
                 ] else ...[
+                  // User is Authenticated: Backup & Restore
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryGreenLight,
+                            backgroundColor: palette.primary,
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
-                          onPressed: _isSyncing ? null : _syncToSupabase,
+                          onPressed: _isSyncing ? null : _syncToCloud,
                           icon: _isSyncing
                               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                               : const Icon(Icons.cloud_upload_rounded, size: 18),
-                          label: Text(_isSyncing ? 'Syncing...' : 'Sync to Cloud', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text(_isSyncing ? 'Syncing...' : 'Backup to Cloud', style: const TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -207,7 +246,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
-                          onPressed: _isSyncing ? null : _restoreFromSupabase,
+                          onPressed: _isSyncing ? null : _restoreFromCloud,
                           icon: const Icon(Icons.cloud_download_rounded, size: 18),
                           label: const Text('Restore Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
@@ -218,15 +257,14 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      if (_userId != null)
+                        Text('UID: ${_userId!.substring(0, 8)}...', style: const TextStyle(fontSize: 10, color: Colors.grey))
+                      else
+                        const SizedBox.shrink(),
                       TextButton.icon(
-                        onPressed: _signInWithGoogle,
-                        icon: const Icon(Icons.account_circle_outlined, size: 14, color: AppColors.infoBlue),
-                        label: Text(user != null ? 'Switch Google Account' : 'Sign In With Google', style: const TextStyle(fontSize: 11, color: AppColors.infoBlue)),
-                      ),
-                      TextButton.icon(
-                        onPressed: _disconnectSupabase,
-                        icon: const Icon(Icons.link_off_rounded, size: 14, color: AppColors.expenseRed),
-                        label: const Text('Disconnect', style: TextStyle(fontSize: 11, color: AppColors.expenseRed)),
+                        onPressed: _signOut,
+                        icon: const Icon(Icons.logout_rounded, size: 14, color: AppColors.expenseRed),
+                        label: const Text('Sign Out', style: TextStyle(fontSize: 11, color: AppColors.expenseRed)),
                       ),
                     ],
                   ),
@@ -348,7 +386,129 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     );
   }
 
-  void _showSupabaseConfigDialog() {
+  Future<void> _signInWithGoogle() async {
+    final success = await SupabaseSyncService().signInWithGoogle();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(success ? 'Opening Google OAuth window...' : 'Google OAuth initiated'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    await _checkAuthStatus();
+  }
+
+  void _showEmailAuthDialog() {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    bool isSignUp = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+          title: Row(
+            children: [
+              const Icon(Icons.lock_person_rounded, color: AppColors.primaryGreenLight),
+              const SizedBox(width: 10),
+              Text(isSignUp ? 'Create Cloud Account' : 'Sign In to Cloud', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email Address',
+                  hintText: 'name@example.com',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setDialogState(() => isSignUp = !isSignUp);
+                    },
+                    child: Text(isSignUp ? 'Already registered? Sign In' : 'Need an account? Sign Up', style: const TextStyle(fontSize: 11)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreenLight,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final email = emailController.text.trim();
+                final pass = passwordController.text.trim();
+                if (email.isEmpty || pass.isEmpty) return;
+
+                try {
+                  if (isSignUp) {
+                    await SupabaseSyncService().signUpWithEmailPassword(email: email, password: pass);
+                  } else {
+                    await SupabaseSyncService().signInWithEmailPassword(email: email, password: pass);
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  await _checkAuthStatus();
+
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      content: Text(isSignUp ? 'Account registered! Please check email to verify ✓' : 'Signed in to Cloud successfully ✓'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        content: Text('Auth error: $e'),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Text(isSignUp ? 'Sign Up' : 'Sign In', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCustomServerDialog() {
     final urlController = TextEditingController();
     final keyController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -360,9 +520,9 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
         backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
         title: const Row(
           children: [
-            Icon(Icons.cloud_sync_rounded, color: AppColors.primaryGreenLight),
+            Icon(Icons.settings_ethernet_rounded, color: AppColors.primaryGreenLight),
             SizedBox(width: 10),
-            Text('Connect Cloud Sync', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('Custom Cloud Server', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -370,15 +530,15 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter your free Supabase project credentials to enable instant multi-device backup & sync:',
+              'Optional for self-hosted instances:',
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: urlController,
               decoration: InputDecoration(
-                labelText: 'Project URL',
-                hintText: 'https://xyzcompany.supabase.co',
+                labelText: 'Server URL',
+                hintText: 'https://custom.supabase.co',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 isDense: true,
               ),
@@ -388,8 +548,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               controller: keyController,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Anon Public Key',
-                hintText: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
+                labelText: 'Anon Key',
+                hintText: 'ey...',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 isDense: true,
               ),
@@ -411,14 +571,14 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
               final success = await SupabaseSyncService().connect(url: url, anonKey: key);
               if (ctx.mounted) Navigator.pop(ctx);
-              _checkSupabaseStatus();
+              _checkAuthStatus();
 
               if (!mounted) return;
               ScaffoldMessenger.of(context).clearSnackBars();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
-                  content: Text(success ? 'Connected to Cloud Database ✓' : 'Failed to connect. Check credentials.'),
+                  content: Text(success ? 'Connected to Custom Server ✓' : 'Failed to connect. Check credentials.'),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -430,40 +590,25 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     );
   }
 
-  Future<void> _signInWithGoogle() async {
-    final success = await SupabaseSyncService().signInWithGoogle();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Opening Google Sign-in browser...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  Future<void> _syncToSupabase() async {
+  Future<void> _syncToCloud() async {
     setState(() => _isSyncing = true);
     final storage = ref.read(storageServiceProvider);
     final success = await SupabaseSyncService().backupToCloud(storage);
-    await _checkSupabaseStatus();
+    await _checkAuthStatus();
     if (mounted) {
       setState(() => _isSyncing = false);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Synced database to Cloud ✓' : 'Sync failed. Check connection or permissions.'),
+          content: Text(success ? 'Synced database to Cloud ✓' : 'Sync failed. Please check connection.'),
           duration: const Duration(seconds: 2),
         ),
       );
     }
   }
 
-  Future<void> _restoreFromSupabase() async {
+  Future<void> _restoreFromCloud() async {
     setState(() => _isSyncing = true);
     final storage = ref.read(storageServiceProvider);
     final success = await SupabaseSyncService().restoreFromCloud(storage);
@@ -478,7 +623,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       ref.invalidate(categoryBudgetsProvider);
     }
 
-    await _checkSupabaseStatus();
+    await _checkAuthStatus();
 
     if (mounted) {
       setState(() => _isSyncing = false);
@@ -493,15 +638,15 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     }
   }
 
-  Future<void> _disconnectSupabase() async {
-    await SupabaseSyncService().disconnect();
-    _checkSupabaseStatus();
+  Future<void> _signOut() async {
+    await SupabaseSyncService().signOut();
+    await _checkAuthStatus();
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Disconnected from Cloud Database'),
+          content: Text('Signed out from Cloud'),
           duration: Duration(seconds: 2),
         ),
       );
