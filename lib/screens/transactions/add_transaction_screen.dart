@@ -11,8 +11,11 @@ import '../../models/recurring_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
 import '../../services/receipt_service.dart';
+import '../../services/anomaly_detection_service.dart';
+import '../../services/learning_suggest_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/numpad.dart';
+import '../../widgets/nlp_quick_add_modal.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final double? initialAmount;
@@ -112,7 +115,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final pastTxs = ref.read(transactionsProvider);
     final categories = ref.read(categoriesProvider);
 
-    final suggested = storage.suggestCategoryForTitle(title, pastTxs, categories);
+    final suggested = LearningSuggestService.suggestCategory(
+      title: title,
+      categories: categories,
+      pastTransactions: pastTxs,
+    ) ?? storage.suggestCategoryForTitle(title, pastTxs, categories);
+
     if (suggested != null && suggested != _suggestedCategoryId) {
       setState(() {
         _suggestedCategoryId = suggested;
@@ -227,6 +235,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           attachments: allAttachments,
         );
 
+    // 1.5 Record learned merchant-to-category correction
+    await LearningSuggestService.recordCorrection(
+      merchantTitle: title,
+      categoryId: catId,
+    );
+
     // 2. Save as Recurring Rule if toggled
     if (_isRecurring) {
       final now = DateTime.now();
@@ -321,6 +335,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight),
+            tooltip: 'Natural Language Entry (NLP)',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (ctx) => const NlpQuickAddModal(),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.check_rounded, color: AppColors.primaryGreenLight, size: 28),
             onPressed: _saveTransaction,
@@ -504,6 +530,68 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+
+                    // 3.4 AI Statistical Anomaly Detection Warning Banner
+                    if (!isIncome && _selectedCategoryId != null) ...[
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final pastTxs = ref.watch(transactionsProvider);
+                          final enteredAmt = _parseAmount();
+                          final anomaly = AnomalyDetectionService.checkAnomaly(
+                            amount: enteredAmt,
+                            categoryId: _selectedCategoryId!,
+                            pastTransactions: pastTxs,
+                            categories: categories,
+                            currencySymbol: settings.currencySymbol,
+                          );
+
+                          if (!anomaly.isAnomaly) return const SizedBox.shrink();
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentOrange.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.4), width: 1.2),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.insights_rounded,
+                                  size: 18,
+                                  color: AppColors.accentOrange,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Unusually Large Entry Detected (AI)',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.accentOrange,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        anomaly.message,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
 
                     // 3.5 Real-time Category Budget Warning Banner (If Expense & Budget Configured)
                     if (!isIncome && _selectedCategoryId != null) ...[

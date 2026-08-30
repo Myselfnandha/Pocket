@@ -1,9 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/category_model.dart';
+import '../services/ai_forecasting_service.dart';
+import '../services/financial_health_service.dart';
 import 'transactions_provider.dart';
 import 'wallets_provider.dart';
 import 'goals_provider.dart';
 import 'debts_provider.dart';
+import 'budgets_provider.dart';
+import 'recurring_rules_provider.dart';
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
@@ -185,5 +189,38 @@ final spendingComparisonProvider = Provider<MonthOverMonthSpendingComparison>((r
     percentageChange: pct,
     isSpendingHigher: diff > 0,
     categoryComparisons: catList,
+  );
+});
+
+/// Computes on-device statistical spend forecast with confidence bands and upcoming recurring obligations
+final monthSpendForecastProvider = Provider<MonthSpendForecast>((ref) {
+  final txs = ref.watch(transactionsProvider);
+  final rules = ref.watch(recurringRulesProvider);
+  final liquidBalance = ref.watch(totalBalanceProvider);
+
+  return AiForecastingService.calculateForecast(
+    transactions: txs,
+    recurringRules: rules,
+    totalLiquidBalance: liquidBalance,
+  );
+});
+
+/// Computes composite 0-1000 Financial Health Score report
+final financialHealthReportProvider = Provider<FinancialHealthReport>((ref) {
+  final stats = ref.watch(monthlyStatsProvider);
+  final budgets = ref.watch(categoryBudgetsProvider);
+  final catSpending = ref.watch(currentMonthCategorySpendingProvider);
+  final debts = ref.watch(debtsProvider);
+  final wallets = ref.watch(walletsWithBalancesProvider);
+  final goals = ref.watch(goalsProvider);
+
+  return FinancialHealthService.calculateScore(
+    totalIncome: stats.totalIncome,
+    totalExpense: stats.totalExpense,
+    budgets: budgets,
+    currentMonthCategorySpending: catSpending,
+    debts: debts,
+    wallets: wallets,
+    goals: goals,
   );
 });

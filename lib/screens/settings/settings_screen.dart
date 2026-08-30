@@ -1173,6 +1173,8 @@ class SettingsScreen extends ConsumerWidget {
         return 'Monthly Category Budget Remaining';
       case HomeScreenWidgetStat.debtsSummary:
         return 'Total Balance & Accounts Overview';
+      case HomeScreenWidgetStat.forecastTrajectory:
+        return 'Live Spend Forecast & Sparkline Trajectory';
     }
   }
 

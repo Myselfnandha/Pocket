@@ -16,6 +16,10 @@ import '../../models/category_model.dart';
 import '../../models/budget_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/spend_forecast_card.dart';
+import '../../widgets/sankey_flow_diagram.dart';
+import '../../widgets/financial_health_gauge.dart';
+import '../../widgets/inflation_calculator_card.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -530,6 +534,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
             ),
           ),
 
+          // Financial Health Score Dashboard
+          const FinancialHealthGauge(),
+          const SizedBox(height: 14),
+
+          // On-Device Spend Forecast Card with Confidence Bands
+          const SpendForecastCard(),
+          const SizedBox(height: 14),
+
+          // Interactive Cyberpunk Money Flow Diagram (Sankey)
+          const SankeyFlowDiagram(),
+          const SizedBox(height: 14),
+
           // Month-over-Month Spending Comparison Card
           Container(
             padding: const EdgeInsets.all(16),
@@ -585,6 +601,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
               ],
             ),
           ),
+
+          // Inflation & Purchasing Power Historical View
+          const InflationCalculatorCard(),
+          const SizedBox(height: 14),
 
           // 1. Top Summary Grid: Income | Expenses | Net Savings
           Container(

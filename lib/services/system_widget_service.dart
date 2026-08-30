@@ -5,12 +5,13 @@ import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet_model.dart';
 import '../models/settings_model.dart';
+import 'ai_forecasting_service.dart';
 
 class SystemWidgetService {
   static const String androidWidgetName = 'PocketWidgetProvider';
   static StreamSubscription<Uri?>? _widgetSubscription;
 
-  /// Updates the Android System Home Screen App Widget with configurable stats
+  /// Updates the Android System Home Screen App Widget with configurable stats & live forecast sparkline
   static Future<void> updateWidgetData({
     required double totalBalance,
     required double todayExpense,
@@ -20,6 +21,7 @@ class SystemWidgetService {
     double? netWorth,
     double? monthlySavings,
     double? budgetRemaining,
+    MonthSpendForecast? forecast,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
@@ -28,6 +30,12 @@ class SystemWidgetService {
       final formattedDate = DateFormat('d MMM').format(DateTime.now());
 
       switch (statType) {
+        case HomeScreenWidgetStat.forecastTrajectory:
+          if (forecast != null) {
+            formattedPrimary = '$currencySymbol${currencyFormat.format(forecast.projectedMonthEndBalance)}';
+            formattedSecondary = 'Est. Month-End (${forecast.daysRemainingInMonth}d left)';
+          }
+          break;
         case HomeScreenWidgetStat.netWorth:
           if (netWorth != null) {
             formattedPrimary = '$currencySymbol${currencyFormat.format(netWorth)}';
@@ -57,10 +65,16 @@ class SystemWidgetService {
         }).join('  •  ');
       }
 
+      String sparklineData = '';
+      if (forecast != null && forecast.sparklineValues.isNotEmpty) {
+        sparklineData = forecast.sparklineValues.map((v) => v.toStringAsFixed(0)).join(',');
+      }
+
       await HomeWidget.saveWidgetData<String>('total_balance', formattedPrimary);
       await HomeWidget.saveWidgetData<String>('today_expense', formattedSecondary);
       await HomeWidget.saveWidgetData<String>('current_date', formattedDate);
       await HomeWidget.saveWidgetData<String>('accounts_summary', accountsSummary);
+      await HomeWidget.saveWidgetData<String>('forecast_sparkline', sparklineData);
 
       await HomeWidget.updateWidget(
         name: androidWidgetName,

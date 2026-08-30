@@ -16,6 +16,7 @@ enum HomeScreenWidgetStat {
   monthlySavings,
   budgetRemaining,
   debtsSummary,
+  forecastTrajectory,
 }
 
 class UserSettingsModel {

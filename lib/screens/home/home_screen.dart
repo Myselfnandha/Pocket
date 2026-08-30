@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
 import '../../widgets/transaction_tile.dart';
 import '../../widgets/quick_add_transaction_dialog.dart';
+import '../../widgets/nlp_quick_add_modal.dart';
 import '../../widgets/waving_hand_emoji.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -74,6 +75,18 @@ class HomeScreen extends ConsumerWidget {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
+            tooltip: 'Natural Language Entry (NLP)',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (ctx) => const NlpQuickAddModal(),
+              );
+            },
+          ),
           Consumer(
             builder: (context, ref, child) {
               final unreadCount = ref.watch(unreadNotificationsCountProvider);
