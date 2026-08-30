@@ -55,6 +55,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   bool _isRecurring = false;
   RecurringFrequency _recurringFrequency = RecurringFrequency.monthly;
 
+  // Tags and Multi-Attachments
+  final List<String> _tags = [];
+  final TextEditingController _tagCtrl = TextEditingController();
+  final List<String> _additionalAttachments = [];
+
   // Receipt image
   File? _receiptFile;
 
@@ -97,6 +102,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _titleFocus.dispose();
+    _tagCtrl.dispose();
     super.dispose();
   }
 
@@ -203,7 +209,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ? categories.firstWhere((c) => c.id == catId, orElse: () => const CategoryModel(id: '', name: 'Untitled', icon: '📝', colorValue: 0)).name
         : _titleController.text.trim();
 
-    // 1. Save Transaction with receipt path
+    final allAttachments = [
+      if (_receiptFile != null) _receiptFile!.path,
+      ..._additionalAttachments,
+    ];
+
+    // 1. Save Transaction with tags & attachments
     await ref.read(transactionsProvider.notifier).addTransaction(
           title: title,
           amount: amount,
@@ -212,6 +223,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           walletId: wId,
           date: _selectedDate,
           receiptImagePath: _receiptFile?.path,
+          tags: _tags,
+          attachments: allAttachments,
         );
 
     // 2. Save as Recurring Rule if toggled
@@ -778,6 +791,116 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 ),
                               ],
                             ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 6.5 Multi-Tags & Ad-hoc Labels Section
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.tag_rounded, size: 18, color: AppColors.primaryGreenLight),
+                                  SizedBox(width: 8),
+                                  Text('Tags & Labels', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                              if (_tags.isNotEmpty)
+                                Text('${_tags.length} added', style: const TextStyle(fontSize: 11, color: AppColors.primaryGreenLight)),
+                            ],
+                          ),
+                          if (_tags.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _tags.map((tag) {
+                                return Chip(
+                                  label: Text('#$tag', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  visualDensity: VisualDensity.compact,
+                                  backgroundColor: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                  deleteIcon: const Icon(Icons.close, size: 14),
+                                  onDeleted: () => setState(() => _tags.remove(tag)),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _tagCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: 'Add tag (e.g. BusinessTrip, Tax, Vacation)',
+                                    hintStyle: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                                    filled: true,
+                                    fillColor: isDark ? const Color(0xFF262626) : const Color(0xFFF2F2F2),
+                                  ),
+                                  onSubmitted: (val) {
+                                    final clean = val.replaceAll('#', '').trim();
+                                    if (clean.isNotEmpty && !_tags.contains(clean)) {
+                                      setState(() {
+                                        _tags.add(clean);
+                                        _tagCtrl.clear();
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
+                                onPressed: () {
+                                  final clean = _tagCtrl.text.replaceAll('#', '').trim();
+                                  if (clean.isNotEmpty && !_tags.contains(clean)) {
+                                    setState(() {
+                                      _tags.add(clean);
+                                      _tagCtrl.clear();
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final existingTags = ref.watch(allTagsProvider);
+                              final suggestions = existingTags.where((t) => !_tags.contains(t)).take(4).toList();
+                              if (suggestions.isEmpty) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: suggestions.map((s) {
+                                    return ActionChip(
+                                      visualDensity: VisualDensity.compact,
+                                      label: Text('+$s', style: const TextStyle(fontSize: 11)),
+                                      onPressed: () => setState(() => _tags.add(s)),
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 14),
 

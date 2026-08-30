@@ -4,23 +4,50 @@ import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet_model.dart';
+import '../models/settings_model.dart';
 
 class SystemWidgetService {
   static const String androidWidgetName = 'PocketWidgetProvider';
   static StreamSubscription<Uri?>? _widgetSubscription;
 
-  /// Updates the Android System Home Screen App Widget with real-time balance and today's spend
+  /// Updates the Android System Home Screen App Widget with configurable stats
   static Future<void> updateWidgetData({
     required double totalBalance,
     required double todayExpense,
     required String currencySymbol,
     List<WalletModel>? wallets,
+    HomeScreenWidgetStat statType = HomeScreenWidgetStat.balanceAndTodaySpend,
+    double? netWorth,
+    double? monthlySavings,
+    double? budgetRemaining,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
-      final formattedBalance = '$currencySymbol${currencyFormat.format(totalBalance)}';
-      final formattedExpense = '$currencySymbol${currencyFormat.format(todayExpense)}';
+      String formattedPrimary = '$currencySymbol${currencyFormat.format(totalBalance)}';
+      String formattedSecondary = '$currencySymbol${currencyFormat.format(todayExpense)}';
       final formattedDate = DateFormat('d MMM').format(DateTime.now());
+
+      switch (statType) {
+        case HomeScreenWidgetStat.netWorth:
+          if (netWorth != null) {
+            formattedPrimary = '$currencySymbol${currencyFormat.format(netWorth)}';
+            formattedSecondary = 'Net Worth';
+          }
+          break;
+        case HomeScreenWidgetStat.monthlySavings:
+          if (monthlySavings != null) {
+            formattedSecondary = '${monthlySavings >= 0 ? '+' : '-'}$currencySymbol${currencyFormat.format(monthlySavings.abs())} Saved';
+          }
+          break;
+        case HomeScreenWidgetStat.budgetRemaining:
+          if (budgetRemaining != null) {
+            formattedSecondary = '$currencySymbol${currencyFormat.format(budgetRemaining)} Left';
+          }
+          break;
+        case HomeScreenWidgetStat.debtsSummary:
+        case HomeScreenWidgetStat.balanceAndTodaySpend:
+          break;
+      }
 
       String accountsSummary = 'No accounts created';
       if (wallets != null && wallets.isNotEmpty) {
@@ -30,8 +57,8 @@ class SystemWidgetService {
         }).join('  •  ');
       }
 
-      await HomeWidget.saveWidgetData<String>('total_balance', formattedBalance);
-      await HomeWidget.saveWidgetData<String>('today_expense', formattedExpense);
+      await HomeWidget.saveWidgetData<String>('total_balance', formattedPrimary);
+      await HomeWidget.saveWidgetData<String>('today_expense', formattedSecondary);
       await HomeWidget.saveWidgetData<String>('current_date', formattedDate);
       await HomeWidget.saveWidgetData<String>('accounts_summary', accountsSummary);
 
@@ -109,6 +136,5 @@ class SystemWidgetService {
 
   static void dispose() {
     _widgetSubscription?.cancel();
-    _nativeChannel.setMethodCallHandler(null);
   }
 }

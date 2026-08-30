@@ -10,6 +10,14 @@ enum AppThemePreset {
   custom,
 }
 
+enum HomeScreenWidgetStat {
+  balanceAndTodaySpend,
+  netWorth,
+  monthlySavings,
+  budgetRemaining,
+  debtsSummary,
+}
+
 class UserSettingsModel {
   final String userName;
   final String? userPhoneNumber;
@@ -34,6 +42,9 @@ class UserSettingsModel {
   final int dailyReminderMinute;
   final bool monthlySummaryEnabled;
 
+  // Widget Customization
+  final HomeScreenWidgetStat homeScreenWidgetStat;
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
@@ -53,6 +64,7 @@ class UserSettingsModel {
     this.dailyReminderHour = 20,
     this.dailyReminderMinute = 0,
     this.monthlySummaryEnabled = true,
+    this.homeScreenWidgetStat = HomeScreenWidgetStat.balanceAndTodaySpend,
   });
 
   UserSettingsModel copyWith({
@@ -74,6 +86,7 @@ class UserSettingsModel {
     int? dailyReminderHour,
     int? dailyReminderMinute,
     bool? monthlySummaryEnabled,
+    HomeScreenWidgetStat? homeScreenWidgetStat,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -94,6 +107,7 @@ class UserSettingsModel {
       dailyReminderHour: dailyReminderHour ?? this.dailyReminderHour,
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
       monthlySummaryEnabled: monthlySummaryEnabled ?? this.monthlySummaryEnabled,
+      homeScreenWidgetStat: homeScreenWidgetStat ?? this.homeScreenWidgetStat,
     );
   }
 
@@ -116,6 +130,7 @@ class UserSettingsModel {
         'dailyReminderHour': dailyReminderHour,
         'dailyReminderMinute': dailyReminderMinute,
         'monthlySummaryEnabled': monthlySummaryEnabled,
+        'homeScreenWidgetStat': homeScreenWidgetStat.name,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -144,5 +159,8 @@ class UserSettingsModel {
         dailyReminderHour: json['dailyReminderHour'] as int? ?? 20,
         dailyReminderMinute: json['dailyReminderMinute'] as int? ?? 0,
         monthlySummaryEnabled: json['monthlySummaryEnabled'] as bool? ?? true,
+        homeScreenWidgetStat: HomeScreenWidgetStat.values.byName(
+          json['homeScreenWidgetStat'] as String? ?? 'balanceAndTodaySpend',
+        ),
       );
 }

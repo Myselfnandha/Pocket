@@ -336,5 +336,50 @@ void main() {
       expect(nextDue.month, equals(9));
       expect(nextDue.day, equals(30));
     });
+
+    test('CategoryBudgetModel rollover calculation carries over unspent amounts', () {
+      final now = DateTime(2026, 8, 30);
+      final budget = CategoryBudgetModel(
+        id: 'budget_food',
+        categoryId: 'food',
+        monthlyLimit: 5000.0,
+        isRolloverEnabled: true,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // If last month spent 3200 of 5000, 1800 unspent should carry over -> effective limit = 6800
+      final effective = budget.calculateEffectiveLimit(lastMonthSpent: 3200.0);
+      expect(effective, equals(6800.0));
+
+      // If rollover is disabled, effective limit is strictly monthlyLimit
+      final noRolloverBudget = budget.copyWith(isRolloverEnabled: false);
+      expect(noRolloverBudget.calculateEffectiveLimit(lastMonthSpent: 3200.0), equals(5000.0));
+    });
+
+    test('TransactionModel supports custom tags and multi-file attachments', () async {
+      final tx = TransactionModel(
+        id: 'tx_tagged',
+        title: 'MacBook Pro AppleCare',
+        amount: 24900.0,
+        type: TransactionType.expense,
+        categoryId: 'electronics',
+        walletId: 'bank_main',
+        date: DateTime.now(),
+        tags: ['WorkEquipment', 'Tax2026', 'Warranty'],
+        attachments: ['/storage/invoices/apple_care.pdf', '/storage/receipts/pos_slip.jpg'],
+        createdAt: DateTime.now(),
+      );
+
+      expect(tx.tags.length, equals(3));
+      expect(tx.tags, contains('WorkEquipment'));
+      expect(tx.attachments.length, equals(2));
+
+      await storage.saveTransactions([tx]);
+      final loaded = storage.getTransactions();
+      expect(loaded.length, equals(1));
+      expect(loaded.first.tags, contains('Warranty'));
+      expect(loaded.first.attachments.length, equals(2));
+    });
   });
 }

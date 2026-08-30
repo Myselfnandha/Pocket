@@ -29,6 +29,17 @@ class StorageService {
   final SharedPreferences _prefs;
   final enc.Encrypter? _encrypter;
 
+  // In-Memory Fast Caching Layer (O(1) memory lookup)
+  List<TransactionModel>? _cachedTransactions;
+  List<CategoryModel>? _cachedCategories;
+  List<WalletModel>? _cachedWallets;
+  UserSettingsModel? _cachedSettings;
+  List<RecurringRuleModel>? _cachedRecurringRules;
+  List<AppNotificationModel>? _cachedNotifications;
+  List<DebtModel>? _cachedDebts;
+  List<CategoryBudgetModel>? _cachedBudgets;
+  List<GoalModel>? _cachedGoals;
+
   StorageService(this._prefs, [FlutterSecureStorage? secureStorage, this._encrypter]);
 
   static Future<StorageService> init({
@@ -61,6 +72,19 @@ class StorageService {
 
   Future<void> reload() async {
     await _prefs.reload();
+    _invalidateCache();
+  }
+
+  void _invalidateCache() {
+    _cachedTransactions = null;
+    _cachedCategories = null;
+    _cachedWallets = null;
+    _cachedSettings = null;
+    _cachedRecurringRules = null;
+    _cachedNotifications = null;
+    _cachedDebts = null;
+    _cachedBudgets = null;
+    _cachedGoals = null;
   }
 
   // --- Encryption Helpers ---
@@ -78,25 +102,21 @@ class StorageService {
     }
   }
 
-  String? _decryptString(String? raw) {
-    if (raw == null) return null;
-    if (!raw.startsWith('enc:v1:')) {
-      // Legacy plaintext format
-      return raw;
-    }
+  String? _decryptString(String? ciphertext) {
+    if (ciphertext == null) return null;
+    if (!ciphertext.startsWith('enc:v1:')) return ciphertext; // Legacy plaintext fallback
     final encrypter = _encrypter;
-    if (encrypter == null) return raw;
+    if (encrypter == null) return null;
     try {
-      final parts = raw.split(':');
-      if (parts.length == 4) {
-        final iv = enc.IV.fromBase64(parts[2]);
-        final encrypted = enc.Encrypted.fromBase64(parts[3]);
-        return encrypter.decrypt(encrypted, iv: iv);
-      }
+      final parts = ciphertext.split(':');
+      if (parts.length != 4) return null;
+      final iv = enc.IV.fromBase64(parts[2]);
+      final encrypted = enc.Encrypted.fromBase64(parts[3]);
+      return encrypter.decrypt(encrypted, iv: iv);
     } catch (e) {
       debugPrint('Decryption error: $e');
+      return null;
     }
-    return raw;
   }
 
   Future<void> _migratePlaintextToEncrypted() async {
@@ -124,17 +144,24 @@ class StorageService {
   // --- Transactions ---
 
   List<TransactionModel> getTransactions() {
+    if (_cachedTransactions != null) return _cachedTransactions!;
     final raw = _decryptString(_prefs.getString(_kTransactions));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedTransactions = [];
+      return _cachedTransactions!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => TransactionModel.fromJson(e)).toList();
+      _cachedTransactions = decoded.map((e) => TransactionModel.fromJson(e)).toList();
+      return _cachedTransactions!;
     } catch (_) {
-      return [];
+      _cachedTransactions = [];
+      return _cachedTransactions!;
     }
   }
 
   Future<void> saveTransactions(List<TransactionModel> list) async {
+    _cachedTransactions = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kTransactions, _encryptString(raw));
   }
@@ -142,17 +169,24 @@ class StorageService {
   // --- Categories ---
 
   List<CategoryModel> getCategories() {
+    if (_cachedCategories != null) return _cachedCategories!;
     final raw = _decryptString(_prefs.getString(_kCategories));
-    if (raw == null) return defaultCategories;
+    if (raw == null) {
+      _cachedCategories = defaultCategories;
+      return _cachedCategories!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => CategoryModel.fromJson(e)).toList();
+      _cachedCategories = decoded.map((e) => CategoryModel.fromJson(e)).toList();
+      return _cachedCategories!;
     } catch (_) {
-      return defaultCategories;
+      _cachedCategories = defaultCategories;
+      return _cachedCategories!;
     }
   }
 
   Future<void> saveCategories(List<CategoryModel> list) async {
+    _cachedCategories = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kCategories, _encryptString(raw));
   }
@@ -160,17 +194,24 @@ class StorageService {
   // --- Wallets ---
 
   List<WalletModel> getWallets() {
+    if (_cachedWallets != null) return _cachedWallets!;
     final raw = _decryptString(_prefs.getString(_kWallets));
-    if (raw == null) return defaultWallets;
+    if (raw == null) {
+      _cachedWallets = defaultWallets;
+      return _cachedWallets!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => WalletModel.fromJson(e)).toList();
+      _cachedWallets = decoded.map((e) => WalletModel.fromJson(e)).toList();
+      return _cachedWallets!;
     } catch (_) {
-      return defaultWallets;
+      _cachedWallets = defaultWallets;
+      return _cachedWallets!;
     }
   }
 
   Future<void> saveWallets(List<WalletModel> list) async {
+    _cachedWallets = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kWallets, _encryptString(raw));
   }
@@ -178,17 +219,24 @@ class StorageService {
   // --- Settings ---
 
   UserSettingsModel getSettings() {
+    if (_cachedSettings != null) return _cachedSettings!;
     final raw = _decryptString(_prefs.getString(_kSettings));
-    if (raw == null) return const UserSettingsModel();
+    if (raw == null) {
+      _cachedSettings = const UserSettingsModel();
+      return _cachedSettings!;
+    }
     try {
       final Map<String, dynamic> decoded = jsonDecode(raw);
-      return UserSettingsModel.fromJson(decoded);
+      _cachedSettings = UserSettingsModel.fromJson(decoded);
+      return _cachedSettings!;
     } catch (_) {
-      return const UserSettingsModel();
+      _cachedSettings = const UserSettingsModel();
+      return _cachedSettings!;
     }
   }
 
   Future<void> saveSettings(UserSettingsModel settings) async {
+    _cachedSettings = settings;
     final raw = jsonEncode(settings.toJson());
     await _prefs.setString(_kSettings, _encryptString(raw));
   }
@@ -196,17 +244,24 @@ class StorageService {
   // --- Recurring Rules ---
 
   List<RecurringRuleModel> getRecurringRules() {
+    if (_cachedRecurringRules != null) return _cachedRecurringRules!;
     final raw = _decryptString(_prefs.getString(_kRecurringRules));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedRecurringRules = [];
+      return _cachedRecurringRules!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => RecurringRuleModel.fromJson(e)).toList();
+      _cachedRecurringRules = decoded.map((e) => RecurringRuleModel.fromJson(e)).toList();
+      return _cachedRecurringRules!;
     } catch (_) {
-      return [];
+      _cachedRecurringRules = [];
+      return _cachedRecurringRules!;
     }
   }
 
   Future<void> saveRecurringRules(List<RecurringRuleModel> list) async {
+    _cachedRecurringRules = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kRecurringRules, _encryptString(raw));
   }
@@ -214,41 +269,99 @@ class StorageService {
   // --- In-App Notifications ---
 
   List<AppNotificationModel> getNotifications() {
+    if (_cachedNotifications != null) return _cachedNotifications!;
     final raw = _decryptString(_prefs.getString(_kNotifications));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedNotifications = [];
+      return _cachedNotifications!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => AppNotificationModel.fromJson(e)).toList();
+      _cachedNotifications = decoded.map((e) => AppNotificationModel.fromJson(e)).toList();
+      return _cachedNotifications!;
     } catch (_) {
-      return [];
+      _cachedNotifications = [];
+      return _cachedNotifications!;
     }
   }
 
   Future<void> saveNotifications(List<AppNotificationModel> list) async {
+    _cachedNotifications = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kNotifications, _encryptString(raw));
   }
 
   Future<void> addNotification(AppNotificationModel notification) async {
     final current = getNotifications();
-    final updated = [notification, ...current];
-    await saveNotifications(updated);
+    await saveNotifications([notification, ...current]);
   }
 
-  // --- Debts & Loans (Lend & Borrow) ---
+  /// Suggests a category ID based on past transaction history and keyword heuristics
+  String? suggestCategoryForTitle(
+    String title,
+    List<TransactionModel> pastTxs,
+    List<CategoryModel> categories,
+  ) {
+    if (title.trim().isEmpty) return null;
+    final lowerTitle = title.toLowerCase();
+
+    // 1. Check exact/substring match against past transactions
+    for (final tx in pastTxs) {
+      if (tx.title.toLowerCase() == lowerTitle ||
+          lowerTitle.contains(tx.title.toLowerCase()) ||
+          tx.title.toLowerCase().contains(lowerTitle)) {
+        return tx.categoryId;
+      }
+    }
+
+    // 2. Keyword heuristics
+    final keywords = {
+      'food': ['zomato', 'swiggy', 'mcdonald', 'kfc', 'starbucks', 'coffee', 'dinner', 'lunch', 'breakfast', 'restaurant', 'cafe', 'burger', 'pizza', 'groceries', 'supermarket', 'blinkit', 'zepto', 'instamart'],
+      'shopping': ['amazon', 'flipkart', 'myntra', 'zara', 'h&m', 'mall', 'clothing', 'shoes', 'electronics'],
+      'transport': ['uber', 'ola', 'rapido', 'metro', 'bus', 'train', 'flight', 'petrol', 'fuel', 'diesel', 'cab', 'taxi', 'toll'],
+      'bills': ['electricity', 'water', 'gas', 'wifi', 'broadband', 'recharge', 'airtel', 'jio', 'vi', 'bill', 'emi', 'loan'],
+      'entertainment': ['netflix', 'prime', 'spotify', 'hotstar', 'cinema', 'pvr', 'movie', 'game', 'playstation', 'steam'],
+      'health': ['pharmacy', 'hospital', 'doctor', 'clinic', 'medicine', 'apollo', 'practo', 'gym', 'fitness'],
+      'salary': ['salary', 'payroll', 'stipend', 'dividend', 'interest'],
+      'rent': ['rent', 'landlord', 'flat rent', 'maintenance'],
+    };
+
+    for (final entry in keywords.entries) {
+      for (final kw in entry.value) {
+        if (lowerTitle.contains(kw)) {
+          final matchedCategory = categories.firstWhere(
+            (c) => c.id == entry.key || c.name.toLowerCase() == entry.key,
+            orElse: () => categories.first,
+          );
+          return matchedCategory.id;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // --- Debts / Lent / Borrowed ---
 
   List<DebtModel> getDebts() {
+    if (_cachedDebts != null) return _cachedDebts!;
     final raw = _decryptString(_prefs.getString(_kDebts));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedDebts = [];
+      return _cachedDebts!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => DebtModel.fromJson(e)).toList();
+      _cachedDebts = decoded.map((e) => DebtModel.fromJson(e)).toList();
+      return _cachedDebts!;
     } catch (_) {
-      return [];
+      _cachedDebts = [];
+      return _cachedDebts!;
     }
   }
 
   Future<void> saveDebts(List<DebtModel> list) async {
+    _cachedDebts = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kDebts, _encryptString(raw));
   }
@@ -256,17 +369,24 @@ class StorageService {
   // --- Category Budgets ---
 
   List<CategoryBudgetModel> getCategoryBudgets() {
+    if (_cachedBudgets != null) return _cachedBudgets!;
     final raw = _decryptString(_prefs.getString(_kBudgets));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedBudgets = [];
+      return _cachedBudgets!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => CategoryBudgetModel.fromJson(e)).toList();
+      _cachedBudgets = decoded.map((e) => CategoryBudgetModel.fromJson(e)).toList();
+      return _cachedBudgets!;
     } catch (_) {
-      return [];
+      _cachedBudgets = [];
+      return _cachedBudgets!;
     }
   }
 
   Future<void> saveCategoryBudgets(List<CategoryBudgetModel> list) async {
+    _cachedBudgets = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kBudgets, _encryptString(raw));
   }
@@ -274,34 +394,39 @@ class StorageService {
   // --- Savings Goals ---
 
   List<GoalModel> getGoals() {
+    if (_cachedGoals != null) return _cachedGoals!;
     final raw = _decryptString(_prefs.getString(_kGoals));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedGoals = [];
+      return _cachedGoals!;
+    }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      return decoded.map((e) => GoalModel.fromJson(e)).toList();
+      _cachedGoals = decoded.map((e) => GoalModel.fromJson(e)).toList();
+      return _cachedGoals!;
     } catch (_) {
-      return [];
+      _cachedGoals = [];
+      return _cachedGoals!;
     }
   }
 
   Future<void> saveGoals(List<GoalModel> list) async {
+    _cachedGoals = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
     await _prefs.setString(_kGoals, _encryptString(raw));
   }
 
-  // --- Process Due Recurring Rules ---
+  // --- Startup Automated Recurring Engine ---
 
   Future<int> processDueRecurringRules() async {
     final rules = getRecurringRules();
-    final transactions = getTransactions();
-    final notifications = getNotifications();
-    final settings = getSettings();
-    final now = DateTime.now();
+    if (rules.isEmpty) return 0;
 
-    int generatedCount = 0;
+    final now = DateTime.now();
+    final List<TransactionModel> txsToAdd = [];
+    final List<AppNotificationModel> notifsToAdd = [];
     final List<RecurringRuleModel> updatedRules = [];
-    final List<TransactionModel> newTransactions = [];
-    final List<AppNotificationModel> newNotifications = [];
+    int processedCount = 0;
 
     for (final rule in rules) {
       if (!rule.isActive || rule.isPaused) {
@@ -309,12 +434,7 @@ class StorageService {
         continue;
       }
 
-      // Check if current time is on or past the due date
-      if (now.isAfter(rule.nextDueDate) ||
-          (now.year == rule.nextDueDate.year &&
-              now.month == rule.nextDueDate.month &&
-              now.day == rule.nextDueDate.day)) {
-        // Create the automated transaction
+      if (rule.nextDueDate.isBefore(now) || rule.nextDueDate.isAtSameMomentAs(now)) {
         final newTx = TransactionModel(
           id: const Uuid().v4(),
           title: rule.title,
@@ -323,163 +443,106 @@ class StorageService {
           categoryId: rule.categoryId,
           walletId: rule.walletId,
           date: rule.nextDueDate,
-          note: rule.note ?? 'Automated recurring ${rule.templatePreset.displayName}',
+          note: 'Auto-generated recurring payment (${rule.frequency.name})',
           createdAt: now,
         );
+        txsToAdd.add(newTx);
 
-        newTransactions.add(newTx);
-        generatedCount++;
+        final notif = AppNotificationModel(
+          id: const Uuid().v4(),
+          title: 'Recurring payment: ${rule.title}',
+          message: 'Auto-recorded payment of ₹${rule.amount.toStringAsFixed(0)} on ${rule.frequency.name} schedule.',
+          type: NotificationType.recurringDue,
+          createdAt: now,
+        );
+        notifsToAdd.add(notif);
 
-        // Calculate next due date
-        final nextDue = rule.calculateNextDueDateAfter(rule.nextDueDate);
-        final updatedRule = rule.copyWith(
-          lastCreatedDate: now,
+        final nextDue = rule.calculateNextDueDateAfter(now);
+        updatedRules.add(rule.copyWith(
           nextDueDate: nextDue,
-        );
-        updatedRules.add(updatedRule);
-
-        // Add Notification
-        newNotifications.add(
-          AppNotificationModel(
-            id: const Uuid().v4(),
-            title: 'Auto-Logged: ${rule.title}',
-            message: 'Recurring ${rule.frequency.name} payment of ${settings.currencySymbol}${rule.amount.toStringAsFixed(2)} was logged automatically.',
-            type: NotificationType.recurringCreated,
-            createdAt: now,
-          ),
-        );
+          lastCreatedDate: now,
+        ));
+        processedCount++;
       } else {
         updatedRules.add(rule);
       }
     }
 
-    if (generatedCount > 0) {
-      await saveTransactions([...newTransactions, ...transactions]);
+    if (processedCount > 0) {
+      final currentTxs = getTransactions();
+      await saveTransactions([...txsToAdd, ...currentTxs]);
+      final currentNotifs = getNotifications();
+      await saveNotifications([...notifsToAdd, ...currentNotifs]);
       await saveRecurringRules(updatedRules);
-      await saveNotifications([...newNotifications, ...notifications]);
     }
 
-    return generatedCount;
+    return processedCount;
   }
 
-  // --- Reset Entire Database ---
+  // --- Initial Seed & Database Reset ---
+
+  Future<void> _seedInitialDataIfNeeded() async {
+    if (_prefs.getString(_kCategories) == null) {
+      await saveCategories(defaultCategories);
+    }
+    if (_prefs.getString(_kWallets) == null) {
+      await saveWallets(defaultWallets);
+    }
+  }
+
+  Future<void> restoreDatabase(Map<String, dynamic> data) async {
+    if (data['transactions'] != null) {
+      final list = (data['transactions'] as List)
+          .map((e) => TransactionModel.fromJson(e))
+          .toList();
+      await saveTransactions(list);
+    }
+    if (data['wallets'] != null) {
+      final list =
+          (data['wallets'] as List).map((e) => WalletModel.fromJson(e)).toList();
+      await saveWallets(list);
+    }
+    if (data['categories'] != null) {
+      final list = (data['categories'] as List)
+          .map((e) => CategoryModel.fromJson(e))
+          .toList();
+      await saveCategories(list);
+    }
+    if (data['recurring_rules'] != null) {
+      final list = (data['recurring_rules'] as List)
+          .map((e) => RecurringRuleModel.fromJson(e))
+          .toList();
+      await saveRecurringRules(list);
+    }
+    if (data['debts'] != null) {
+      final list =
+          (data['debts'] as List).map((e) => DebtModel.fromJson(e)).toList();
+      await saveDebts(list);
+    }
+    if (data['budgets'] != null) {
+      final list = (data['budgets'] as List)
+          .map((e) => CategoryBudgetModel.fromJson(e))
+          .toList();
+      await saveCategoryBudgets(list);
+    }
+    if (data['goals'] != null) {
+      final list =
+          (data['goals'] as List).map((e) => GoalModel.fromJson(e)).toList();
+      await saveGoals(list);
+    }
+    _invalidateCache();
+  }
 
   Future<void> clearAllData() async {
+    _invalidateCache();
     await _prefs.remove(_kTransactions);
-    await _prefs.remove(_kCategories);
-    await _prefs.remove(_kWallets);
-    await _prefs.remove(_kSettings);
     await _prefs.remove(_kRecurringRules);
     await _prefs.remove(_kNotifications);
     await _prefs.remove(_kDebts);
     await _prefs.remove(_kBudgets);
     await _prefs.remove(_kGoals);
-    await _seedInitialDataIfNeeded();
-  }
-
-  // --- Smart Category Auto-suggestion ---
-
-  String? suggestCategoryForTitle(
-    String title,
-    List<TransactionModel> pastTransactions,
-    List<CategoryModel> categories,
-  ) {
-    if (title.trim().isEmpty) return null;
-    final normalized = title.trim().toLowerCase();
-
-    // 1. Exact match from past transactions
-    for (final tx in pastTransactions) {
-      if (tx.title.trim().toLowerCase() == normalized) {
-        return tx.categoryId;
-      }
-    }
-
-    // 2. Keyword/substring match from past transactions
-    for (final tx in pastTransactions) {
-      final pastTitle = tx.title.trim().toLowerCase();
-      if (pastTitle.contains(normalized) || normalized.contains(pastTitle)) {
-        return tx.categoryId;
-      }
-    }
-
-    // 3. Keyword heuristic match on default categories
-    final Map<String, List<String>> heuristics = {
-      'food': ['food', 'lunch', 'dinner', 'breakfast', 'zomato', 'swiggy', 'cafe', 'coffee', 'starbucks', 'mcdonalds', 'kfc', 'burger', 'pizza', 'restaurant'],
-      'groceries': ['grocery', 'groceries', 'supermarket', 'blinkit', 'zepto', 'instamart', 'milk', 'vegetables', 'fruits', 'market'],
-      'transport': ['uber', 'ola', 'rapido', 'metro', 'bus', 'fuel', 'petrol', 'diesel', 'taxi', 'auto', 'toll', 'parking'],
-      'shopping': ['amazon', 'flipkart', 'myntra', 'clothes', 'shoes', 'dress', 'mall', 'electronics', 'purchase'],
-      'bills': ['electricity', 'water', 'wifi', 'broadband', 'recharge', 'jio', 'airtel', 'gas', 'bill', 'emi', 'insurance'],
-      'rent': ['rent', 'house', 'maintenance', 'landlord'],
-      'health': ['pharmacy', 'medicine', 'doctor', 'hospital', 'apollo', 'clinic', 'dentist', 'gym'],
-      'entertainment': ['netflix', 'spotify', 'movie', 'cinema', 'theatre', 'prime', 'game', 'gaming', 'ott', 'hotstar'],
-      'salary': ['salary', 'paycheck', 'payroll', 'bonus', 'stipend', 'wage'],
-      'freelance': ['client', 'project', 'freelance', 'consulting', 'upwork', 'fiverr'],
-    };
-
-    for (final entry in heuristics.entries) {
-      for (final keyword in entry.value) {
-        if (normalized.contains(keyword)) {
-          final catExists = categories.any((c) => c.id == entry.key);
-          if (catExists) return entry.key;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  // --- Seed Initial Mock Data for First Launch Experience ---
-
-  Future<void> _seedInitialDataIfNeeded() async {
-    if (_prefs.containsKey(_kCategories)) return;
-
-    await saveTransactions([]);
     await saveCategories(defaultCategories);
     await saveWallets(defaultWallets);
     await saveSettings(const UserSettingsModel());
-    await saveRecurringRules([]);
-    await saveNotifications([]);
-    await saveDebts([]);
-    await saveCategoryBudgets([]);
-    await saveGoals([]);
-  }
-
-  Future<void> restoreDatabase(Map<String, dynamic> data) async {
-    if (data['transactions'] is List) {
-      final list = (data['transactions'] as List)
-          .map((e) => TransactionModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveTransactions(list);
-    }
-    if (data['wallets'] is List) {
-      final list = (data['wallets'] as List)
-          .map((e) => WalletModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveWallets(list);
-    }
-    if (data['categories'] is List) {
-      final list = (data['categories'] as List)
-          .map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveCategories(list);
-    }
-    if (data['debts'] is List) {
-      final list = (data['debts'] as List)
-          .map((e) => DebtModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveDebts(list);
-    }
-    if (data['budgets'] is List) {
-      final list = (data['budgets'] as List)
-          .map((e) => CategoryBudgetModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveCategoryBudgets(list);
-    }
-    if (data['goals'] is List) {
-      final list = (data['goals'] as List)
-          .map((e) => GoalModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      await saveGoals(list);
-    }
   }
 }

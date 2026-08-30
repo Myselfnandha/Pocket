@@ -159,6 +159,14 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
               ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.widgets_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Home Screen Widget Metric', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(_getWidgetMetricTitle(settings.homeScreenWidgetStat)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showWidgetMetricPicker(context, ref, settings),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -873,30 +881,59 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showCategoriesManager(BuildContext context, WidgetRef ref, List<CategoryModel> categories) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
+        initialChildSize: 0.75,
+        maxChildSize: 0.92,
         minChildSize: 0.5,
         expand: false,
-        builder: (ctx, scrollCtrl) => Padding(
+        builder: (ctx, scrollCtrl) => Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Manage Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primaryGreenLight),
-                    onPressed: () => _showAddCategoryDialog(context, ref),
+                  Text(
+                    'Manage Categories (${categories.length})',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreenLight,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add', style: TextStyle(fontWeight: FontWeight.w800)),
+                    onPressed: () => _showCategoryEditDialog(context, ref, null),
                   ),
                 ],
               ),
@@ -905,16 +942,42 @@ class SettingsScreen extends ConsumerWidget {
                 child: ListView.separated(
                   controller: scrollCtrl,
                   itemCount: categories.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
                   itemBuilder: (context, index) {
                     final cat = categories[index];
                     return ListTile(
-                      leading: Text(cat.icon, style: const TextStyle(fontSize: 22)),
-                      title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(cat.type == TransactionType.income ? 'Income' : 'Expense'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.expenseRed),
-                        onPressed: () => ref.read(categoriesProvider.notifier).deleteCategory(cat.id),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: cat.color.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: cat.color.withValues(alpha: 0.4)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(cat.icon, style: const TextStyle(fontSize: 20)),
+                      ),
+                      title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                      subtitle: Text(
+                        cat.type == TransactionType.income ? '📈 Income' : '📉 Expense',
+                        style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            onPressed: () => _showCategoryEditDialog(context, ref, cat),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.expenseRed),
+                            onPressed: () => ref.read(categoriesProvider.notifier).deleteCategory(cat.id),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -927,83 +990,272 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddCategoryDialog(BuildContext context, WidgetRef ref) {
-    final nameCtrl = TextEditingController();
-    String icon = '🏷️';
-    TransactionType type = TransactionType.expense;
+  void _showCategoryEditDialog(BuildContext context, WidgetRef ref, CategoryModel? existing) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    String icon = existing?.icon ?? '🏷️';
+    int colorVal = existing?.colorValue ?? 0xFF2E7D32;
+    TransactionType type = existing?.type ?? TransactionType.expense;
 
-    final icons = ['🍔', '🚗', '🏠', '🛒', '💊', '🎬', '👕', '📱', '⚡', '📚', '✈️', '🎁', '💇', '🔧', '💰', '💼', '📈', '💵', '📦'];
+    final icons = [
+      '🍔', '🍕', '☕', '🛒', '🚗', '⛽', '✈️', '🚆', '🏠', '⚡', '💧', '📶',
+      '💊', '🏥', '🏋️', '🎬', '🎮', '📚', '👕', '👠', '📱', '💻', '🔧', '🎁',
+      '💇', '👶', '🐾', '💰', '💼', '📈', '💵', '💳', '🏦', '🎓', '🏖️', '📦'
+    ];
+
+    final colors = [
+      0xFF2E7D32, // Emerald
+      0xFF00BFA5, // Teal
+      0xFF0288D1, // Sky Blue
+      0xFF5E35B1, // Purple
+      0xFFD81B60, // Pink
+      0xFFE53935, // Crimson
+      0xFFFB8C00, // Amber
+      0xFF8D6E63, // Brown
+      0xFF546E7A, // Slate
+      0xFF43A047, // Forest Green
+    ];
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('New Category'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(hintText: 'Category Name'),
-              ),
-              const SizedBox(height: 14),
-              Row(
+        builder: (ctx, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return AlertDialog(
+            title: Text(
+              existing == null ? 'New Category' : 'Edit Category',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ChoiceChip(
-                    label: const Text('Expense'),
-                    selected: type == TransactionType.expense,
-                    onSelected: (_) => setDialogState(() => type = TransactionType.expense),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Category Name',
+                      hintText: 'e.g. Pet Care, Subscriptions',
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Income'),
-                    selected: type == TransactionType.income,
-                    onSelected: (_) => setDialogState(() => type = TransactionType.income),
+                  const SizedBox(height: 14),
+
+                  // Type Toggle
+                  Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Expense'),
+                        selected: type == TransactionType.expense,
+                        onSelected: (_) => setDialogState(() => type = TransactionType.expense),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('Income'),
+                        selected: type == TransactionType.income,
+                        onSelected: (_) => setDialogState(() => type = TransactionType.income),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Color Picker
+                  const Text('Category Color', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: colors.map((c) {
+                      final isSel = colorVal == c;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => colorVal = c),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Color(c),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSel ? Colors.white : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isSel
+                                ? [BoxShadow(color: Color(c).withValues(alpha: 0.6), blurRadius: 6)]
+                                : null,
+                          ),
+                          child: isSel ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Icon Picker
+                  const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: icons.map((ic) {
+                      final isSel = icon == ic;
+                      return InkWell(
+                        onTap: () => setDialogState(() => icon = ic),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isSel ? Color(colorVal).withValues(alpha: 0.3) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSel ? Color(colorVal) : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                            ),
+                          ),
+                          child: Text(ic, style: const TextStyle(fontSize: 20)),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              const Text('Select Icon', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                children: icons.map((ic) {
-                  final isSel = icon == ic;
-                  return InkWell(
-                    onTap: () => setDialogState(() => icon = ic),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: isSel ? AppColors.primaryGreenLight.withValues(alpha: 0.3) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(ic, style: const TextStyle(fontSize: 20)),
-                    ),
-                  );
-                }).toList(),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreenLight,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  final name = nameCtrl.text.trim();
+                  if (name.isNotEmpty) {
+                    if (existing != null) {
+                      final updated = existing.copyWith(
+                        name: name,
+                        icon: icon,
+                        colorValue: colorVal,
+                        type: type,
+                      );
+                      ref.read(categoriesProvider.notifier).updateCategory(updated);
+                    } else {
+                      final newCat = CategoryModel(
+                        id: const Uuid().v4(),
+                        name: name,
+                        icon: icon,
+                        colorValue: colorVal,
+                        type: type,
+                      );
+                      ref.read(categoriesProvider.notifier).addCategory(newCat);
+                    }
+                  }
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                if (name.isNotEmpty) {
-                  final newCat = CategoryModel(
-                    id: const Uuid().v4(),
-                    name: name,
-                    icon: icon,
-                    colorValue: 0xFF4CAF50,
-                    type: type,
-                  );
-                  ref.read(categoriesProvider.notifier).addCategory(newCat);
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Save'),
+          );
+        },
+      ),
+    );
+  }
+
+  String _getWidgetMetricTitle(HomeScreenWidgetStat stat) {
+    switch (stat) {
+      case HomeScreenWidgetStat.balanceAndTodaySpend:
+        return 'Total Balance & Today\'s Spend';
+      case HomeScreenWidgetStat.netWorth:
+        return 'Total Net Worth (Assets - Liabilities)';
+      case HomeScreenWidgetStat.monthlySavings:
+        return 'Monthly Savings & Savings Rate';
+      case HomeScreenWidgetStat.budgetRemaining:
+        return 'Monthly Category Budget Remaining';
+      case HomeScreenWidgetStat.debtsSummary:
+        return 'Total Balance & Accounts Overview';
+    }
+  }
+
+  void _showWidgetMetricPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
+            const SizedBox(height: 14),
+            Text(
+              'Home Screen Widget Metric',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose what primary statistic appears on your Android home-screen widget.',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...HomeScreenWidgetStat.values.map((stat) {
+              final isSel = settings.homeScreenWidgetStat == stat;
+              return ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: isSel
+                    ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                leading: Icon(
+                  stat == HomeScreenWidgetStat.balanceAndTodaySpend
+                      ? Icons.account_balance_wallet_outlined
+                      : stat == HomeScreenWidgetStat.netWorth
+                          ? Icons.trending_up_rounded
+                          : stat == HomeScreenWidgetStat.monthlySavings
+                              ? Icons.savings_outlined
+                              : stat == HomeScreenWidgetStat.budgetRemaining
+                                  ? Icons.pie_chart_outline_rounded
+                                  : Icons.receipt_long_outlined,
+                  color: isSel ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
+                ),
+                title: Text(
+                  _getWidgetMetricTitle(stat),
+                  style: TextStyle(
+                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                    color: isSel ? AppColors.primaryGreenLight : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                  ),
+                ),
+                trailing: isSel ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight) : null,
+                onTap: () {
+                  final updated = settings.copyWith(homeScreenWidgetStat: stat);
+                  ref.read(settingsProvider.notifier).updateSettings(updated);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
+            const SizedBox(height: 10),
           ],
         ),
       ),

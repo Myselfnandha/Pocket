@@ -84,20 +84,12 @@ class TransactionTile extends ConsumerWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             backgroundColor: const Color(0xFF1E1E1E),
             content: Text('Deleted "${transaction.title}"'),
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Undo',
               textColor: AppColors.primaryGreenLight,
               onPressed: () {
-                ref.read(transactionsProvider.notifier).addTransaction(
-                      title: transaction.title,
-                      amount: transaction.amount,
-                      type: transaction.type,
-                      categoryId: transaction.categoryId,
-                      walletId: transaction.walletId,
-                      date: transaction.date,
-                      note: transaction.note,
-                    );
+                ref.read(transactionsProvider.notifier).insertTransactionAt(0, transaction);
               },
             ),
           ),

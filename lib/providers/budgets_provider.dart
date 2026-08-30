@@ -78,8 +78,45 @@ final currentMonthCategorySpendingProvider = Provider<Map<String, double>>((ref)
   return spending;
 });
 
-/// Total monthly budget limit across all configured categories
+/// Map of categoryId -> total expense for previous month
+final lastMonthCategorySpendingProvider = Provider<Map<String, double>>((ref) {
+  final txs = ref.watch(transactionsProvider);
+  final now = DateTime.now();
+  final lastMonth = DateTime(now.year, now.month - 1, 1);
+  final Map<String, double> spending = {};
+
+  for (final tx in txs) {
+    if (tx.type == TransactionType.expense &&
+        tx.date.year == lastMonth.year &&
+        tx.date.month == lastMonth.month) {
+      spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) + tx.amount;
+    }
+  }
+
+  return spending;
+});
+
+/// Map of categoryId -> effective budget limit with rollover applied
+final effectiveCategoryBudgetsProvider = Provider<Map<String, double>>((ref) {
+  final budgets = ref.watch(categoryBudgetsProvider);
+  final lastMonthSpending = ref.watch(lastMonthCategorySpendingProvider);
+  final Map<String, double> effective = {};
+
+  for (final b in budgets) {
+    final lastSpent = lastMonthSpending[b.categoryId] ?? 0.0;
+    effective[b.categoryId] = b.calculateEffectiveLimit(lastMonthSpent: lastSpent);
+  }
+
+  return effective;
+});
+
+/// Total monthly budget limit across all configured categories (including rollover)
 final totalCategoryBudgetLimitProvider = Provider<double>((ref) {
+  final effectiveBudgets = ref.watch(effectiveCategoryBudgetsProvider);
+  if (effectiveBudgets.isNotEmpty) {
+    return effectiveBudgets.values.fold(0.0, (sum, val) => sum + val);
+  }
   final budgets = ref.watch(categoryBudgetsProvider);
   return budgets.fold(0.0, (sum, b) => sum + b.monthlyLimit);
 });
+

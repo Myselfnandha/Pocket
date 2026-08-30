@@ -14,6 +14,8 @@ class TransactionModel {
   final String? receiverName;
   final String? refId;
   final String? counterpartyLast4;
+  final List<String> tags;
+  final List<String> attachments; // Invoices, receipts, warranties, warranty PDFs/images
   final DateTime createdAt;
 
   const TransactionModel({
@@ -30,6 +32,8 @@ class TransactionModel {
     this.receiverName,
     this.refId,
     this.counterpartyLast4,
+    this.tags = const [],
+    this.attachments = const [],
     required this.createdAt,
   });
 
@@ -47,6 +51,8 @@ class TransactionModel {
     String? receiverName,
     String? refId,
     String? counterpartyLast4,
+    List<String>? tags,
+    List<String>? attachments,
     DateTime? createdAt,
   }) {
     return TransactionModel(
@@ -63,6 +69,8 @@ class TransactionModel {
       receiverName: receiverName ?? this.receiverName,
       refId: refId ?? this.refId,
       counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
+      tags: tags ?? this.tags,
+      attachments: attachments ?? this.attachments,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -81,6 +89,8 @@ class TransactionModel {
         'receiverName': receiverName,
         'refId': refId,
         'counterpartyLast4': counterpartyLast4,
+        'tags': tags,
+        'attachments': attachments,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -100,6 +110,12 @@ class TransactionModel {
         receiverName: json['receiverName'] as String?,
         refId: json['refId'] as String?,
         counterpartyLast4: json['counterpartyLast4'] as String?,
+        tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+            const [],
+        attachments: (json['attachments'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            (json['receiptImagePath'] != null ? [json['receiptImagePath'] as String] : const []),
         createdAt: DateTime.parse(
           json['createdAt'] as String? ?? json['date'] as String,
         ),

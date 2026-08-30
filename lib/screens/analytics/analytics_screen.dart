@@ -429,12 +429,163 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
         ? (totalBudgetLimit - totalExpense)
         : (totalIncome - totalExpense);
 
+    final netWorth = ref.watch(netWorthSummaryProvider);
+    final spendingComparison = ref.watch(spendingComparisonProvider);
+
     return SingleChildScrollView(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 0. Total Net Worth Tracker Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [const Color(0xFFE2F1E8), const Color(0xFFD0EBE0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.primaryGreenLight.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.account_balance_rounded, size: 18, color: AppColors.primaryGreenLight),
+                        const SizedBox(width: 8),
+                        Text(
+                          'TOTAL NET WORTH',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.1,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${settings.currencySymbol}${currencyFormat.format(netWorth.totalNetWorth)}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: netWorth.totalNetWorth >= 0 ? AppColors.primaryGreenLight : AppColors.expenseRed,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('💳 Liquid: ${settings.currencySymbol}${currencyFormat.format(netWorth.liquidAssets)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('🎯 Goals: ${settings.currencySymbol}${currencyFormat.format(netWorth.goalReserves)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('🤝 Lent: +${settings.currencySymbol}${currencyFormat.format(netWorth.lentReceivables)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                    if (netWorth.borrowedLiabilities > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.expenseRed.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('📉 Debt: -${settings.currencySymbol}${currencyFormat.format(netWorth.borrowedLiabilities)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.expenseRed)),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Month-over-Month Spending Comparison Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Month-over-Month Spend',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (spendingComparison.differenceAmount > 0 ? AppColors.expenseRed : AppColors.incomeGreen).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${spendingComparison.differenceAmount > 0 ? '+' : ''}${spendingComparison.percentageChange.toStringAsFixed(1)}% vs last month',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: spendingComparison.differenceAmount > 0 ? AppColors.expenseRed : AppColors.incomeGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  spendingComparison.lastMonthTotalExpense > 0
+                      ? 'Spent ${settings.currencySymbol}${currencyFormat.format(spendingComparison.thisMonthTotalExpense)} this month compared to ${settings.currencySymbol}${currencyFormat.format(spendingComparison.lastMonthTotalExpense)} last month.'
+                      : 'No expenses recorded in the previous month for comparison.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // 1. Top Summary Grid: Income | Expenses | Net Savings
           Container(
             padding: const EdgeInsets.all(18),

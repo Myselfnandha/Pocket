@@ -242,10 +242,8 @@ class TransactionDetailScreen extends ConsumerWidget {
               const SizedBox(height: 20),
             ],
 
-            // Attached Receipt Image Section
-            if (currentTx.receiptImagePath != null &&
-                currentTx.receiptImagePath!.isNotEmpty &&
-                File(currentTx.receiptImagePath!).existsSync()) ...[
+            // Tags Section
+            if (currentTx.tags.isNotEmpty) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -261,47 +259,112 @@ class TransactionDetailScreen extends ConsumerWidget {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primaryGreenLight),
+                        Icon(Icons.tag_rounded, size: 18, color: AppColors.primaryGreenLight),
                         SizedBox(width: 8),
-                        Text('Attached Receipt', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        Text('Tags & Labels', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onTap: () => _showZoomableImage(context, File(currentTx.receiptImagePath!)),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Image.file(
-                              File(currentTx.receiptImagePath!),
-                              width: double.infinity,
-                              height: 180,
-                              fit: BoxFit.cover,
-                            ),
-                            Container(
-                              margin: const EdgeInsets.all(8),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.zoom_in, color: Colors.white, size: 16),
-                                  SizedBox(width: 4),
-                                  Text('Tap to zoom', style: TextStyle(color: Colors.white, fontSize: 11)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: currentTx.tags.map((tag) {
+                        return Chip(
+                          label: Text('#$tag', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Attached Files & Documents Section
+            if (currentTx.attachments.isNotEmpty ||
+                (currentTx.receiptImagePath != null && currentTx.receiptImagePath!.isNotEmpty)) ...[
+              Builder(
+                builder: (context) {
+                  final allFiles = {
+                    if (currentTx.receiptImagePath != null && currentTx.receiptImagePath!.isNotEmpty)
+                      currentTx.receiptImagePath!,
+                    ...currentTx.attachments,
+                  }.where((p) => File(p).existsSync()).toList();
+
+                  if (allFiles.isEmpty) return const SizedBox.shrink();
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.attach_file_rounded, size: 18, color: AppColors.primaryGreenLight),
+                                SizedBox(width: 8),
+                                Text('Attached Documents & Receipts', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            Text('${allFiles.length} files', style: const TextStyle(fontSize: 11, color: AppColors.primaryGreenLight)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...allFiles.map((filePath) {
+                          final f = File(filePath);
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: GestureDetector(
+                              onTap: () => _showZoomableImage(context, f),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    Image.file(
+                                      f,
+                                      width: double.infinity,
+                                      height: 160,
+                                      fit: BoxFit.cover,
+                                    ),
+                                    Container(
+                                      margin: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.7),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                                          SizedBox(width: 4),
+                                          Text('Tap to zoom', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ] else ...[
@@ -318,8 +381,8 @@ class TransactionDetailScreen extends ConsumerWidget {
                       side: const BorderSide(color: AppColors.primaryGreenLight),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.primaryGreenLight),
-                    label: const Text('Edit', style: TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primaryGreenLight),
+                    label: const Text('Edit Transaction', style: TextStyle(fontWeight: FontWeight.w600)),
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -333,18 +396,20 @@ class TransactionDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.expenseRed,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.expenseRed.withValues(alpha: 0.15),
+                      foregroundColor: AppColors.expenseRed,
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
                     onPressed: () => _confirmDelete(context, ref, currentTx),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -356,22 +421,27 @@ class TransactionDetailScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          alignment: Alignment.topRight,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-                onPressed: () => Navigator.pop(ctx),
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.file(file, fit: BoxFit.contain),
               ),
             ),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Image.file(file),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
               ),
             ),
           ],
@@ -454,8 +524,17 @@ class TransactionDetailScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: const Color(0xFF1E1E1E),
                   content: Text('Deleted "${tx.title}"'),
-                  duration: const Duration(seconds: 2),
+                  duration: const Duration(seconds: 4),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.primaryGreenLight,
+                    onPressed: () {
+                      ref.read(transactionsProvider.notifier).insertTransactionAt(0, tx);
+                    },
+                  ),
                 ),
               );
             },

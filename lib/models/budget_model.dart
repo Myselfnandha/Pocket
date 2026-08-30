@@ -33,20 +33,31 @@ class CategoryBudgetModel {
     );
   }
 
+  /// Calculates effective monthly limit considering rollover from previous month
+  double calculateEffectiveLimit({
+    required double lastMonthSpent,
+  }) {
+    if (!isRolloverEnabled) return monthlyLimit;
+    final unspentCarryover = (monthlyLimit - lastMonthSpent).clamp(0.0, monthlyLimit * 2);
+    return monthlyLimit + unspentCarryover;
+  }
+
   /// Calculates safe daily spending allowance for the remainder of the month
-  double calculateDailySafeSpend(double currentSpent, {DateTime? referenceDate}) {
+  double calculateDailySafeSpend(double currentSpent, {DateTime? referenceDate, double? effectiveLimit}) {
+    final limit = effectiveLimit ?? monthlyLimit;
     final now = referenceDate ?? DateTime.now();
     final totalDaysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final remainingDays = (totalDaysInMonth - now.day + 1).clamp(1, totalDaysInMonth);
-    final remainingBudget = monthlyLimit - currentSpent;
+    final remainingBudget = limit - currentSpent;
     if (remainingBudget <= 0) return 0.0;
     return remainingBudget / remainingDays;
   }
 
   /// Calculates progress percentage clamped between 0.0 and 1.0 (or > 1.0 for overflow)
-  double calculateProgress(double currentSpent) {
-    if (monthlyLimit <= 0) return 1.0;
-    return (currentSpent / monthlyLimit).clamp(0.0, 2.0);
+  double calculateProgress(double currentSpent, {double? effectiveLimit}) {
+    final limit = effectiveLimit ?? monthlyLimit;
+    if (limit <= 0) return 1.0;
+    return (currentSpent / limit).clamp(0.0, 2.0);
   }
 
   Map<String, dynamic> toJson() => {
