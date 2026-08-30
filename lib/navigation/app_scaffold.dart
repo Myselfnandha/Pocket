@@ -1,30 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quick_add_transaction_dialog.dart';
 
-class AppScaffold extends StatefulWidget {
+class AppScaffold extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
+  final List<Widget> children;
 
   const AppScaffold({
     super.key,
     required this.navigationShell,
+    required this.children,
   });
 
   @override
-  State<AppScaffold> createState() => _AppScaffoldState();
+  ConsumerState<AppScaffold> createState() => _AppScaffoldState();
 }
 
-class _AppScaffoldState extends State<AppScaffold> {
+class _AppScaffoldState extends ConsumerState<AppScaffold> {
   DateTime? _lastBackPressTime;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: widget.navigationShell.currentIndex);
+  }
+
+  @override
+  void didUpdateWidget(AppScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_pageController.hasClients &&
+        widget.navigationShell.currentIndex != _pageController.page?.round()) {
+      _pageController.animateToPage(
+        widget.navigationShell.currentIndex,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _handlePopInvoked(bool didPop) {
     if (didPop) return;
 
     // If currently on a non-home tab (Analytics, Wallets, Settings), switch to Home (tab 0)
     if (widget.navigationShell.currentIndex != 0) {
-      widget.navigationShell.goBranch(0);
+      _onNavTapped(0);
       return;
     }
 
@@ -33,10 +63,12 @@ class _AppScaffoldState extends State<AppScaffold> {
     if (_lastBackPressTime == null ||
         now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
       _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text('Press back again to exit'),
-          duration: Duration(seconds: 4),
+          duration: Duration(seconds: 2),
         ),
       );
     } else {
@@ -44,17 +76,43 @@ class _AppScaffoldState extends State<AppScaffold> {
     }
   }
 
+  void _onNavTapped(int index) {
+    HapticFeedback.lightImpact();
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    widget.navigationShell.goBranch(
+      index,
+      initialLocation: index == widget.navigationShell.currentIndex,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentIndex = widget.navigationShell.currentIndex;
+    final palette = ref.watch(activePaletteProvider);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) => _handlePopInvoked(didPop),
       child: Scaffold(
         extendBody: true,
-        body: widget.navigationShell,
+        body: PageView(
+          controller: _pageController,
+          physics: const BouncingScrollPhysics(),
+          onPageChanged: (index) {
+            widget.navigationShell.goBranch(
+              index,
+              initialLocation: false,
+            );
+          },
+          children: widget.children,
+        ),
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -91,6 +149,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                     unselectedIcon: Icons.grid_view_outlined,
                     label: 'Home',
                     isDark: isDark,
+                    palette: palette,
                   ),
 
                   // 2. Analytics Tab (Branch 1)
@@ -101,10 +160,11 @@ class _AppScaffoldState extends State<AppScaffold> {
                     unselectedIcon: Icons.donut_large_outlined,
                     label: 'Analytics',
                     isDark: isDark,
+                    palette: palette,
                   ),
 
                   // 3. Center Floating Elevated (+) Quick Add Button
-                  _buildCenterQuickAddButton(context),
+                  _buildCenterQuickAddButton(context, palette),
 
                   // 4. Wallets Tab (Branch 2)
                   _buildNavItem(
@@ -114,6 +174,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                     unselectedIcon: Icons.account_balance_wallet_outlined,
                     label: 'Wallets',
                     isDark: isDark,
+                    palette: palette,
                   ),
 
                   // 5. Settings Tab (Branch 3)
@@ -124,6 +185,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                     unselectedIcon: Icons.settings_outlined,
                     label: 'Settings',
                     isDark: isDark,
+                    palette: palette,
                   ),
                 ],
               ),
@@ -141,18 +203,13 @@ class _AppScaffoldState extends State<AppScaffold> {
     required IconData unselectedIcon,
     required String label,
     required bool isDark,
+    required AppThemePalette palette,
   }) {
     final isSelected = currentIndex == branchIndex;
 
     return Expanded(
       child: InkWell(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          widget.navigationShell.goBranch(
-            branchIndex,
-            initialLocation: isSelected,
-          );
-        },
+        onTap: () => _onNavTapped(branchIndex),
         borderRadius: BorderRadius.circular(24),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -160,7 +217,7 @@ class _AppScaffoldState extends State<AppScaffold> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.18 : 0.12)
+                ? palette.primary.withValues(alpha: isDark ? 0.18 : 0.12)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
           ),
@@ -172,7 +229,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                 isSelected ? selectedIcon : unselectedIcon,
                 size: 21,
                 color: isSelected
-                    ? AppColors.primaryGreenLight
+                    ? palette.primary
                     : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
               ),
               const SizedBox(height: 2),
@@ -182,7 +239,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                   fontSize: 10.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
-                      ? AppColors.primaryGreenLight
+                      ? palette.primary
                       : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
                 ),
               ),
@@ -193,7 +250,7 @@ class _AppScaffoldState extends State<AppScaffold> {
     );
   }
 
-  Widget _buildCenterQuickAddButton(BuildContext context) {
+  Widget _buildCenterQuickAddButton(BuildContext context, AppThemePalette palette) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Material(
@@ -208,18 +265,18 @@ class _AppScaffoldState extends State<AppScaffold> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF2E7D32),
-                  Color(0xFF4CAF50),
+                  palette.primaryDark,
+                  palette.primary,
                 ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.4),
+                  color: palette.primary.withValues(alpha: 0.4),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

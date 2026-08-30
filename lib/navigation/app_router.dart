@@ -125,9 +125,15 @@ GoRouter createRouter(bool isOnboarded) {
       ),
 
       // 4-Tab Navigation Shell: Home, Analytics, Wallets, Settings
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, state, navigationShell) {
-          return AppScaffold(navigationShell: navigationShell);
+          return navigationShell;
+        },
+        navigatorContainerBuilder: (context, navigationShell, children) {
+          return AppScaffold(
+            navigationShell: navigationShell,
+            children: children,
+          );
         },
         branches: [
           // Tab 1: Home (Branch 0)

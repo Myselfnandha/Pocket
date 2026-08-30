@@ -45,6 +45,25 @@ class SystemWidgetService {
     }
   }
 
+  /// Clears & resets Android Home Screen Widget to zero-state (₹0.00 / No active accounts)
+  static Future<void> clearWidgetData([String currencySymbol = '₹']) async {
+    try {
+      final formattedDate = DateFormat('d MMM').format(DateTime.now());
+      await HomeWidget.saveWidgetData<String>('total_balance', '${currencySymbol}0.00');
+      await HomeWidget.saveWidgetData<String>('today_expense', '${currencySymbol}0.00');
+      await HomeWidget.saveWidgetData<String>('current_date', formattedDate);
+      await HomeWidget.saveWidgetData<String>('accounts_summary', 'No active accounts');
+
+      await HomeWidget.updateWidget(
+        name: androidWidgetName,
+        androidName: androidWidgetName,
+        qualifiedAndroidName: 'com.pocket.pocket.PocketWidgetProvider',
+      );
+    } catch (e) {
+      debugPrint('SystemWidgetService clearWidgetData error: $e');
+    }
+  }
+
   static const MethodChannel _nativeChannel = MethodChannel('com.pocket.pocket/widget_events');
 
   /// Listens for quick action deep links triggered from the Android system home screen widget

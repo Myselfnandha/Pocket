@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/app_providers.dart';
-import '../../theme/app_theme.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -71,8 +70,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final palette = ref.watch(activePaletteProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0E11),
+      backgroundColor: bgColor,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _navigateNow, // Instant tap-to-skip
@@ -91,7 +94,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Radial Ambient Neon Glow Halo
+                          // Radial Ambient Theme-Adaptive Glow Halo
                           Container(
                             width: 130,
                             height: 130,
@@ -99,7 +102,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primaryGreenLight.withValues(
+                                  color: palette.primary.withValues(
                                     alpha: 0.38 * _glowAnimation.value,
                                   ),
                                   blurRadius: 36,
@@ -108,19 +111,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               ],
                             ),
                           ),
-                          // Emerald Neon App Icon Squircle
+                          // App Icon Squircle with Theme-Adaptive Border
                           Container(
                             width: 90,
                             height: 90,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(22),
                               border: Border.all(
-                                color: AppColors.primaryGreenLight.withValues(alpha: 0.55),
+                                color: palette.primary.withValues(alpha: 0.55),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.6),
+                                  color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.12),
                                   blurRadius: 16,
                                   offset: const Offset(0, 8),
                                 ),
@@ -132,10 +135,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 'assets/icons/app_icon.png',
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) => Container(
-                                  color: const Color(0xFF131313),
-                                  child: const Icon(
+                                  color: isDark ? const Color(0xFF131313) : const Color(0xFFEEEEEE),
+                                  child: Icon(
                                     Icons.account_balance_wallet_rounded,
-                                    color: AppColors.primaryGreenLight,
+                                    color: palette.primary,
                                     size: 44,
                                   ),
                                 ),
@@ -147,12 +150,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     const SizedBox(height: 20),
 
-                    // Brand Title
+                    // Theme-Adaptive Brand Title
                     ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
+                      shaderCallback: (bounds) => LinearGradient(
                         colors: [
-                          Colors.white,
-                          AppColors.primaryGreenLight,
+                          isDark ? Colors.white : Colors.black87,
+                          palette.primary,
                         ],
                       ).createShader(bounds),
                       child: const Text(

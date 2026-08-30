@@ -450,10 +450,12 @@ class TransactionDetailScreen extends ConsumerWidget {
               ref.read(transactionsProvider.notifier).deleteTransaction(tx.id);
               Navigator.pop(ctx);
               context.pop();
+              ScaffoldMessenger.of(context).clearSnackBars();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
+                  behavior: SnackBarBehavior.floating,
                   content: Text('Deleted "${tx.title}"'),
-                  duration: const Duration(seconds: 4),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             },

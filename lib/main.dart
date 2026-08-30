@@ -130,18 +130,38 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
     super.dispose();
   }
 
+  void _syncWidget() {
+    final totalBalance = ref.read(totalBalanceProvider);
+    final monthlyStats = ref.read(monthlyStatsProvider);
+    final settings = ref.read(settingsProvider);
+    final wallets = ref.read(walletsWithBalancesProvider);
+
+    SystemWidgetService.updateWidgetData(
+      totalBalance: totalBalance,
+      todayExpense: monthlyStats.todayExpense,
+      currencySymbol: settings.currencySymbol,
+      wallets: wallets,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(effectiveThemeModeProvider);
     final darkTheme = ref.watch(activeDarkThemeProvider);
     final lightTheme = ref.watch(activeLightThemeProvider);
 
+    // Reactive listeners: sync Android System Widget immediately on ANY state mutation
+    ref.listen<double>(totalBalanceProvider, (prev, next) => _syncWidget());
+    ref.listen<MonthlyStats>(monthlyStatsProvider, (prev, next) => _syncWidget());
+    ref.listen(walletsWithBalancesProvider, (prev, next) => _syncWidget());
+    ref.listen(settingsProvider, (prev, next) => _syncWidget());
+
     final totalBalance = ref.watch(totalBalanceProvider);
     final monthlyStats = ref.watch(monthlyStatsProvider);
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsWithBalancesProvider);
 
-    // Sync real-time balance, today's spend and active accounts to Android System Home Screen App Widget
+    // Initial sync
     SystemWidgetService.updateWidgetData(
       totalBalance: totalBalance,
       todayExpense: monthlyStats.todayExpense,

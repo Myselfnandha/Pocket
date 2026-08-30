@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
 import '../../services/supabase_sync_service.dart';
+import '../../services/system_widget_service.dart';
 import '../../theme/app_theme.dart';
 
 class DataManagementScreen extends ConsumerStatefulWidget {
@@ -44,85 +45,46 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     final recurring = ref.watch(recurringRulesProvider);
     final backupService = ref.watch(backupServiceProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final syncService = SupabaseSyncService();
+    final user = syncService.currentUser;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Data & Cloud Sync'),
+        elevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // 1. Local Database Status Card
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.storage_rounded, color: AppColors.primaryGreenLight, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Local Encrypted Database',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'All data is stored locally on this device',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMetric('Transactions', '${transactions.length}', isDark),
-                    _buildMetric('Wallets', '${wallets.length}', isDark),
-                    _buildMetric('Categories', '${categories.length}', isDark),
-                    _buildMetric('Recurring', '${recurring.length}', isDark),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // 2. Supabase Free Cloud Database Sync
-          _buildSectionHeader('SUPABASE FREE CLOUD DATABASE'),
+          // 1. Overview Metric Card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMetric('Transactions', '${transactions.length}', isDark),
+                _buildMetric('Wallets', '${wallets.length}', isDark),
+                _buildMetric('Categories', '${categories.length}', isDark),
+                _buildMetric('Recurring', '${recurring.length}', isDark),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 2. Section: Cloud Sync & Backup
+          _buildSectionHeader('CLOUD BACKUP & GOOGLE SYNC'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isSupabaseConnected
                     ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
@@ -143,7 +105,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _isSupabaseConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                        _isSupabaseConnected ? Icons.cloud_done_rounded : Icons.cloud_outlined,
                         color: _isSupabaseConnected ? AppColors.primaryGreenLight : Colors.grey,
                         size: 22,
                       ),
@@ -156,7 +118,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                           Row(
                             children: [
                               Text(
-                                'Supabase PostgreSQL Cloud',
+                                user != null ? 'Google Cloud Sync' : 'Cloud Database Sync',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -173,7 +135,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  _isSupabaseConnected ? 'CONNECTED' : 'OFFLINE',
+                                  _isSupabaseConnected ? (user != null ? 'GOOGLE AUTH' : 'CONNECTED') : 'OFFLINE',
                                   style: TextStyle(
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.w800,
@@ -185,9 +147,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _lastSyncTime != null
-                                ? 'Last synced: ${_lastSyncTime!.substring(0, 16).replaceAll('T', ' ')}'
-                                : 'Connect free Supabase database to sync across devices',
+                            user?.email != null
+                                ? 'Account: ${user!.email}'
+                                : (_lastSyncTime != null
+                                    ? 'Last synced: ${_lastSyncTime!.substring(0, 16).replaceAll('T', ' ')}'
+                                    : '1-Tap Google Sign-in to sync database across devices'),
                             style: TextStyle(
                               fontSize: 11.5,
                               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -201,7 +165,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                 const SizedBox(height: 14),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
                 const SizedBox(height: 12),
-                if (!_isSupabaseConnected)
+                if (!_isSupabaseConnected) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -212,11 +176,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: _showSupabaseConfigDialog,
-                      icon: const Icon(Icons.link_rounded, size: 18),
-                      label: const Text('Connect Supabase Database', style: TextStyle(fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.cloud_sync_rounded, size: 18),
+                      label: const Text('Connect Free Cloud Database', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                  )
-                else ...[
+                  ),
+                ] else ...[
                   Row(
                     children: [
                       Expanded(
@@ -251,13 +215,20 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _disconnectSupabase,
-                      icon: const Icon(Icons.link_off_rounded, size: 14, color: AppColors.expenseRed),
-                      label: const Text('Disconnect Database', style: TextStyle(fontSize: 11, color: AppColors.expenseRed)),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _signInWithGoogle,
+                        icon: const Icon(Icons.account_circle_outlined, size: 14, color: AppColors.infoBlue),
+                        label: Text(user != null ? 'Switch Google Account' : 'Sign In With Google', style: const TextStyle(fontSize: 11, color: AppColors.infoBlue)),
+                      ),
+                      TextButton.icon(
+                        onPressed: _disconnectSupabase,
+                        icon: const Icon(Icons.link_off_rounded, size: 14, color: AppColors.expenseRed),
+                        label: const Text('Disconnect', style: TextStyle(fontSize: 11, color: AppColors.expenseRed)),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -301,7 +272,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           behavior: SnackBarBehavior.floating,
-                          content: Text('Failed to export backup: $e'),
+                          content: Text('Export failed: $e'),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -310,9 +281,9 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                 ),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
                 ListTile(
-                  leading: const Icon(Icons.folder_open_rounded, color: AppColors.infoBlue),
-                  title: const Text('Restore Database from Backup', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Restore complete state from a previously saved Pocket JSON backup'),
+                  leading: const Icon(Icons.restore_page_rounded, color: AppColors.infoBlue),
+                  title: const Text('Restore from JSON Backup', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Import and replace current data with a saved .json file'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _confirmRestore(context, ref, backupService),
                 ),
@@ -321,8 +292,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           ),
           const SizedBox(height: 24),
 
-          // 4. Section: Data Import & Export
-          _buildSectionHeader('IMPORT & EXPORT'),
+          // 4. Section: CSV Spreadsheets
+          _buildSectionHeader('CSV SPREADSHEETS (EXCEL / SHEETS)'),
           Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
@@ -334,39 +305,40 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.file_upload_outlined, color: AppColors.accentOrange),
-                  title: const Text('Import CSV Transactions', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Import transactions from a spreadsheet CSV file'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _pickAndImportCsv(context, ref, backupService),
+                  leading: const Icon(Icons.table_chart_outlined, color: AppColors.warningAmber),
+                  title: const Text('Export Transactions (CSV)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Export all transaction records for spreadsheets'),
+                  trailing: const Icon(Icons.share_outlined, size: 20),
+                  onTap: () => _exportAllCsv(context, ref),
                 ),
                 Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
                 ListTile(
-                  leading: const Icon(Icons.table_chart_outlined, color: AppColors.primaryGreenLight),
-                  title: const Text('Export All to CSV', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('Export all ${transactions.length} transactions as spreadsheet'),
-                  trailing: const Icon(Icons.share_outlined, size: 20),
-                  onTap: () => _exportAllCsv(context, ref),
+                  leading: const Icon(Icons.file_upload_outlined, color: AppColors.warningAmber),
+                  title: const Text('Import Transactions (CSV)', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Import records from bank/fintech CSV files'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _pickAndImportCsv(context, ref, backupService),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
 
-          // 5. Section: Danger Zone
+          // 5. Danger Zone: Erase Data
           _buildSectionHeader('DANGER ZONE'),
           Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.expenseRed.withValues(alpha: 0.3),
+                color: AppColors.expenseRed.withValues(alpha: 0.5),
               ),
             ),
             child: ListTile(
               leading: const Icon(Icons.delete_forever_rounded, color: AppColors.expenseRed),
-              title: const Text('Reset All Data', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.expenseRed)),
-              subtitle: const Text('Erase all transactions, wallets, and reset app to initial state'),
+              title: const Text('Reset All Data', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.expenseRed)),
+              subtitle: const Text('Erase all transactions, wallets, and settings permanently'),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.expenseRed),
               onTap: () => _confirmResetAllData(context, ref),
             ),
           ),
@@ -390,7 +362,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           children: [
             Icon(Icons.cloud_sync_rounded, color: AppColors.primaryGreenLight),
             SizedBox(width: 10),
-            Text('Connect Supabase Cloud', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('Connect Cloud Sync', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -398,7 +370,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter your free Supabase project credentials to enable instant cloud backup & sync:',
+              'Enter your free Supabase project credentials to enable instant multi-device backup & sync:',
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 16),
@@ -446,7 +418,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
-                  content: Text(success ? 'Connected to Supabase Cloud ✓' : 'Failed to connect. Check credentials.'),
+                  content: Text(success ? 'Connected to Cloud Database ✓' : 'Failed to connect. Check credentials.'),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -456,6 +428,21 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _signInWithGoogle() async {
+    final success = await SupabaseSyncService().signInWithGoogle();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Opening Google Sign-in browser...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _syncToSupabase() async {
@@ -469,7 +456,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Synced database to Supabase Cloud ✓' : 'Sync failed. Check connection or table setup.'),
+          content: Text(success ? 'Synced database to Cloud ✓' : 'Sync failed. Check connection or permissions.'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -480,20 +467,26 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     setState(() => _isSyncing = true);
     final storage = ref.read(storageServiceProvider);
     final success = await SupabaseSyncService().restoreFromCloud(storage);
+
     if (success) {
-      await ref.read(transactionsProvider.notifier).refreshFromDisk();
-      await ref.read(walletsProvider.notifier).refreshFromDisk();
-      await ref.read(categoriesProvider.notifier).refreshFromDisk();
-      await ref.read(notificationsProvider.notifier).refreshFromDisk();
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(walletsProvider);
+      ref.invalidate(categoriesProvider);
+      ref.invalidate(settingsProvider);
+      ref.invalidate(recurringRulesProvider);
+      ref.invalidate(debtsProvider);
+      ref.invalidate(categoryBudgetsProvider);
     }
+
     await _checkSupabaseStatus();
+
     if (mounted) {
       setState(() => _isSyncing = false);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Restored database from Supabase Cloud ✓' : 'Restore failed. No cloud backup found.'),
+          content: Text(success ? 'Restored all data from Cloud ✓' : 'Restore failed. No cloud backup found.'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -508,7 +501,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Disconnected from Supabase Cloud'),
+          content: Text('Disconnected from Cloud Database'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -568,21 +561,26 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Restore Database?'),
-        content: const Text('This will overwrite all existing local transactions, wallets, and settings with the backup file data. Continue?'),
+        content: const Text('This will overwrite existing local data with the selected backup file.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.infoBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreenLight,
+              foregroundColor: Colors.black,
+            ),
             onPressed: () async {
               final success = await backupService.restoreFromJsonString(content);
               if (ctx.mounted) Navigator.pop(ctx);
+
               if (success) {
                 ref.invalidate(transactionsProvider);
                 ref.invalidate(walletsProvider);
                 ref.invalidate(categoriesProvider);
                 ref.invalidate(settingsProvider);
                 ref.invalidate(recurringRulesProvider);
-                ref.invalidate(notificationsProvider);
+                ref.invalidate(debtsProvider);
+                ref.invalidate(categoryBudgetsProvider);
 
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).clearSnackBars();
@@ -668,7 +666,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.expenseRed, foregroundColor: Colors.white),
             onPressed: () async {
               final storage = ref.read(storageServiceProvider);
+              final settings = ref.read(settingsProvider);
               await storage.clearAllData();
+
+              // Instantly clear & reset Android System Widget to ₹0.00 zero state
+              await SystemWidgetService.clearWidgetData(settings.currencySymbol);
 
               ref.invalidate(transactionsProvider);
               ref.invalidate(walletsProvider);
