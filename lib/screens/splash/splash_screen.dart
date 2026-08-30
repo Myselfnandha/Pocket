@@ -25,10 +25,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void initState() {
     super.initState();
 
-    // Snappy, ultra-fast 350ms animation
+    // Normal-fast 600ms smooth animation
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 600),
     );
 
     _scaleAnimation = CurvedAnimation(
@@ -38,20 +38,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeIn,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
     );
 
     _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeInOutCubic,
       ),
     );
 
     _controller.forward();
 
-    // Fast 450ms transition into Home/Onboarding
-    _timer = Timer(const Duration(milliseconds: 450), _navigateNow);
+    // Smooth 800ms transition into Home/Onboarding
+    _timer = Timer(const Duration(milliseconds: 800), _navigateNow);
   }
 
   void _navigateNow() {

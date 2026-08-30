@@ -77,10 +77,14 @@ class TransactionTile extends ConsumerWidget {
       onDismissed: (_) {
         onDelete?.call();
         ref.read(transactionsProvider.notifier).deleteTransaction(transaction.id);
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: const Color(0xFF1E1E1E),
             content: Text('Deleted "${transaction.title}"'),
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 2),
             action: SnackBarAction(
               label: 'Undo',
               textColor: AppColors.primaryGreenLight,

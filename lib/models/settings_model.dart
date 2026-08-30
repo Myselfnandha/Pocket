@@ -1,6 +1,15 @@
 enum AppThemeMode { autoTime, manual }
 enum ManualThemeStyle { light, dark, pureBlack }
 
+enum AppThemePreset {
+  emerald,
+  cyberpunk,
+  sapphire,
+  sunset,
+  rose,
+  custom,
+}
+
 class UserSettingsModel {
   final String userName;
   final String? userPhoneNumber;
@@ -11,6 +20,10 @@ class UserSettingsModel {
   final bool isPureBlackEnabled;
   final bool showCategoryTags;
   final bool isOnboarded;
+
+  // Custom Theming
+  final AppThemePreset themePreset;
+  final int customAccentColorValue;
 
   // Notification Preferences
   final bool notifyBudgetNearLimit;
@@ -31,6 +44,8 @@ class UserSettingsModel {
     this.isPureBlackEnabled = true,
     this.showCategoryTags = true,
     this.isOnboarded = false,
+    this.themePreset = AppThemePreset.emerald,
+    this.customAccentColorValue = 0xFF4CAF50,
     this.notifyBudgetNearLimit = true,
     this.notifyBudgetExceeded = true,
     this.notifyRecurringDue = true,
@@ -50,6 +65,8 @@ class UserSettingsModel {
     bool? isPureBlackEnabled,
     bool? showCategoryTags,
     bool? isOnboarded,
+    AppThemePreset? themePreset,
+    int? customAccentColorValue,
     bool? notifyBudgetNearLimit,
     bool? notifyBudgetExceeded,
     bool? notifyRecurringDue,
@@ -68,6 +85,8 @@ class UserSettingsModel {
       isPureBlackEnabled: isPureBlackEnabled ?? this.isPureBlackEnabled,
       showCategoryTags: showCategoryTags ?? this.showCategoryTags,
       isOnboarded: isOnboarded ?? this.isOnboarded,
+      themePreset: themePreset ?? this.themePreset,
+      customAccentColorValue: customAccentColorValue ?? this.customAccentColorValue,
       notifyBudgetNearLimit: notifyBudgetNearLimit ?? this.notifyBudgetNearLimit,
       notifyBudgetExceeded: notifyBudgetExceeded ?? this.notifyBudgetExceeded,
       notifyRecurringDue: notifyRecurringDue ?? this.notifyRecurringDue,
@@ -88,6 +107,8 @@ class UserSettingsModel {
         'isPureBlackEnabled': isPureBlackEnabled,
         'showCategoryTags': showCategoryTags,
         'isOnboarded': isOnboarded,
+        'themePreset': themePreset.name,
+        'customAccentColorValue': customAccentColorValue,
         'notifyBudgetNearLimit': notifyBudgetNearLimit,
         'notifyBudgetExceeded': notifyBudgetExceeded,
         'notifyRecurringDue': notifyRecurringDue,
@@ -112,6 +133,10 @@ class UserSettingsModel {
         isPureBlackEnabled: json['isPureBlackEnabled'] as bool? ?? true,
         showCategoryTags: json['showCategoryTags'] as bool? ?? true,
         isOnboarded: json['isOnboarded'] as bool? ?? false,
+        themePreset: AppThemePreset.values.byName(
+          json['themePreset'] as String? ?? 'emerald',
+        ),
+        customAccentColorValue: json['customAccentColorValue'] as int? ?? 0xFF4CAF50,
         notifyBudgetNearLimit: json['notifyBudgetNearLimit'] as bool? ?? true,
         notifyBudgetExceeded: json['notifyBudgetExceeded'] as bool? ?? true,
         notifyRecurringDue: json['notifyRecurringDue'] as bool? ?? true,

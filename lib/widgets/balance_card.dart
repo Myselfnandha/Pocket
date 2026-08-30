@@ -14,6 +14,7 @@ class BalanceCard extends ConsumerWidget {
     final monthlyStats = ref.watch(monthlyStatsProvider);
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsProvider);
+    final palette = ref.watch(activePaletteProvider);
 
     final currencyFormat = NumberFormat('#,##0.00');
     final compactFormat = NumberFormat.compact();
@@ -27,18 +28,18 @@ class BalanceCard extends ConsumerWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1B5E20), // Dark green
-            Color(0xFF2E7D32), // Forest green
-            Color(0xFF388E3C), // Medium green
+            palette.surfaceContainer,
+            palette.primaryDark,
+            palette.primary,
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2E7D32).withValues(alpha: 0.35),
+            color: palette.primaryDark.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),

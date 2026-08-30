@@ -88,12 +88,31 @@ final effectiveThemeModeProvider = Provider<ThemeMode>((ref) {
   }
 });
 
+final activePaletteProvider = Provider<AppThemePalette>((ref) {
+  final settings = ref.watch(settingsProvider);
+  return AppThemePalette.fromSettings(
+    preset: settings.themePreset,
+    customColorValue: settings.customAccentColorValue,
+  );
+});
+
+final activeAccentColorProvider = Provider<Color>((ref) {
+  final palette = ref.watch(activePaletteProvider);
+  return palette.primary;
+});
+
 final activeDarkThemeProvider = Provider<ThemeData>((ref) {
   final settings = ref.watch(settingsProvider);
+  final palette = ref.watch(activePaletteProvider);
   final isAmoled = settings.isPureBlackEnabled ||
       (settings.themeMode == AppThemeMode.manual &&
           settings.manualThemeStyle == ManualThemeStyle.pureBlack);
-  return AppTheme.getDarkTheme(isPureBlack: isAmoled);
+  return AppTheme.getDarkTheme(isPureBlack: isAmoled, palette: palette);
+});
+
+final activeLightThemeProvider = Provider<ThemeData>((ref) {
+  final palette = ref.watch(activePaletteProvider);
+  return AppTheme.getLightTheme(palette: palette);
 });
 
 // --- Categories Provider ---
@@ -119,6 +138,11 @@ class CategoriesNotifier extends StateNotifier<List<CategoryModel>> {
   Future<void> deleteCategory(String id) async {
     state = state.where((cat) => cat.id != id).toList();
     await _storage.saveCategories(state);
+  }
+
+  Future<void> refreshFromDisk() async {
+    await _storage.reload();
+    state = _storage.getCategories();
   }
 }
 
@@ -151,6 +175,11 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
   Future<void> deleteWallet(String id) async {
     state = state.where((w) => w.id != id).toList();
     await _storage.saveWallets(state);
+  }
+
+  Future<void> refreshFromDisk() async {
+    await _storage.reload();
+    state = _storage.getWallets();
   }
 }
 
@@ -234,6 +263,11 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
   Future<void> deleteTransaction(String id) async {
     state = state.where((tx) => tx.id != id).toList();
     await _storage.saveTransactions(state);
+  }
+
+  Future<void> refreshFromDisk() async {
+    await _storage.reload();
+    state = _storage.getTransactions();
   }
 }
 
@@ -321,6 +355,11 @@ class NotificationsNotifier extends StateNotifier<List<AppNotificationModel>> {
   Future<void> clearAll() async {
     state = [];
     await _storage.saveNotifications([]);
+  }
+
+  Future<void> refreshFromDisk() async {
+    await _storage.reload();
+    state = _storage.getNotifications();
   }
 }
 

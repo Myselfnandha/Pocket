@@ -6,9 +6,9 @@ import 'providers/app_providers.dart';
 import 'services/notification_service.dart';
 import 'services/shared_transaction_handler.dart';
 import 'services/storage_service.dart';
+import 'services/supabase_sync_service.dart';
 import 'services/system_widget_service.dart';
 import 'services/upi_screenshot_parser_service.dart';
-import 'theme/app_theme.dart';
 import 'widgets/quick_add_transaction_dialog.dart';
 
 void main() async {
@@ -16,6 +16,7 @@ void main() async {
 
   final storageService = await StorageService.init();
   await NotificationService().init();
+  await SupabaseSyncService().init();
 
   // Process any due recurring transactions automatically
   await storageService.processDueRecurringRules();
@@ -37,7 +38,7 @@ class PocketApp extends ConsumerStatefulWidget {
   ConsumerState<PocketApp> createState() => _PocketAppState();
 }
 
-class _PocketAppState extends ConsumerState<PocketApp> {
+class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserver {
   late final _router = createRouter(
     ref.read(settingsProvider).isOnboarded,
   );
@@ -45,6 +46,7 @@ class _PocketAppState extends ConsumerState<PocketApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     // 1. Android System Home Screen App Widget Launch Listener
     SystemWidgetService.registerWidgetLaunchCallback((uri) {
@@ -57,6 +59,16 @@ class _PocketAppState extends ConsumerState<PocketApp> {
         _handleSharedTransaction(parsed);
       },
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh transactions and wallets whenever returning from widget popup or notification
+      ref.read(transactionsProvider.notifier).refreshFromDisk();
+      ref.read(walletsProvider.notifier).refreshFromDisk();
+      ref.read(notificationsProvider.notifier).refreshFromDisk();
+    }
   }
 
   void _handleWidgetLaunch(Uri uri) {
@@ -112,6 +124,7 @@ class _PocketAppState extends ConsumerState<PocketApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     SystemWidgetService.dispose();
     SharedTransactionHandler.dispose();
     super.dispose();
@@ -121,6 +134,7 @@ class _PocketAppState extends ConsumerState<PocketApp> {
   Widget build(BuildContext context) {
     final themeMode = ref.watch(effectiveThemeModeProvider);
     final darkTheme = ref.watch(activeDarkThemeProvider);
+    final lightTheme = ref.watch(activeLightThemeProvider);
 
     final totalBalance = ref.watch(totalBalanceProvider);
     final monthlyStats = ref.watch(monthlyStatsProvider);
@@ -138,7 +152,7 @@ class _PocketAppState extends ConsumerState<PocketApp> {
     return MaterialApp.router(
       title: 'Pocket',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: _router,

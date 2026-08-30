@@ -1,8 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/settings_model.dart';
+
+class AppThemePalette {
+  final String name;
+  final Color primary;
+  final Color primaryDark;
+  final Color accent;
+  final Color surfaceContainer;
+
+  const AppThemePalette({
+    required this.name,
+    required this.primary,
+    required this.primaryDark,
+    required this.accent,
+    this.surfaceContainer = const Color(0xFF1B5E20),
+  });
+
+  static const emerald = AppThemePalette(
+    name: 'Emerald Neon',
+    primary: Color(0xFF4CAF50),
+    primaryDark: Color(0xFF2E7D32),
+    accent: Color(0xFFFFB74D),
+    surfaceContainer: Color(0xFF1B5E20),
+  );
+
+  static const cyberpunk = AppThemePalette(
+    name: 'Cyberpunk Purple',
+    primary: Color(0xFFB388FF),
+    primaryDark: Color(0xFF7C4DFF),
+    accent: Color(0xFF00E5FF),
+    surfaceContainer: Color(0xFF311B92),
+  );
+
+  static const sapphire = AppThemePalette(
+    name: 'Midnight Sapphire',
+    primary: Color(0xFF29B6F6),
+    primaryDark: Color(0xFF0288D1),
+    accent: Color(0xFFFFD54F),
+    surfaceContainer: Color(0xFF01579B),
+  );
+
+  static const sunset = AppThemePalette(
+    name: 'Sunset Gold',
+    primary: Color(0xFFFFB300),
+    primaryDark: Color(0xFFFF8F00),
+    accent: Color(0xFFFF5252),
+    surfaceContainer: Color(0xFFE65100),
+  );
+
+  static const rose = AppThemePalette(
+    name: 'Rose Quartz',
+    primary: Color(0xFFFF4081),
+    primaryDark: Color(0xFFC2185B),
+    accent: Color(0xFF00E676),
+    surfaceContainer: Color(0xFF880E4F),
+  );
+
+  static AppThemePalette fromSettings({
+    required AppThemePreset preset,
+    int? customColorValue,
+  }) {
+    switch (preset) {
+      case AppThemePreset.emerald:
+        return emerald;
+      case AppThemePreset.cyberpunk:
+        return cyberpunk;
+      case AppThemePreset.sapphire:
+        return sapphire;
+      case AppThemePreset.sunset:
+        return sunset;
+      case AppThemePreset.rose:
+        return rose;
+      case AppThemePreset.custom:
+        final customColor = customColorValue != null ? Color(customColorValue) : const Color(0xFF4CAF50);
+        final hsl = HSLColor.fromColor(customColor);
+        final darkColor = hsl.withLightness((hsl.lightness - 0.18).clamp(0.0, 1.0)).toColor();
+        final containerColor = hsl.withLightness((hsl.lightness - 0.28).clamp(0.0, 1.0)).toColor();
+        final accentColor = hsl.withHue((hsl.hue + 180) % 360).toColor();
+        return AppThemePalette(
+          name: 'Custom Accent',
+          primary: customColor,
+          primaryDark: darkColor,
+          accent: accentColor,
+          surfaceContainer: containerColor,
+        );
+    }
+  }
+}
 
 class AppColors {
-  // Brand colors
+  // Brand colors default
   static const Color primaryGreen = Color(0xFF2E7D32);
   static const Color primaryGreenLight = Color(0xFF4CAF50);
   static const Color accentOrange = Color(0xFFFF9800);
@@ -35,7 +123,10 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData getDarkTheme({bool isPureBlack = true}) {
+  static ThemeData getDarkTheme({
+    bool isPureBlack = true,
+    AppThemePalette palette = AppThemePalette.emerald,
+  }) {
     final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
     final bgColor = isPureBlack ? AppColors.pureBlackBackground : AppColors.darkBackground;
     final surfaceColor = isPureBlack ? const Color(0xFF121212) : AppColors.darkSurface;
@@ -47,11 +138,11 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: bgColor,
       colorScheme: ColorScheme.dark(
-        primary: AppColors.primaryGreenLight,
+        primary: palette.primary,
         onPrimary: Colors.black,
-        primaryContainer: const Color(0xFF1B5E20),
+        primaryContainer: palette.surfaceContainer,
         onPrimaryContainer: Colors.white,
-        secondary: AppColors.accentOrangeLight,
+        secondary: palette.accent,
         onSecondary: Colors.black,
         surface: surfaceColor,
         onSurface: AppColors.darkTextPrimary,
@@ -103,7 +194,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: surfaceColor,
-        selectedItemColor: AppColors.primaryGreenLight,
+        selectedItemColor: palette.primary,
         unselectedItemColor: AppColors.darkTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -121,8 +212,8 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.primaryGreenLight,
+          borderSide: BorderSide(
+            color: palette.primary,
             width: 1.5,
           ),
         ),
@@ -130,7 +221,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGreenLight,
+          backgroundColor: palette.primary,
           foregroundColor: Colors.black,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -152,19 +243,21 @@ class AppTheme {
   static ThemeData get darkTheme => getDarkTheme(isPureBlack: false);
   static ThemeData get pureBlackTheme => getDarkTheme(isPureBlack: true);
 
-  static ThemeData get lightTheme {
+  static ThemeData getLightTheme({
+    AppThemePalette palette = AppThemePalette.emerald,
+  }) {
     final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.light().textTheme);
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBackground,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryGreen,
+      colorScheme: ColorScheme.light(
+        primary: palette.primaryDark,
         onPrimary: Colors.white,
-        primaryContainer: Color(0xFFE8F5E9),
-        onPrimaryContainer: AppColors.primaryGreen,
-        secondary: AppColors.accentOrange,
+        primaryContainer: palette.primary.withValues(alpha: 0.15),
+        onPrimaryContainer: palette.primaryDark,
+        secondary: palette.accent,
         onSecondary: Colors.white,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
@@ -215,9 +308,9 @@ class AppTheme {
           side: const BorderSide(color: AppColors.lightCardBorder, width: 1),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.lightSurface,
-        selectedItemColor: AppColors.primaryGreen,
+        selectedItemColor: palette.primaryDark,
         unselectedItemColor: AppColors.lightTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -235,8 +328,8 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.primaryGreen,
+          borderSide: BorderSide(
+            color: palette.primaryDark,
             width: 1.5,
           ),
         ),
@@ -244,7 +337,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGreen,
+          backgroundColor: palette.primaryDark,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -262,4 +355,6 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get lightTheme => getLightTheme();
 }

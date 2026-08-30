@@ -31,6 +31,10 @@ class StorageService {
     return service;
   }
 
+  Future<void> reload() async {
+    await _prefs.reload();
+  }
+
   // --- Transactions ---
 
   List<TransactionModel> getTransactions() {
@@ -332,5 +336,38 @@ class StorageService {
     await saveNotifications([]);
     await saveDebts([]);
     await saveCategoryBudgets([]);
+  }
+
+  Future<void> restoreDatabase(Map<String, dynamic> data) async {
+    if (data['transactions'] is List) {
+      final list = (data['transactions'] as List)
+          .map((e) => TransactionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveTransactions(list);
+    }
+    if (data['wallets'] is List) {
+      final list = (data['wallets'] as List)
+          .map((e) => WalletModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveWallets(list);
+    }
+    if (data['categories'] is List) {
+      final list = (data['categories'] as List)
+          .map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveCategories(list);
+    }
+    if (data['debts'] is List) {
+      final list = (data['debts'] as List)
+          .map((e) => DebtModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveDebts(list);
+    }
+    if (data['budgets'] is List) {
+      final list = (data['budgets'] as List)
+          .map((e) => CategoryBudgetModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await saveCategoryBudgets(list);
+    }
   }
 }

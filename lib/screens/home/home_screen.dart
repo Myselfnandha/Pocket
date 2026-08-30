@@ -25,6 +25,7 @@ class HomeScreen extends ConsumerWidget {
         titleSpacing: 16,
         title: Consumer(
           builder: (context, ref, child) {
+            final palette = ref.watch(activePaletteProvider);
             return InkWell(
               onTap: () => context.push('/settings'),
               borderRadius: BorderRadius.circular(20),
@@ -36,10 +37,10 @@ class HomeScreen extends ConsumerWidget {
                     Container(
                       width: 38,
                       height: 38,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [AppColors.primaryGreen, AppColors.primaryGreenLight],
+                          colors: [palette.primaryDark, palette.primary],
                         ),
                       ),
                       alignment: Alignment.center,

@@ -397,53 +397,84 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                child: InkWell(
+                  onTap: () {
+                    final daysElapsed = _currentMonth.year == now.year && _currentMonth.month == now.month
+                        ? now.day
+                        : DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month);
+                    final totalDays = DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month);
+                    final avgDaily = daysElapsed > 0 ? totalExpense / daysElapsed : 0.0;
+                    final projectedTotal = avgDaily * totalDays;
+                    _showDailyAvgSpendDialog(
+                      context,
+                      totalExpense: totalExpense,
+                      daysElapsed: daysElapsed,
+                      totalDays: totalDays,
+                      avgDaily: avgDaily,
+                      projectedTotal: projectedTotal,
+                      currencySymbol: settings.currencySymbol,
+                      isCurrentMonth: _currentMonth.year == now.year && _currentMonth.month == now.month,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(7),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentOrange.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentOrange.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.local_fire_department_rounded, size: 16, color: AppColors.accentOrange),
                         ),
-                        child: const Icon(Icons.local_fire_department_rounded, size: 16, color: AppColors.accentOrange),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Daily Average',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Daily Avg Spend',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 11,
+                                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${settings.currencySymbol}${currencyFormat.format(_currentMonth.year == now.year && _currentMonth.month == now.month ? (now.day > 0 ? totalExpense / now.day : 0.0) : (DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) > 0 ? totalExpense / DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) : 0.0))}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              const SizedBox(height: 2),
+                              Text(
+                                '${settings.currencySymbol}${currencyFormat.format(_currentMonth.year == now.year && _currentMonth.month == now.month ? (now.day > 0 ? totalExpense / now.day : 0.0) : (DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) > 0 ? totalExpense / DateUtils.getDaysInMonth(_currentMonth.year, _currentMonth.month) : 0.0))}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1341,6 +1372,129 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     );
 
     await Printing.sharePdf(bytes: await pdf.save(), filename: 'Pocket_Report_${DateFormat('yyyy_MM').format(_currentMonth)}.pdf');
+  }
+
+  void _showDailyAvgSpendDialog(
+    BuildContext context, {
+    required double totalExpense,
+    required int daysElapsed,
+    required int totalDays,
+    required double avgDaily,
+    required double projectedTotal,
+    required String currencySymbol,
+    required bool isCurrentMonth,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currencyFormat = NumberFormat('#,##0.00');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.accentOrange.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.local_fire_department_rounded, color: AppColors.accentOrange, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('Daily Avg Spend', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isCurrentMonth
+                  ? 'Your daily spending speed for the current month so far:'
+                  : 'Your daily spending rate across the entire month:',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF222222) : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Month Expenses:'),
+                      Text(
+                        '$currencySymbol${currencyFormat.format(totalExpense)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.expenseRed),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(isCurrentMonth ? 'Days Elapsed:' : 'Total Days:'),
+                      Text(
+                        '$daysElapsed days',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Daily Burning Rate:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '$currencySymbol${currencyFormat.format(avgDaily)} / day',
+                        style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.accentOrange, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (isCurrentMonth) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.infoBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_graph_rounded, size: 16, color: AppColors.infoBlue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Projected Month-End Spend: $currencySymbol${currencyFormat.format(projectedTotal)}',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.infoBlue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryGreenLight)),
+          ),
+        ],
+      ),
+    );
   }
 }
 

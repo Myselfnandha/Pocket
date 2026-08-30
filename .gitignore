@@ -41,3 +41,5 @@ app.*.map.json
 !android/app/pocket-release-key.jks
 *.keystore
 key.properties
+*Development_Export.md
+docs/*

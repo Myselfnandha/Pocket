@@ -116,9 +116,37 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsGroup(
             isDark: isDark,
             children: [
+              Consumer(
+                builder: (context, ref, child) {
+                  final activePalette = ref.watch(activePaletteProvider);
+                  return ListTile(
+                    leading: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: activePalette.primary,
+                        boxShadow: [
+                          BoxShadow(
+                            color: activePalette.primary.withValues(alpha: 0.5),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+                      ),
+                    ),
+                    title: const Text('Theme & Accent Palette', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('${activePalette.name} (5 Presets + Custom Color)'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _showThemeStudioModal(context, ref, settings),
+                  );
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
-                leading: const Icon(Icons.palette_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                leading: const Icon(Icons.brightness_medium_rounded, color: AppColors.infoBlue),
+                title: const Text('Display Mode', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   settings.themeMode == AppThemeMode.autoTime
                       ? 'Auto Mode (Switches Light/Dark based on time of day)'
@@ -194,7 +222,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.3.3 • Material 3 Transaction Tracker'),
+                subtitle: Text('v1.3.4 • Material 3 Transaction Tracker'),
               ),
             ],
           ),
@@ -342,6 +370,336 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showThemeStudioModal(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final customColors = [
+      0xFF00E676, // Electric Lime
+      0xFF00E5FF, // Neon Cyan
+      0xFF2979FF, // Electric Blue
+      0xFF651FFF, // Deep Indigo
+      0xFFD500F9, // Cyber Magenta
+      0xFFFF1744, // Crimson Red
+      0xFFFF9100, // Amber Flame
+      0xFFFFD600, // Radiant Gold
+      0xFF1DE9B6, // Seafoam Teal
+      0xFFFF4081, // Hot Pink
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Consumer(
+        builder: (context, ref, child) {
+          final currentSettings = ref.watch(settingsProvider);
+          final activePalette = ref.watch(activePaletteProvider);
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: activePalette.primary.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.palette_rounded, color: activePalette.primary, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Theme & Accent Studio',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'CURATED LUXURY PRESETS',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 5 Curated Presets
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildPresetCard(
+                          title: 'Emerald',
+                          color: const Color(0xFF4CAF50),
+                          gradient: const [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                          isSelected: currentSettings.themePreset == AppThemePreset.emerald,
+                          onTap: () {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  currentSettings.copyWith(
+                                    themePreset: AppThemePreset.emerald,
+                                    customAccentColorValue: 0xFF4CAF50,
+                                  ),
+                                );
+                          },
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetCard(
+                          title: 'Cyberpunk',
+                          color: const Color(0xFFB388FF),
+                          gradient: const [Color(0xFFB388FF), Color(0xFF7C4DFF)],
+                          isSelected: currentSettings.themePreset == AppThemePreset.cyberpunk,
+                          onTap: () {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  currentSettings.copyWith(
+                                    themePreset: AppThemePreset.cyberpunk,
+                                    customAccentColorValue: 0xFFB388FF,
+                                  ),
+                                );
+                          },
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetCard(
+                          title: 'Sapphire',
+                          color: const Color(0xFF29B6F6),
+                          gradient: const [Color(0xFF29B6F6), Color(0xFF0288D1)],
+                          isSelected: currentSettings.themePreset == AppThemePreset.sapphire,
+                          onTap: () {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  currentSettings.copyWith(
+                                    themePreset: AppThemePreset.sapphire,
+                                    customAccentColorValue: 0xFF29B6F6,
+                                  ),
+                                );
+                          },
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetCard(
+                          title: 'Sunset Gold',
+                          color: const Color(0xFFFFB300),
+                          gradient: const [Color(0xFFFFB300), Color(0xFFFF8F00)],
+                          isSelected: currentSettings.themePreset == AppThemePreset.sunset,
+                          onTap: () {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  currentSettings.copyWith(
+                                    themePreset: AppThemePreset.sunset,
+                                    customAccentColorValue: 0xFFFFB300,
+                                  ),
+                                );
+                          },
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetCard(
+                          title: 'Rose Quartz',
+                          color: const Color(0xFFFF4081),
+                          gradient: const [Color(0xFFFF4081), Color(0xFFC2185B)],
+                          isSelected: currentSettings.themePreset == AppThemePreset.rose,
+                          onTap: () {
+                            ref.read(settingsProvider.notifier).updateSettings(
+                                  currentSettings.copyWith(
+                                    themePreset: AppThemePreset.rose,
+                                    customAccentColorValue: 0xFFFF4081,
+                                  ),
+                                );
+                          },
+                          isDark: isDark,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Text(
+                    'CUSTOM ACCENT COLOR',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Custom Swatches
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: customColors.map((colorVal) {
+                      final isSelected = currentSettings.themePreset == AppThemePreset.custom &&
+                          currentSettings.customAccentColorValue == colorVal;
+                      return InkWell(
+                        onTap: () {
+                          ref.read(settingsProvider.notifier).updateSettings(
+                                currentSettings.copyWith(
+                                  themePreset: AppThemePreset.custom,
+                                  customAccentColorValue: colorVal,
+                                ),
+                              );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(colorVal),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(colorVal).withValues(alpha: 0.4),
+                                blurRadius: isSelected ? 10 : 4,
+                                spreadRadius: isSelected ? 2 : 0,
+                              ),
+                            ],
+                            border: Border.all(
+                              color: isSelected ? Colors.white : Colors.transparent,
+                              width: isSelected ? 2.5 : 1,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 16),
+                  // Custom Hex Input Button
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: activePalette.primary,
+                      side: BorderSide(color: activePalette.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                    icon: const Icon(Icons.colorize_rounded, size: 16),
+                    label: const Text('Enter Custom Hex Code (#...)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    onPressed: () => _showHexInputDialog(context, ref, currentSettings),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPresetCard({
+    required String title,
+    required Color color,
+    required List<Color> gradient,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withValues(alpha: 0.15)
+              : (isDark ? AppColors.darkSurfaceVariant : const Color(0xFFF5F5F5)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : Colors.transparent,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: gradient),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? color : (isDark ? Colors.white : Colors.black),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHexInputDialog(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final controller = TextEditingController(
+      text: '#${settings.customAccentColorValue.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Custom Accent Hex', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: 'Hex Color Code',
+            hintText: '#00E676',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final raw = controller.text.replaceAll('#', '').trim();
+              if (raw.length == 6) {
+                final val = int.tryParse('0xFF$raw');
+                if (val != null) {
+                  ref.read(settingsProvider.notifier).updateSettings(
+                        settings.copyWith(
+                          themePreset: AppThemePreset.custom,
+                          customAccentColorValue: val,
+                        ),
+                      );
+                }
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Apply Color'),
+          ),
+        ],
       ),
     );
   }

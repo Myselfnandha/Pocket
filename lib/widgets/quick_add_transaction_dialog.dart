@@ -260,6 +260,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         walletName: selectedWallet.name,
       );
     } else {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -277,7 +278,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               ),
             ],
           ),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
