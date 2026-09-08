@@ -84,8 +84,8 @@ jobs:
       - name: Fast Static Analysis
         run: flutter analyze --no-fatal-infos
 
-      - name: Run Tests in Parallel
-        run: flutter test --concurrency=4
+      - name: Run Tests
+        run: flutter test
 
       - name: Configure Production Release Keystore
         run: |

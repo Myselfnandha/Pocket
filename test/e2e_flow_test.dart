@@ -36,9 +36,14 @@ import 'package:pocket/screens/debts/debts_screen.dart';
 import 'package:pocket/screens/settings/settings_screen.dart';
 import 'package:pocket/screens/settings/data_management_screen.dart';
 import 'package:pocket/widgets/balance_card.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    GoogleFonts.config.allowRuntimeFetching = false;
+  });
 
   group('Pocket Full End-to-End Application & Service Verification Suite', () {
     late StorageService storage;
