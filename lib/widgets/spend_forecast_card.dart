@@ -34,16 +34,23 @@ class SpendForecastCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.auto_graph_rounded, size: 20, color: AppColors.infoBlue),
-                  SizedBox(width: 8),
-                  Text(
-                    'On-Device Spend Forecast',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_graph_rounded, size: 20, color: AppColors.infoBlue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'On-Device Spend Forecast',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

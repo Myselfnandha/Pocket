@@ -465,21 +465,28 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.account_balance_rounded, size: 18, color: AppColors.primaryGreenLight),
-                        const SizedBox(width: 8),
-                        Text(
-                          'TOTAL NET WORTH',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.1,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.account_balance_rounded, size: 18, color: AppColors.primaryGreenLight),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'TOTAL NET WORTH',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.1,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '${settings.currencySymbol}${currencyFormat.format(netWorth.totalNetWorth)}',
                       style: TextStyle(
@@ -563,14 +570,19 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Month-over-Month Spend',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    Expanded(
+                      child: Text(
+                        'Month-over-Month Spend',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(

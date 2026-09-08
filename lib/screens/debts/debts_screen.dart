@@ -80,7 +80,14 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                           children: [
                             Icon(Icons.arrow_upward_rounded, size: 14, color: AppColors.incomeGreen),
                             SizedBox(width: 4),
-                            Text('You are owed (Lent)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.incomeGreen)),
+                            Expanded(
+                              child: Text(
+                                'You are owed (Lent)',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.incomeGreen),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -105,7 +112,14 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                           children: [
                             Icon(Icons.arrow_downward_rounded, size: 14, color: AppColors.expenseRed),
                             SizedBox(width: 4),
-                            Text('You owe (Borrowed)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.expenseRed)),
+                            Expanded(
+                              child: Text(
+                                'You owe (Borrowed)',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.expenseRed),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),

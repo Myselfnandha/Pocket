@@ -54,16 +54,23 @@ class _InflationCalculatorCardState extends ConsumerState<InflationCalculatorCar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.history_toggle_off_rounded, size: 20, color: AppColors.accentOrange),
-                  SizedBox(width: 8),
-                  Text(
-                    'Inflation & Purchasing Power',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.history_toggle_off_rounded, size: 20, color: AppColors.accentOrange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Inflation & Purchasing Power',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -167,7 +174,10 @@ class _InflationCalculatorCardState extends ConsumerState<InflationCalculatorCar
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -180,10 +190,9 @@ class _InflationCalculatorCardState extends ConsumerState<InflationCalculatorCar
                         style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.expenseRed),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Text(
-                      '(${result.yearDifference.toStringAsFixed(1)} years @ ${_inflationRate.toStringAsFixed(1)}% p.a.)',
-                      style: TextStyle(fontSize: 10.5, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                      '• ${(result.yearDifference).toStringAsFixed(1)} yrs compound effect',
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
                     ),
                   ],
                 ),

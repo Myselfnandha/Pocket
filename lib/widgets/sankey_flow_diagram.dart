@@ -142,16 +142,23 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.alt_route_rounded, size: 20, color: AppColors.primaryGreenLight),
-                  SizedBox(width: 8),
-                  Text(
-                    'Money Flow Topology (Sankey)',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.alt_route_rounded, size: 20, color: AppColors.primaryGreenLight),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Money Flow Topology (Sankey)',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -270,27 +277,33 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
           children: [
             Text(node.icon, style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 6),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  node.title,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black87,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    node.title,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  '$currencySymbol${node.amount.toStringAsFixed(0)} ($pct%)',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: node.color,
+                  Text(
+                    '$currencySymbol${node.amount.toStringAsFixed(0)} ($pct%)',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: node.color,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

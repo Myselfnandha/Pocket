@@ -139,14 +139,19 @@ class FinancialHealthGauge extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          pillar.name,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        Expanded(
+                          child: Text(
+                            pillar.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           '${pillar.score}/${pillar.maxScore} pts (${pillar.status})',
                           style: TextStyle(
@@ -192,7 +197,14 @@ class FinancialHealthGauge extends ConsumerWidget {
                     children: [
                       Icon(Icons.lightbulb_outline_rounded, size: 16, color: AppColors.primaryGreenLight),
                       SizedBox(width: 6),
-                      Text('Actionable Financial Recommendations', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryGreenLight)),
+                      Expanded(
+                        child: Text(
+                          'Actionable Financial Recommendations',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryGreenLight),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
