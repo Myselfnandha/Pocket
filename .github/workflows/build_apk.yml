@@ -18,7 +18,7 @@ on:
         default: '34'
 
 concurrency:
-  group: pocket-build-${{ github.ref }}
+  group: pocket-release-pipeline
   cancel-in-progress: true
 
 permissions:
@@ -110,12 +110,13 @@ jobs:
         run: |
           mkdir -p dist/
           cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-latest.apk"
 
       - name: Upload Universal APK Artifact (Fast)
         uses: actions/upload-artifact@v4
         with:
           name: Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-APK
-          path: dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk
+          path: dist/*.apk
           compression-level: 0
           retention-days: 30
 
@@ -123,9 +124,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         with:
-          files: dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk
+          files: dist/*.apk
           name: Pocket ${{ steps.versioning.outputs.VERSION_TAG }}
           tag_name: ${{ steps.versioning.outputs.VERSION_TAG }}
+          target_commitish: ${{ github.sha }}
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -143,6 +145,9 @@ jobs:
           echo "| **Version** | \`${{ steps.versioning.outputs.VERSION_NAME }}+${{ steps.versioning.outputs.BUILD_NUMBER }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Tag** | [\`${{ steps.versioning.outputs.VERSION_TAG }}\`](https://github.com/${{ github.repository }}/releases/tag/${{ steps.versioning.outputs.VERSION_TAG }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Universal APK** | \`Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Latest Direct APK** | \`Pocket-latest.apk\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Download Release APK" >> $GITHUB_STEP_SUMMARY
-          echo "👉 [**Download Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk**](https://github.com/${{ github.repository }}/releases/download/${{ steps.versioning.outputs.VERSION_TAG }}/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk)" >> $GITHUB_STEP_SUMMARY
+          echo "- 👉 [**Download Versioned (${{ steps.versioning.outputs.VERSION_TAG }})**](https://github.com/${{ github.repository }}/releases/download/${{ steps.versioning.outputs.VERSION_TAG }}/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk)" >> $GITHUB_STEP_SUMMARY
+          echo "- 👉 [**Download Latest Direct APK**](https://github.com/${{ github.repository }}/releases/latest/download/Pocket-latest.apk)" >> $GITHUB_STEP_SUMMARY
+
