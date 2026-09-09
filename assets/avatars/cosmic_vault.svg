@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background Void -->
+    <radialGradient id="cosmicBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#280840"/>
+      <stop offset="70%" stop-color="#150324"/>
+      <stop offset="100%" stop-color="#090112"/>
+    </radialGradient>
+
+    <!-- Outer Cosmic Aura -->
+    <radialGradient id="cosmicAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.45"/>
+      <stop offset="65%" stop-color="#9333ea" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#581c87" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 3D Glass Sphere Body -->
+    <radialGradient id="cosmicSphere" cx="34%" cy="31%" r="66%">
+      <stop offset="0%" stop-color="#f5d0fe" stop-opacity="0.95"/>
+      <stop offset="20%" stop-color="#c084fc" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#9333ea" stop-opacity="0.6"/>
+      <stop offset="85%" stop-color="#581c87" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#26043d" stop-opacity="0.98"/>
+    </radialGradient>
+
+    <!-- Inner Amethyst Vault Core -->
+    <radialGradient id="vaultCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#f5d0fe"/>
+      <stop offset="70%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#581c87" stop-opacity="0.2"/>
+    </radialGradient>
+
+    <!-- Top Specular Highlight -->
+    <linearGradient id="cosmicSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#f5d0fe" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Bottom Rim Bounce Light -->
+    <linearGradient id="cosmicRim" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#e879f9" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#c084fc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#581c87" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Cosmic Ring Gradient -->
+    <linearGradient id="cosmicRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf4ff" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#c084fc" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#4c1d95" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base Circle & Ambient Halo -->
+  <circle cx="50" cy="50" r="48" fill="url(#cosmicBg)"/>
+  <circle cx="50" cy="50" r="46" fill="url(#cosmicAura)"/>
+
+  <!-- Back Segment of Cosmic Ring -->
+  <path d="M 17 48 C 17 32, 46 22, 77 31 C 88 35, 89 47, 83 56" 
+        fill="none" stroke="url(#cosmicRing)" stroke-width="1.8" stroke-dasharray="3 3" opacity="0.4"/>
+
+  <!-- Main 3D Cosmic Glass Sphere -->
+  <circle cx="50" cy="50" r="36" fill="url(#cosmicSphere)"/>
+
+  <!-- Luminous Inner Vault Core -->
+  <circle cx="49" cy="49" r="14" fill="url(#vaultCore)"/>
+
+  <!-- Vault Geometric Shards / Crystal Prism -->
+  <polygon points="49,32 61,42 61,56 49,66 37,56 37,42" 
+           fill="none" stroke="#f5d0fe" stroke-width="1.2" opacity="0.7"/>
+  <polygon points="49,38 56,44 56,54 49,60 42,54 42,44" 
+           fill="#9333ea" stroke="#ffffff" stroke-width="0.8" opacity="0.6"/>
+
+  <!-- Cosmic Constellation Sparks -->
+  <polygon points="49,36 51,46 61,49 51,52 49,62 47,52 37,49 47,46" fill="#ffffff" opacity="0.85"/>
+  <circle cx="49" cy="49" r="3" fill="#ffffff"/>
+  <circle cx="34" cy="38" r="1.5" fill="#f5d0fe" opacity="0.8"/>
+  <circle cx="64" cy="60" r="1.5" fill="#f5d0fe" opacity="0.8"/>
+
+  <!-- Front Segment of Cosmic Ring -->
+  <path d="M 83 56 C 77 66, 48 76, 21 66 C 13 62, 13 52, 17 48" 
+        fill="none" stroke="url(#cosmicRing)" stroke-width="2.6" stroke-linecap="round"/>
+
+  <!-- Frosted Glass Surface Refraction Arc -->
+  <path d="M 23 44 C 26 27, 43 19, 63 21" 
+        fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Primary Specular Top Highlight -->
+  <ellipse cx="43" cy="27" rx="15" ry="8" transform="rotate(-22 43 27)" fill="url(#cosmicSpecular)"/>
+
+  <!-- Secondary Specular Sparkle -->
+  <circle cx="60" cy="26" r="2.1" fill="#ffffff" opacity="0.8"/>
+
+  <!-- Bottom Rim Bounce Reflection -->
+  <path d="M 31 75 C 43 83, 60 81, 69 72" 
+        fill="none" stroke="url(#cosmicRim)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Outer Glass Frame Ring -->
+  <circle cx="50" cy="50" r="48" fill="none" stroke="url(#cosmicRing)" stroke-width="1.2" opacity="0.8"/>
+</svg>

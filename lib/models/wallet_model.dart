@@ -35,6 +35,19 @@ class WalletModel {
     return digits.length <= 4 ? '•••• $digits' : '•••• ${digits.substring(digits.length - 4)}';
   }
 
+  /// Returns clean, semantic account name. Auto-sanitizes numeric-only names (e.g. "5000") to "Cash Wallet".
+  String get displayName {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return walletType == WalletType.cash ? 'Cash Wallet' : '${walletType.name.toUpperCase()} Account';
+    }
+    final numericPattern = RegExp(r'^[0-9.,₹$€£\s]+$');
+    if (numericPattern.hasMatch(trimmed)) {
+      return walletType == WalletType.cash ? 'Cash Wallet' : '${walletType.name.toUpperCase()} Account';
+    }
+    return trimmed;
+  }
+
   WalletModel copyWith({
     String? id,
     String? name,

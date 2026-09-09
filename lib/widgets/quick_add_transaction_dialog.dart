@@ -9,6 +9,8 @@ import '../models/category_model.dart';
 import '../providers/app_providers.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import 'blurred_dialog_utils.dart';
+import 'top_capsule_toast.dart';
 
 class QuickAddTransactionDialog extends ConsumerStatefulWidget {
   final TransactionType initialType;
@@ -63,9 +65,8 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     if (isOpen) return;
     isOpen = true;
     try {
-      await showDialog(
+      await showBlurredDialog(
         context: context,
-        useRootNavigator: true,
         builder: (context) => QuickAddTransactionDialog(
           initialType: initialType,
           initialAmount: initialAmount,
@@ -193,12 +194,12 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final amount = double.tryParse(amountText);
 
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid amount'),
-          backgroundColor: AppColors.expenseRed,
-          duration: Duration(seconds: 4),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: 'Invalid Amount',
+        subtitle: 'Please enter a valid amount greater than 0',
+        accentColor: AppColors.expenseRed,
+        icon: const Icon(Icons.error_outline_rounded, color: AppColors.expenseRed, size: 16),
       );
       return;
     }
@@ -207,12 +208,12 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final wallets = ref.read(walletsWithBalancesProvider);
 
     if (wallets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please create a wallet first'),
-          backgroundColor: AppColors.expenseRed,
-          duration: Duration(seconds: 4),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: 'No Wallet Found',
+        subtitle: 'Please create an account or wallet first',
+        accentColor: AppColors.expenseRed,
+        icon: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.expenseRed, size: 16),
       );
       return;
     }
@@ -248,7 +249,6 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
 
     final settings = ref.read(settingsProvider);
     final currencySymbol = settings.currencySymbol;
-    final currencyFormat = NumberFormat('#,##0.00');
     final selectedWallet = wallets.firstWhere((w) => w.id == walletId, orElse: () => wallets.first);
 
     if (widget.isStandaloneScreen) {
@@ -258,28 +258,18 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         amount: amount,
         currencySymbol: currencySymbol,
         isIncome: _type == TransactionType.income,
-        walletName: selectedWallet.name,
+        walletName: selectedWallet.displayName,
       );
     } else {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          backgroundColor: const Color(0xFF1E1E1E),
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Added "$title" • $currencySymbol${currencyFormat.format(amount)}',
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
+      TopCapsuleToast.show(
+        context,
+        title: title,
+        subtitle: '${_type == TransactionType.expense ? "-" : "+"}${settings.formatCurrency(amount)} • ${selectedWallet.displayName}',
+        accentColor: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+        icon: Icon(
+          _type == TransactionType.expense ? Icons.call_made_rounded : Icons.call_received_rounded,
+          color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+          size: 16,
         ),
       );
     }
@@ -675,15 +665,33 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 12),
 
-            // Account & Wallet Selector
-            Text(
-              'PAY VIA ACCOUNT',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
-                color: isDark ? const Color(0xFFB0B0B0) : const Color(0xFF666666),
-              ),
+            // Dynamic Directional Account & Wallet Selector
+            Row(
+              children: [
+                Icon(
+                  _type == TransactionType.expense
+                      ? Icons.call_made_rounded
+                      : Icons.call_received_rounded,
+                  size: 12,
+                  color: _type == TransactionType.expense
+                      ? AppColors.expenseRed
+                      : AppColors.incomeGreen,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _type == TransactionType.expense
+                      ? 'PAY FROM ACCOUNT'
+                      : 'DEPOSIT INTO ACCOUNT',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                    color: _type == TransactionType.expense
+                        ? AppColors.expenseRed
+                        : AppColors.incomeGreen,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             SingleChildScrollView(
@@ -691,34 +699,73 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               child: Row(
                 children: wallets.map((w) {
                   final isSelected = _selectedWalletId == w.id;
+                  final formattedBalance = settings.formatCurrency(w.currentBalance);
+
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: InkWell(
                       onTap: () => setState(() => _selectedWalletId = w.id),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
+                              ? (_type == TransactionType.expense
+                                  ? AppColors.expenseRed.withValues(alpha: 0.15)
+                                  : AppColors.incomeGreen.withValues(alpha: 0.15))
                               : (isDark ? const Color(0xFF222222) : const Color(0xFFF2F2F2)),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? AppColors.primaryGreenLight : Colors.transparent,
-                            width: 1.2,
+                            color: isSelected
+                                ? (_type == TransactionType.expense
+                                    ? AppColors.expenseRed.withValues(alpha: 0.6)
+                                    : AppColors.incomeGreen.withValues(alpha: 0.6))
+                                : Colors.transparent,
+                            width: 1.3,
                           ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: (_type == TransactionType.expense
+                                            ? AppColors.expenseRed
+                                            : AppColors.incomeGreen)
+                                        .withValues(alpha: 0.2),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(w.icon, style: const TextStyle(fontSize: 14)),
-                            const SizedBox(width: 4),
-                            Text(
-                              w.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primaryGreenLight : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                              ),
+                            const SizedBox(width: 6),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  w.displayName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                    color: isSelected
+                                        ? (_type == TransactionType.expense
+                                            ? AppColors.expenseRed
+                                            : AppColors.incomeGreen)
+                                        : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  ),
+                                ),
+                                Text(
+                                  formattedBalance,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

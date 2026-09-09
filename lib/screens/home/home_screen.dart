@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
 import '../../widgets/transaction_tile.dart';
 import '../../widgets/quick_add_transaction_dialog.dart';
 import '../../widgets/nlp_quick_add_modal.dart';
+import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -18,8 +18,6 @@ class HomeScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final todayTxs = ref.watch(todayTransactionsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final currencyFormat = NumberFormat('#,##0.00');
 
     return Scaffold(
       appBar: AppBar(
@@ -35,26 +33,11 @@ class HomeScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [palette.primaryDark, palette.primary],
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        settings.userName.isNotEmpty
-                            ? settings.userName[0].toUpperCase()
-                            : 'N',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                      ),
+                    UserAvatarWidget(
+                      avatarId: settings.selectedAvatarId,
+                      size: 38,
+                      glowColor: palette.primary,
+                      fallbackInitial: settings.userName,
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -78,15 +61,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
             tooltip: 'Natural Language Entry',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                useRootNavigator: true,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (ctx) => const NlpQuickAddModal(),
-              );
-            },
+            onPressed: () => NlpQuickAddModal.show(context),
           ),
           Consumer(
             builder: (context, ref, child) {
@@ -250,8 +225,8 @@ class HomeScreen extends ConsumerWidget {
                                       const SizedBox(height: 2),
                                       Text(
                                         netDebt >= 0
-                                            ? '+${settings.currencySymbol}${currencyFormat.format(netDebt)}'
-                                            : '-${settings.currencySymbol}${currencyFormat.format(netDebt.abs())}',
+                                            ? '+${settings.formatCurrency(netDebt)}'
+                                            : '-${settings.formatCurrency(netDebt.abs())}',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
@@ -297,31 +272,17 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       InkWell(
                         onTap: () => QuickAddTransactionDialog.show(context),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
                             ),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add_rounded, size: 14, color: AppColors.primaryGreenLight),
-                              SizedBox(width: 4),
-                              Text(
-                                'Quick Log',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryGreenLight,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: const Icon(Icons.add_rounded, size: 16, color: AppColors.primaryGreenLight),
                         ),
                       ),
                       const SizedBox(width: 6),

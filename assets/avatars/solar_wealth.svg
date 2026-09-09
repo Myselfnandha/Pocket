@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background Void -->
+    <radialGradient id="solarBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#241704"/>
+      <stop offset="70%" stop-color="#120c02"/>
+      <stop offset="100%" stop-color="#070401"/>
+    </radialGradient>
+
+    <!-- Outer Ambient Glow -->
+    <radialGradient id="solarAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#d97706" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#b45309" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 3D Glass Sphere Body -->
+    <radialGradient id="solarSphere" cx="35%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.95"/>
+      <stop offset="18%" stop-color="#f59e0b" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#b45309" stop-opacity="0.6"/>
+      <stop offset="85%" stop-color="#451a03" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#1e0b02" stop-opacity="0.95"/>
+    </radialGradient>
+
+    <!-- Inner Golden Core -->
+    <radialGradient id="sunCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#fef08a"/>
+      <stop offset="70%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0.2"/>
+    </radialGradient>
+
+    <!-- Primary Top Specular Highlight -->
+    <linearGradient id="solarSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#fef3c7" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Bottom Rim Bounce Light -->
+    <linearGradient id="solarRim" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#b45309" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Orbital Ring Gradient -->
+    <linearGradient id="solarRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef9c3" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#78350f" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base Circle & Ambient Halo -->
+  <circle cx="50" cy="50" r="48" fill="url(#solarBg)"/>
+  <circle cx="50" cy="50" r="46" fill="url(#solarAura)"/>
+
+  <!-- Back Portion of Orbital Ring -->
+  <path d="M 16 58 C 14 46, 26 34, 52 30 C 74 27, 88 33, 86 42" 
+        fill="none" stroke="url(#solarRing)" stroke-width="1.8" stroke-dasharray="4 2" opacity="0.4"/>
+
+  <!-- Main 3D Glass Sphere -->
+  <circle cx="50" cy="50" r="36" fill="url(#solarSphere)"/>
+
+  <!-- Luminous Inner Wealth Core -->
+  <circle cx="48" cy="48" r="15" fill="url(#sunCore)"/>
+
+  <!-- Core Facet Rings -->
+  <circle cx="48" cy="48" r="19" fill="none" stroke="#fef08a" stroke-width="0.8" opacity="0.4"/>
+  <circle cx="48" cy="48" r="23" fill="none" stroke="#f59e0b" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.5"/>
+
+  <!-- Geometric Star Sparks -->
+  <polygon points="48,32 50,45 63,48 50,51 48,64 46,51 33,48 46,45" fill="#ffffff" opacity="0.75"/>
+  <circle cx="48" cy="48" r="3" fill="#ffffff"/>
+
+  <!-- Front Segment of Glass Orbital Ring -->
+  <path d="M 86 42 C 84 54, 70 66, 44 70 C 22 73, 13 67, 16 58" 
+        fill="none" stroke="url(#solarRing)" stroke-width="2.6" stroke-linecap="round"/>
+
+  <!-- Glass Shell Internal Refraction Arc -->
+  <path d="M 22 42 C 26 26, 42 18, 62 20" 
+        fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- Primary Specular Top Highlight (Curved Gloss Cap) -->
+  <ellipse cx="44" cy="27" rx="16" ry="8" transform="rotate(-20 44 27)" fill="url(#solarSpecular)"/>
+
+  <!-- Secondary Mini Specular Dot -->
+  <circle cx="61" cy="26" r="2.2" fill="#ffffff" opacity="0.7"/>
+
+  <!-- Bottom Rim Bounce Reflection -->
+  <path d="M 30 76 C 42 84, 60 82, 70 73" 
+        fill="none" stroke="url(#solarRim)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Outer Glass Frame Ring -->
+  <circle cx="50" cy="50" r="48" fill="none" stroke="url(#solarRing)" stroke-width="1.2" opacity="0.75"/>
+</svg>

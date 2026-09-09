@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background Void -->
+    <radialGradient id="quantumBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#03223f"/>
+      <stop offset="70%" stop-color="#021324"/>
+      <stop offset="100%" stop-color="#010812"/>
+    </radialGradient>
+
+    <!-- Outer Cyan Glow -->
+    <radialGradient id="quantumAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45"/>
+      <stop offset="65%" stop-color="#0284c7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 3D Glass Sphere Body -->
+    <radialGradient id="quantumSphere" cx="34%" cy="31%" r="66%">
+      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.95"/>
+      <stop offset="20%" stop-color="#38bdf8" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#0284c7" stop-opacity="0.6"/>
+      <stop offset="85%" stop-color="#0c4a6e" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#021d2e" stop-opacity="0.98"/>
+    </radialGradient>
+
+    <!-- Internal Quantum Flow Core -->
+    <radialGradient id="cyanCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#bae6fd"/>
+      <stop offset="70%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0.2"/>
+    </radialGradient>
+
+    <!-- Top Specular Highlight -->
+    <linearGradient id="quantumSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#bae6fd" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Bottom Rim Bounce Light -->
+    <linearGradient id="quantumRim" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#0284c7" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Quantum Flux Ring -->
+    <linearGradient id="quantumRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#075985" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base Circle & Halo -->
+  <circle cx="50" cy="50" r="48" fill="url(#quantumBg)"/>
+  <circle cx="50" cy="50" r="46" fill="url(#quantumAura)"/>
+
+  <!-- Back Segment of Inclined Ring -->
+  <path d="M 18 45 C 22 30, 50 20, 78 32 C 88 37, 88 49, 82 58" 
+        fill="none" stroke="url(#quantumRing)" stroke-width="1.8" stroke-dasharray="4 2" opacity="0.4"/>
+
+  <!-- Main 3D Quantum Glass Sphere -->
+  <circle cx="50" cy="50" r="36" fill="url(#quantumSphere)"/>
+
+  <!-- Inner Quantum Core -->
+  <circle cx="49" cy="49" r="14" fill="url(#cyanCore)"/>
+
+  <!-- Quantum Orbital Wave Loops -->
+  <ellipse cx="49" cy="49" rx="19" ry="8" transform="rotate(35 49 49)" 
+           fill="none" stroke="#7dd3fc" stroke-width="0.9" opacity="0.6"/>
+  <ellipse cx="49" cy="49" rx="19" ry="8" transform="rotate(-35 49 49)" 
+           fill="none" stroke="#38bdf8" stroke-width="0.9" opacity="0.6"/>
+
+  <!-- Flow Vector Nodes -->
+  <circle cx="49" cy="49" r="4" fill="#ffffff"/>
+  <circle cx="36" cy="41" r="1.8" fill="#bae6fd" opacity="0.9"/>
+  <circle cx="62" cy="57" r="1.8" fill="#bae6fd" opacity="0.9"/>
+  <circle cx="58" cy="38" r="1.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="40" cy="60" r="1.5" fill="#ffffff" opacity="0.8"/>
+
+  <!-- Front Segment of Inclined Ring -->
+  <path d="M 82 58 C 76 68, 48 78, 22 66 C 14 61, 14 51, 18 45" 
+        fill="none" stroke="url(#quantumRing)" stroke-width="2.6" stroke-linecap="round"/>
+
+  <!-- Frosted Glass Surface Refraction Arc -->
+  <path d="M 23 44 C 26 27, 43 19, 63 21" 
+        fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Primary Specular Top Highlight -->
+  <ellipse cx="43" cy="27" rx="15" ry="8" transform="rotate(-22 43 27)" fill="url(#quantumSpecular)"/>
+
+  <!-- Secondary Specular Micro Dot -->
+  <circle cx="60" cy="26" r="2.1" fill="#ffffff" opacity="0.8"/>
+
+  <!-- Bottom Rim Bounce Reflection -->
+  <path d="M 31 75 C 43 83, 60 81, 69 72" 
+        fill="none" stroke="url(#quantumRim)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Outer Glass Frame Ring -->
+  <circle cx="50" cy="50" r="48" fill="none" stroke="url(#quantumRing)" stroke-width="1.2" opacity="0.8"/>
+</svg>

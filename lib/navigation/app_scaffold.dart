@@ -217,9 +217,25 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isSelected
-                ? palette.primary.withValues(alpha: isDark ? 0.18 : 0.12)
+                ? palette.primary.withValues(alpha: isDark ? 0.22 : 0.14)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
+            border: isSelected
+                ? Border.all(
+                    color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                    width: 1.0,
+                  )
+                : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -231,6 +247,14 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
                 color: isSelected
                     ? palette.primary
                     : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                shadows: isSelected
+                    ? [
+                        Shadow(
+                          color: palette.primary.withValues(alpha: 0.6),
+                          blurRadius: 8,
+                        ),
+                      ]
+                    : null,
               ),
               const SizedBox(height: 2),
               Text(

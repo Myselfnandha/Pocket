@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
 
@@ -15,9 +14,6 @@ class BalanceCard extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsProvider);
     final palette = ref.watch(activePaletteProvider);
-
-    final currencyFormat = NumberFormat('#,##0.00');
-    final compactFormat = NumberFormat.compact();
 
     final screenWidth = MediaQuery.of(context).size.width;
     // Sizing for 2 full cards + 1/4 of the 3rd card inside the hero balance card
@@ -82,7 +78,7 @@ class BalanceCard extends ConsumerWidget {
 
           // 2. Big Balance Text
           Text(
-            '${settings.currencySymbol}${currencyFormat.format(totalBalance)}',
+            settings.formatCurrency(totalBalance),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
@@ -99,7 +95,7 @@ class BalanceCard extends ConsumerWidget {
               Expanded(
                 child: _MetricPill(
                   label: 'Income',
-                  amount: '+${settings.currencySymbol}${compactFormat.format(monthlyStats.totalIncome)}',
+                  amount: '+${settings.formatCompact(monthlyStats.totalIncome)}',
                   icon: Icons.call_received_rounded,
                   iconColor: const Color(0xFFA5D6A7),
                 ),
@@ -110,7 +106,7 @@ class BalanceCard extends ConsumerWidget {
               Expanded(
                 child: _MetricPill(
                   label: 'Expense',
-                  amount: '-${settings.currencySymbol}${compactFormat.format(monthlyStats.totalExpense)}',
+                  amount: '-${settings.formatCompact(monthlyStats.totalExpense)}',
                   icon: Icons.call_made_rounded,
                   iconColor: const Color(0xFFFFAB91),
                 ),
@@ -121,7 +117,7 @@ class BalanceCard extends ConsumerWidget {
               Expanded(
                 child: _MetricPill(
                   label: 'Today',
-                  amount: '${settings.currencySymbol}${compactFormat.format(monthlyStats.todayExpense)}',
+                  amount: settings.formatCompact(monthlyStats.todayExpense),
                   icon: Icons.today_rounded,
                   iconColor: AppColors.accentOrangeLight,
                 ),
@@ -298,7 +294,7 @@ class BalanceCard extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          '${settings.currencySymbol}${currencyFormat.format(wallet.currentBalance)}',
+                          settings.formatCurrency(wallet.currentBalance),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

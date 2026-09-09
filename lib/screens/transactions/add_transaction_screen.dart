@@ -16,6 +16,8 @@ import '../../services/learning_suggest_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/numpad.dart';
 import '../../widgets/nlp_quick_add_modal.dart';
+import '../../widgets/blurred_dialog_utils.dart';
+import '../../widgets/top_capsule_toast.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final double? initialAmount;
@@ -282,25 +284,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     context.pop();
 
     final settings = ref.read(settingsProvider);
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: const Color(0xFF1E1E1E),
-        content: Text('Saved "$title" (${_type == TransactionType.income ? '+' : '-'}${settings.currencySymbol}${amount.toStringAsFixed(2)}) ✓'),
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: AppColors.primaryGreenLight,
-          onPressed: () {
-            final allTxs = ref.read(transactionsProvider);
-            if (allTxs.isNotEmpty) {
-              ref.read(transactionsProvider.notifier).deleteTransaction(allTxs.first.id);
-            }
-          },
-        ),
-      ),
+    final matchedCat = categories.where((c) => c.id == catId).firstOrNull;
+    TopCapsuleToast.show(
+      context,
+      title: title,
+      amountText: '${_type == TransactionType.income ? '+' : '-'}${settings.currencySymbol}${settings.formatCurrency(amount)}',
+      categoryIcon: matchedCat?.icon ?? (_type == TransactionType.income ? '💰' : '💸'),
+      isSuccess: true,
     );
   }
 
@@ -319,11 +309,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _selectedWalletId = wallets.first.id;
     }
 
-    final selectedWallet = wallets.firstWhere(
-      (w) => w.id == _selectedWalletId,
-      orElse: () => wallets.isNotEmpty ? wallets.first : defaultWallets.first,
-    );
-
     final isIncome = _type == TransactionType.income;
     final activeColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
 
@@ -338,15 +323,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           IconButton(
             icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight),
             tooltip: 'Natural Language Entry',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                useRootNavigator: true,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (ctx) => const NlpQuickAddModal(),
-              );
-            },
+            onPressed: () => NlpQuickAddModal.show(context),
           ),
           IconButton(
             icon: const Icon(Icons.check_rounded, color: AppColors.primaryGreenLight, size: 28),
@@ -735,85 +712,176 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 5. Account/Wallet & Date Pickers
+                    // 5. Dynamic Directional Header & Rich Account Cards
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              _titleFocus.unfocus();
-                              _showWalletPicker(wallets);
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(selectedWallet.icon, style: const TextStyle(fontSize: 18)),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      selectedWallet.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_drop_down, size: 20),
-                                ],
+                        Row(
+                          children: [
+                            Icon(
+                              isIncome ? Icons.south_west_rounded : Icons.arrow_outward_rounded,
+                              size: 14,
+                              color: activeColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isIncome ? 'DEPOSIT INTO ACCOUNT' : 'PAY FROM ACCOUNT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.1,
+                                color: activeColor,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              _titleFocus.unfocus();
-                              _pickDate();
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                        InkWell(
+                          onTap: () {
+                            _titleFocus.unfocus();
+                            _pickDate();
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.primaryGreenLight),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _formatSelectedDate(_selectedDate),
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primaryGreenLight),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _formatSelectedDate(_selectedDate),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_drop_down, size: 20),
-                                ],
-                              ),
+                              ],
                             ),
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Horizontal Rich Account Cards Row
+                    SizedBox(
+                      height: 56,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: wallets.length + 1,
+                        separatorBuilder: (context, index) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          if (index == wallets.length) {
+                            return InkWell(
+                              onTap: () {
+                                _titleFocus.unfocus();
+                                _showWalletPicker(wallets);
+                              },
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.more_horiz_rounded, size: 18, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'All',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          final w = wallets[index];
+                          final isSelected = w.id == _selectedWalletId;
+                          return InkWell(
+                            onTap: () {
+                              _titleFocus.unfocus();
+                              setState(() {
+                                _selectedWalletId = w.id;
+                                _showNumpad = true;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? activeColor.withValues(alpha: 0.15)
+                                    : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected ? activeColor : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                                  width: isSelected ? 1.8 : 1.0,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: activeColor.withValues(alpha: 0.25),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(w.icon, style: const TextStyle(fontSize: 20)),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        w.displayName,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                          color: isSelected
+                                              ? (isDark ? Colors.white : Colors.black87)
+                                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${settings.currencySymbol}${settings.formatCurrency(w.currentBalance)}',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected ? activeColor : (isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (isSelected) ...[
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.check_circle_rounded, size: 14, color: activeColor),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(height: 14),
 
@@ -1131,50 +1199,113 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _showWalletPicker(List<WalletModel> wallets) {
-    showModalBottomSheet(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final settings = ref.read(settingsProvider);
+
+    showBlurredDialog(
       context: context,
-      useRootNavigator: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 440,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Text(
-                    'Select Wallet / Account',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Select Wallet / Account',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
                 ...wallets.map((w) {
                   final isSelected = w.id == _selectedWalletId;
-                  return ListTile(
-                    leading: Text(w.icon, style: const TextStyle(fontSize: 22)),
-                    title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Balance: ${w.currentBalance.toStringAsFixed(2)}'),
-                    trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight)
-                        : null,
+                  return InkWell(
                     onTap: () {
                       setState(() {
                         _selectedWalletId = w.id;
                         _showNumpad = true;
                       });
-                      Navigator.pop(context);
+                      Navigator.pop(ctx);
                     },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                            : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primaryGreenLight : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(w.icon, style: const TextStyle(fontSize: 22)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  w.displayName,
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Balance: ${settings.currencySymbol}${settings.formatCurrency(w.currentBalance)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 20),
+                        ],
+                      ),
+                    ),
                   );
                 }),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

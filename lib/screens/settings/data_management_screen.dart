@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/system_widget_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/top_capsule_toast.dart';
 
 class DataManagementScreen extends ConsumerStatefulWidget {
   const DataManagementScreen({super.key});
@@ -60,23 +61,153 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // 1. Overview Metric Card
+          // 1. Cyber-Vault Frosted Glass Hero Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  palette.surfaceContainer,
+                  palette.primaryDark.withValues(alpha: isDark ? 0.75 : 0.85),
+                  palette.primary.withValues(alpha: isDark ? 0.45 : 0.65),
+                ],
               ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: palette.primary.withValues(alpha: 0.4),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: palette.primaryDark.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMetric('Transactions', '${transactions.length}', isDark),
-                _buildMetric('Wallets', '${wallets.length}', isDark),
-                _buildMetric('Categories', '${categories.length}', isDark),
-                _buildMetric('Recurring', '${recurring.length}', isDark),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.shield_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'CYBER-VAULT DATA HUB',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'AES-256 Encrypted Local SQLite',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreenLight.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.primaryGreenLight.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded, size: 12, color: AppColors.primaryGreenLight),
+                          SizedBox(width: 4),
+                          Text(
+                            'Healthy',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildVaultChip('📝', '${transactions.length}', 'Records')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildVaultChip('🏦', '${wallets.length}', 'Accounts')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildVaultChip('🏷️', '${categories.length}', 'Categories')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildVaultChip('🔁', '${recurring.length}', 'Rules')),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _lastSyncTime != null
+                              ? 'Last Backup: ${_lastSyncTime!.substring(0, 16).replaceAll('T', ' ')}'
+                              : 'Local SQLite Database: Healthy & Encrypted',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -249,91 +380,178 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           ),
           const SizedBox(height: 24),
 
-          // 3. Section: Local Backup & Restore
-          _buildSectionHeader('LOCAL BACKUP & RESTORE'),
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          // 3. Section: 2-Column Bento Action Grid
+          _buildSectionHeader('LOCAL ENGINES & EXPORT HUBS'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Column 1: JSON Data Vault
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: palette.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.data_object_rounded, size: 20, color: palette.primary),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'JSON Vault',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Complete database state & app settings.',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          height: 1.3,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: palette.primary,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _exportJsonBackup(context, ref),
+                          icon: const Icon(Icons.file_download_outlined, size: 16),
+                          label: const Text('Export Vault', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            side: BorderSide(
+                              color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _confirmRestore(context, ref, backupService),
+                          icon: const Icon(Icons.restore_rounded, size: 16),
+                          label: const Text('Restore File', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.save_alt_rounded, color: AppColors.primaryGreenLight),
-                  title: const Text('Export JSON Database Backup', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Export all transactions, wallets, rules, and settings to a JSON file'),
-                  trailing: const Icon(Icons.share_outlined, size: 20),
-                  onTap: () async {
-                    try {
-                      final file = await backupService.exportJsonBackup();
-                      await backupService.shareBackupFile(file);
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          content: Text('Backup exported successfully ✓'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          content: Text('Export failed: $e'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                ListTile(
-                  leading: const Icon(Icons.restore_page_rounded, color: AppColors.infoBlue),
-                  title: const Text('Restore from JSON Backup', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Import and replace current data with a saved .json file'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _confirmRestore(context, ref, backupService),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+              const SizedBox(width: 12),
 
-          // 4. Section: CSV Spreadsheets
-          _buildSectionHeader('CSV SPREADSHEETS (EXCEL / SHEETS)'),
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              // Column 2: Spreadsheet Engine
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.warningAmber.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.table_chart_rounded, size: 20, color: AppColors.warningAmber),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'CSV Engine',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Excel, Sheets & bank CSV statements.',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          height: 1.3,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.warningAmber,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _exportAllCsv(context, ref),
+                          icon: const Icon(Icons.table_view_rounded, size: 16),
+                          label: const Text('Export CSV', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            side: BorderSide(
+                              color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _pickAndImportCsv(context, ref, backupService),
+                          icon: const Icon(Icons.file_upload_outlined, size: 16),
+                          label: const Text('Import CSV', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.table_chart_outlined, color: AppColors.warningAmber),
-                  title: const Text('Export Transactions (CSV)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Export all transaction records for spreadsheets'),
-                  trailing: const Icon(Icons.share_outlined, size: 20),
-                  onTap: () => _exportAllCsv(context, ref),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                ListTile(
-                  leading: const Icon(Icons.file_upload_outlined, color: AppColors.warningAmber),
-                  title: const Text('Import Transactions (CSV)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Import records from bank/fintech CSV files'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _pickAndImportCsv(context, ref, backupService),
-                ),
-              ],
-            ),
+            ],
           ),
           const SizedBox(height: 24),
 
@@ -366,26 +584,20 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       final success = await CloudSyncService().signInWithGoogle();
       await _checkAuthStatus();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(success ? 'Connected to Google Drive successfully ✓' : 'Google sign-in cancelled'),
-          duration: const Duration(seconds: 2),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: success ? 'Connected to Google Drive ✓' : 'Google sign-in cancelled',
+        isSuccess: success,
       );
     } on GoogleAuthException catch (e) {
       if (!mounted) return;
       if (e.isDeveloperError10) {
         _showOAuthTokenDialog();
       } else {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(e.message),
-            duration: const Duration(seconds: 4),
-          ),
+        TopCapsuleToast.show(
+          context,
+          title: e.message,
+          isSuccess: false,
         );
       }
     } catch (e) {
@@ -476,13 +688,10 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               await _checkAuthStatus();
 
               if (!mounted) return;
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  content: Text('Connected to Google Drive successfully ✓'),
-                  duration: Duration(seconds: 2),
-                ),
+              TopCapsuleToast.show(
+                context,
+                title: 'Connected to Google Drive successfully ✓',
+                isSuccess: true,
               );
             },
             child: const Text('Connect & Authorize', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -500,25 +709,19 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       await _checkAuthStatus();
       if (mounted) {
         setState(() => _isSyncing = false);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(success ? 'Zero-knowledge backup saved to Google Drive ✓' : 'Sync failed.'),
-            duration: const Duration(seconds: 2),
-          ),
+        TopCapsuleToast.show(
+          context,
+          title: success ? 'Zero-knowledge backup saved to Google Drive ✓' : 'Sync failed',
+          isSuccess: success,
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSyncing = false);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Backup error: $e'),
-            duration: const Duration(seconds: 3),
-          ),
+        TopCapsuleToast.show(
+          context,
+          title: 'Backup error: $e',
+          isSuccess: false,
         );
       }
     }
@@ -554,25 +757,19 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
       if (mounted) {
         setState(() => _isSyncing = false);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(backup != null ? 'Restored all data from Google Drive ✓' : 'No cloud backup found on Google Drive.'),
-            duration: const Duration(seconds: 2),
-          ),
+        TopCapsuleToast.show(
+          context,
+          title: backup != null ? 'Restored all data from Google Drive ✓' : 'No cloud backup found on Google Drive',
+          isSuccess: backup != null,
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSyncing = false);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Restore error: $e'),
-            duration: const Duration(seconds: 3),
-          ),
+        TopCapsuleToast.show(
+          context,
+          title: 'Restore error: $e',
+          isSuccess: false,
         );
       }
     }
@@ -582,39 +779,14 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     await CloudSyncService().signOut();
     await _checkAuthStatus();
     if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Disconnected from Google Drive'),
-          duration: Duration(seconds: 2),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: 'Disconnected from Google Drive',
+        isSuccess: true,
       );
     }
   }
 
-  Widget _buildMetric(String label, String value, bool isDark) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
@@ -629,6 +801,61 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildVaultChip(String emoji, String count, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 2),
+          Text(
+            count,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.75),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportJsonBackup(BuildContext context, WidgetRef ref) async {
+    try {
+      final backup = ref.read(backupServiceProvider);
+      final file = await backup.exportJsonBackup();
+      await backup.shareBackupFile(file, subject: 'Pocket Complete Financial Backup');
+      if (!context.mounted) return;
+      TopCapsuleToast.show(
+        context,
+        title: 'JSON Vault Exported ✓',
+        subtitle: 'Encrypted backup ready to share',
+        isSuccess: true,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      TopCapsuleToast.show(
+        context,
+        title: 'Export failed: $e',
+        isSuccess: false,
+      );
+    }
   }
 
   Future<void> _confirmRestore(BuildContext context, WidgetRef ref, dynamic backupService) async {
@@ -668,23 +895,19 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                 ref.invalidate(categoryBudgetsProvider);
 
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    behavior: SnackBarBehavior.floating,
-                    content: Text('Database restored successfully ✓'),
-                    duration: Duration(seconds: 2),
-                  ),
+                TopCapsuleToast.show(
+                  context,
+                  title: 'Database restored successfully ✓',
+                  subtitle: 'All records recovered',
+                  isSuccess: true,
                 );
               } else {
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    behavior: SnackBarBehavior.floating,
-                    content: Text('Failed to restore. Invalid backup file structure.'),
-                    duration: Duration(seconds: 2),
-                  ),
+                TopCapsuleToast.show(
+                  context,
+                  title: 'Failed to restore database',
+                  subtitle: 'Invalid backup file structure',
+                  isSuccess: false,
                 );
               }
             },
@@ -709,13 +932,10 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     ref.invalidate(transactionsProvider);
 
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text('Imported $count transactions from CSV ✓'),
-        duration: const Duration(seconds: 2),
-      ),
+    TopCapsuleToast.show(
+      context,
+      title: 'Imported $count transactions from CSV ✓',
+      isSuccess: true,
     );
   }
 
@@ -723,20 +943,33 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     final txs = ref.read(transactionsProvider);
 
     if (txs.isEmpty) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('No transactions to export'),
-          duration: Duration(seconds: 2),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: 'No transactions to export',
+        isSuccess: false,
       );
       return;
     }
 
-    final backup = ref.read(backupServiceProvider);
-    final file = await backup.exportJsonBackup();
-    await backup.shareBackupFile(file);
+    try {
+      final backup = ref.read(backupServiceProvider);
+      final file = await backup.exportTransactionsCsv();
+      await backup.shareBackupFile(file, subject: 'Pocket Transactions CSV Export');
+      if (!context.mounted) return;
+      TopCapsuleToast.show(
+        context,
+        title: 'Transactions CSV Exported ✓',
+        subtitle: '${txs.length} transactions included',
+        isSuccess: true,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      TopCapsuleToast.show(
+        context,
+        title: 'Export failed: $e',
+        isSuccess: false,
+      );
+    }
   }
 
   void _confirmResetAllData(BuildContext context, WidgetRef ref) {
@@ -767,13 +1000,10 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
 
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  content: Text('All data has been reset ✓'),
-                  duration: Duration(seconds: 2),
-                ),
+              TopCapsuleToast.show(
+                context,
+                title: 'All data has been reset ✓',
+                isSuccess: true,
               );
             },
             child: const Text('Reset Everything'),

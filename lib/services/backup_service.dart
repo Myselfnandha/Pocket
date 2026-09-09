@@ -59,11 +59,57 @@ class BackupService {
     return file;
   }
 
-  Future<void> shareBackupFile(File file) async {
+  Future<void> shareBackupFile(File file, {String subject = 'Pocket Backup'}) async {
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: 'Pocket Complete Financial Backup',
+      text: subject,
     );
+  }
+
+  // --- Export CSV Spreadsheets ---
+
+  String exportTransactionsCsvString() {
+    final transactions = _storage.getTransactions();
+    final categories = _storage.getCategories();
+    final wallets = _storage.getWallets();
+
+    final List<List<dynamic>> rows = [
+      ['ID', 'Date', 'Title', 'Type', 'Amount', 'Category', 'Wallet', 'Note'],
+    ];
+
+    for (final tx in transactions) {
+      final cat = categories.firstWhere(
+        (c) => c.id == tx.categoryId,
+        orElse: () => const CategoryModel(id: '', name: 'Other', icon: '📦', colorValue: 0),
+      );
+      final wallet = wallets.firstWhere(
+        (w) => w.id == tx.walletId,
+        orElse: () => const WalletModel(id: '', name: 'Wallet', icon: '💳', colorValue: 0, initialBalance: 0),
+      );
+
+      rows.add([
+        tx.id,
+        tx.date.toIso8601String(),
+        tx.title,
+        tx.type.name,
+        tx.amount,
+        cat.name,
+        wallet.name,
+        tx.note ?? '',
+      ]);
+    }
+
+    return const ListToCsvConverter().convert(rows);
+  }
+
+  Future<File> exportTransactionsCsv() async {
+    final csvStr = exportTransactionsCsvString();
+    final tempDir = await getTemporaryDirectory();
+    final fileName = 'Pocket_Transactions_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+    final file = File('${tempDir.path}/$fileName');
+    await file.writeAsString(csvStr);
+
+    return file;
   }
 
   // --- Restore Full JSON Backup ---

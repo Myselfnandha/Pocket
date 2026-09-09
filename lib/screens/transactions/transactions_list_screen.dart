@@ -113,6 +113,41 @@ class _TransactionsListScreenState
         break;
     }
 
+    // Precalculate chronological balance shifts for all transactions per wallet
+    // and overall liquid balances
+    final chronologicalTxs = List<TransactionModel>.from(allTxs)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    final Map<String, double> walletBalances = {
+      for (final w in wallets) w.id: w.initialBalance,
+    };
+
+    final Map<String, (double, double)> txWalletBalanceShifts = {};
+    final Map<String, double> txTotalBalanceBefore = {};
+    final Map<String, double> txTotalBalanceAfter = {};
+
+    double runningTotal = wallets.fold(0.0, (sum, w) => sum + w.initialBalance);
+
+    for (final tx in chronologicalTxs) {
+      final curWalletBal = walletBalances[tx.walletId] ?? 0.0;
+      final double nextWalletBal;
+      final double nextTotal;
+
+      if (tx.type == TransactionType.income) {
+        nextWalletBal = curWalletBal + tx.amount;
+        nextTotal = runningTotal + tx.amount;
+      } else {
+        nextWalletBal = curWalletBal - tx.amount;
+        nextTotal = runningTotal - tx.amount;
+      }
+
+      walletBalances[tx.walletId] = nextWalletBal;
+      txWalletBalanceShifts[tx.id] = (curWalletBal, nextWalletBal);
+      txTotalBalanceBefore[tx.id] = runningTotal;
+      txTotalBalanceAfter[tx.id] = nextTotal;
+      runningTotal = nextTotal;
+    }
+
     // Group by formatted date
     final Map<String, List<TransactionModel>> grouped = {};
     for (final tx in filtered) {
@@ -130,29 +165,10 @@ class _TransactionsListScreenState
       orElse: () => const WalletModel(id: '', name: 'All Wallets', icon: '🏦', colorValue: 0, initialBalance: 0),
     );
 
-    final hasActiveFilters = _typeFilter != null ||
-        _categoryFilter != null ||
-        _walletFilter != null ||
-        _dateRange != null ||
-        _searchQuery.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
-          if (hasActiveFilters)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _searchQuery = '';
-                  _typeFilter = null;
-                  _categoryFilter = null;
-                  _walletFilter = null;
-                  _dateRange = null;
-                });
-              },
-              child: const Text('Reset', style: TextStyle(color: AppColors.expenseRed, fontWeight: FontWeight.w700)),
-            ),
           IconButton(
             icon: const Icon(Icons.add_rounded, size: 26),
             color: AppColors.primaryGreenLight,
@@ -498,11 +514,24 @@ class _TransactionsListScreenState
                       final dateHeader = grouped.keys.elementAt(sectionIndex);
                       final items = grouped[dateHeader]!;
 
-                      // Calculate day total
-                      double dayExpense = 0;
+                      final sortedDayItems = List<TransactionModel>.from(items)
+                        ..sort((a, b) => a.date.compareTo(b.date));
+                      final earliestTx = sortedDayItems.first;
+                      final latestTx = sortedDayItems.last;
+
+                      final double? dayOpening = _walletFilter != null
+                          ? txWalletBalanceShifts[earliestTx.id]?.$1
+                          : txTotalBalanceBefore[earliestTx.id];
+                      final double? dayClosing = _walletFilter != null
+                          ? txWalletBalanceShifts[latestTx.id]?.$2
+                          : txTotalBalanceAfter[latestTx.id];
+
+                      double dayNet = 0;
                       for (final item in items) {
-                        if (item.type == TransactionType.expense) {
-                          dayExpense += item.amount;
+                        if (item.type == TransactionType.income) {
+                          dayNet += item.amount;
+                        } else {
+                          dayNet -= item.amount;
                         }
                       }
 
@@ -514,26 +543,47 @@ class _TransactionsListScreenState
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      dateHeader,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primaryGreenLight,
+                                      ),
+                                    ),
+                                    if (dayOpening != null && dayClosing != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          'Opening: ${settings.formatCurrency(dayOpening)} • Closing: ${settings.formatCurrency(dayClosing)}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark
+                                                ? AppColors.darkTextTertiary
+                                                : AppColors.lightTextTertiary,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                                 Text(
-                                  dateHeader,
-                                  style: const TextStyle(
-                                    fontSize: 13,
+                                  dayNet >= 0
+                                      ? '+${settings.formatCurrency(dayNet)}'
+                                      : '-${settings.formatCurrency(dayNet.abs())}',
+                                  style: TextStyle(
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryGreenLight,
+                                    color: dayNet >= 0
+                                        ? AppColors.incomeGreen
+                                        : AppColors.expenseRed,
                                   ),
                                 ),
-                                if (dayExpense > 0)
-                                  Text(
-                                    '-${settings.currencySymbol}${dayExpense.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? AppColors.darkTextSecondary
-                                          : AppColors.lightTextSecondary,
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
@@ -564,9 +614,14 @@ class _TransactionsListScreenState
                               ),
                               itemBuilder: (context, i) {
                                 final tx = items[i];
+                                final shift = txWalletBalanceShifts[tx.id];
+                                final shiftText = shift != null
+                                    ? '${settings.formatCurrency(shift.$1)} ➔ ${settings.formatCurrency(shift.$2)}'
+                                    : null;
                                 return TransactionTile(
                                   transaction: tx,
                                   showSignPrefix: false,
+                                  runningBalanceText: shiftText,
                                   onTap: () => context.push(
                                     '/transaction-detail',
                                     extra: tx,

@@ -6,6 +6,7 @@ import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/system_contact_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/top_capsule_toast.dart';
 
 class DebtsScreen extends ConsumerStatefulWidget {
   const DebtsScreen({super.key});
@@ -36,6 +37,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     final totalBorrowed = ref.watch(totalBorrowedProvider);
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsWithBalancesProvider);
+    final palette = ref.watch(activePaletteProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final activeDebts = debts.where((d) => !d.isSettled).toList();
@@ -44,12 +46,15 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     final settledDebts = debts.where((d) => d.isSettled).toList();
     final currencyFormat = NumberFormat('#,##0.00');
 
+    final netPosition = totalLent - totalBorrowed;
+    final isNetPositive = netPosition >= 0;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Debts & Loans'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: AppColors.primaryGreenLight),
+            icon: Icon(Icons.person_add_alt_1_rounded, color: palette.primary),
             tooltip: 'Add Debt / Loan',
             onPressed: () => _showAddDebtModal(context, ref, wallets, settings.currencySymbol, debts),
           ),
@@ -58,77 +63,153 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
       ),
       body: Column(
         children: [
-          // 1. Top Summary Banner
+          // 1. Top Summary Hero with Net Position Pill & Dual Luminous Mini-Meter Metrics
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  color: palette.primary.withValues(alpha: isDark ? 0.28 : 0.2),
+                  width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.arrow_upward_rounded, size: 14, color: AppColors.incomeGreen),
-                            SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                'You are owed (Lent)',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.incomeGreen),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '+${settings.currencySymbol}${currencyFormat.format(totalLent)}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.incomeGreen),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Net Position Pill
                   Container(
-                    width: 1,
-                    height: 44,
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (isNetPositive ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: (isNetPositive ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.arrow_downward_rounded, size: 14, color: AppColors.expenseRed),
-                            SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                'You owe (Borrowed)',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.expenseRed),
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          isNetPositive ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                          size: 14,
+                          color: isNetPositive ? AppColors.incomeGreen : AppColors.expenseRed,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(width: 6),
                         Text(
-                          '-${settings.currencySymbol}${currencyFormat.format(totalBorrowed)}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.expenseRed),
+                          isNetPositive
+                              ? '+${settings.currencySymbol}${currencyFormat.format(netPosition)} Net to Collect'
+                              : '-${settings.currencySymbol}${currencyFormat.format(netPosition.abs())} Net to Pay',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: isNetPositive ? AppColors.incomeGreen : AppColors.expenseRed,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Dual Luminous Mini-Meter Metrics
+                  Row(
+                    children: [
+                      // Lent / You are owed
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF222222) : const Color(0xFFF9F9F9),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.incomeGreen.withValues(alpha: isDark ? 0.25 : 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.incomeGreen.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.arrow_upward_rounded, size: 12, color: AppColors.incomeGreen),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Expanded(
+                                    child: Text(
+                                      'You are owed',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.incomeGreen),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '+${settings.currencySymbol}${currencyFormat.format(totalLent)}',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.incomeGreen),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Borrowed / You owe
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF222222) : const Color(0xFFF9F9F9),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.expenseRed.withValues(alpha: isDark ? 0.25 : 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.expenseRed.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.arrow_downward_rounded, size: 12, color: AppColors.expenseRed),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Expanded(
+                                    child: Text(
+                                      'You owe',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.expenseRed),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '-${settings.currencySymbol}${currencyFormat.format(totalBorrowed)}',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.expenseRed),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -140,8 +221,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
             controller: _tabController,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            indicatorColor: AppColors.primaryGreenLight,
-            labelColor: AppColors.primaryGreenLight,
+            indicatorColor: palette.primary,
+            labelColor: palette.primary,
             unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             tabs: [
               Tab(text: 'All (${activeDebts.length})'),
@@ -156,10 +237,10 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildDebtsList(activeDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No active debts or loans'),
-                _buildDebtsList(lentDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently lent to others'),
-                _buildDebtsList(borrowedDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently borrowed from others'),
-                _buildDebtsList(settledDebts, settings.currencySymbol, currencyFormat, wallets, isDark, true, 'Fully settled debts will appear here in history'),
+                _buildDebtsList(activeDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No active debts or loans', palette),
+                _buildDebtsList(lentDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently lent to others', palette),
+                _buildDebtsList(borrowedDebts, settings.currencySymbol, currencyFormat, wallets, isDark, false, 'No money currently borrowed from others', palette),
+                _buildDebtsList(settledDebts, settings.currencySymbol, currencyFormat, wallets, isDark, true, 'Fully settled debts will appear here in history', palette),
               ],
             ),
           ),
@@ -176,6 +257,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     bool isDark,
     bool isSettledList,
     String emptyMessage,
+    dynamic palette,
   ) {
     if (list.isEmpty) {
       return Center(
@@ -210,7 +292,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       itemCount: list.length,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -219,7 +301,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
         final progress = debt.totalAmount > 0 ? (1 - (debt.remainingAmount / debt.totalAmount)).clamp(0.0, 1.0) : 1.0;
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -233,8 +315,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.15),
                       shape: BoxShape.circle,
@@ -243,13 +325,13 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     child: Text(
                       debt.personName.isNotEmpty ? debt.personName[0].toUpperCase() : '?',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,17 +339,17 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                         Text(
                           debt.personName,
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         // Prominent Type Badge Tag
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.15),
+                            color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Row(
@@ -275,32 +357,22 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                             children: [
                               Icon(
                                 isLent ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                                size: 11,
+                                size: 10,
                                 color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                               ),
                               const SizedBox(width: 3),
                               Text(
                                 isLent ? 'LENT • YOU GAVE' : 'BORROWED • YOU TOOK',
                                 style: TextStyle(
-                                  fontSize: 9.5,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.4,
+                                  letterSpacing: 0.3,
                                   color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        if (debt.phoneNumber != null && debt.phoneNumber!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            debt.phoneNumber!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -310,7 +382,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                       Text(
                         '${isLent ? '+' : '-'}$currencySymbol${currencyFormat.format(debt.remainingAmount)}',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                         ),
@@ -326,17 +398,39 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 5,
-                  backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0),
-                  valueColor: AlwaysStoppedAnimation<Color>(isLent ? AppColors.incomeGreen : AppColors.expenseRed),
-                ),
+              // Progress Bar with Percentage Badge
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE0E0E0),
+                        valueColor: AlwaysStoppedAnimation<Color>(isLent ? AppColors.incomeGreen : AppColors.expenseRed),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${(progress * 100).toInt()}% settled',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
 
@@ -361,31 +455,45 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     ],
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!debt.isSettled) ...[
-                        OutlinedButton(
+                        OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            minimumSize: const Size(0, 28),
                             visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            side: BorderSide(
+                              color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                            ),
                           ),
+                          icon: const Icon(Icons.add_rounded, size: 13),
+                          label: const Text('Payment', style: TextStyle(fontSize: 11)),
                           onPressed: () => _showPartialPaymentDialog(context, ref, debt, wallets, currencySymbol),
-                          child: const Text('Add Payment', style: TextStyle(fontSize: 11)),
                         ),
                         const SizedBox(width: 6),
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            minimumSize: const Size(0, 28),
                             visualDensity: VisualDensity.compact,
                             backgroundColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                             foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 0,
                           ),
+                          icon: const Icon(Icons.check_rounded, size: 13),
+                          label: const Text('Settle Up', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           onPressed: () => _showSettleUpDialog(context, ref, debt, wallets, currencySymbol),
-                          child: const Text('Settle Up', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                         ),
                       ],
+                      const SizedBox(width: 2),
                       IconButton(
                         icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.expenseRed),
                         visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         onPressed: () => ref.read(debtsProvider.notifier).deleteDebt(debt.id),
                       ),
                     ],
@@ -427,7 +535,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Full-width edge-to-edge segmented toggle (prevents overflow on all screen sizes)
+                // Full-width edge-to-edge segmented toggle
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -459,15 +567,29 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                             alignment: Alignment.center,
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: Text(
-                                'Lent (You gave)',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: selectedType == DebtType.lent ? FontWeight.w800 : FontWeight.w600,
-                                  color: selectedType == DebtType.lent
-                                      ? AppColors.incomeGreen
-                                      : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 14,
+                                    color: selectedType == DebtType.lent
+                                        ? AppColors.incomeGreen
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Lent (Gave)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: selectedType == DebtType.lent
+                                          ? AppColors.incomeGreen
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -495,15 +617,29 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                             alignment: Alignment.center,
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: Text(
-                                'Borrowed (You took)',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: selectedType == DebtType.borrowed ? FontWeight.w800 : FontWeight.w600,
-                                  color: selectedType == DebtType.borrowed
-                                      ? AppColors.expenseRed
-                                      : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.arrow_downward_rounded,
+                                    size: 14,
+                                    color: selectedType == DebtType.borrowed
+                                        ? AppColors.expenseRed
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Borrowed',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: selectedType == DebtType.borrowed
+                                          ? AppColors.expenseRed
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -514,86 +650,101 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                 ),
                 const SizedBox(height: 14),
 
-                // Contact Name & Contact Picker Button
-                Row(
-                  children: [
-                    Expanded(
-                      child: Autocomplete<String>(
-                        optionsBuilder: (textVal) {
-                          if (textVal.text.isEmpty) return const [];
-                          return existingNames.where((n) => n.toLowerCase().contains(textVal.text.toLowerCase()));
-                        },
-                        onSelected: (selection) => nameCtrl.text = selection,
-                        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                          nameCtrl.addListener(() {
-                            if (textEditingController.text != nameCtrl.text) {
-                              textEditingController.text = nameCtrl.text;
-                            }
-                          });
-                          textEditingController.addListener(() {
-                            nameCtrl.text = textEditingController.text;
-                          });
-                          return TextField(
-                            controller: textEditingController,
-                            focusNode: focusNode,
-                            decoration: const InputDecoration(hintText: 'Person Name *', prefixIcon: Icon(Icons.person_outline_rounded)),
-                          );
-                        },
-                      ),
+                // Existing person autocompletion chips
+                if (existingNames.isNotEmpty) ...[
+                  const Text('Recent Contacts', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey)),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: 28,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: existingNames.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 6),
+                      itemBuilder: (context, i) {
+                        return ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          label: Text(existingNames[i], style: const TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            nameCtrl.text = existingNames[i];
+                            final past = existingDebts.firstWhere((d) => d.personName == existingNames[i]);
+                            if (past.phoneNumber != null) phoneCtrl.text = past.phoneNumber!;
+                          },
+                        );
+                      },
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.contacts_rounded, color: AppColors.primaryGreenLight),
-                      tooltip: 'Pick from Phone Contacts',
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Person Name',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.contacts_rounded, size: 20),
+                      tooltip: 'Pick from Contacts',
                       onPressed: () async {
                         final contact = await SystemContactService.pickContact();
                         if (contact != null) {
                           setDialogState(() {
                             nameCtrl.text = contact.name;
-                            if (contact.phone != null && contact.phone!.isNotEmpty) {
+                            if (contact.phone != null) {
                               phoneCtrl.text = contact.phone!;
                             }
                           });
                         }
                       },
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
-                // Phone number
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: 'Phone Number (optional)', prefixIcon: Icon(Icons.phone_outlined)),
+                  decoration: const InputDecoration(labelText: 'Phone Number (optional)'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
-                // Amount
                 TextField(
                   controller: amountCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(prefixText: '$currencySymbol ', hintText: 'Total Amount *'),
+                  decoration: InputDecoration(
+                    labelText: 'Amount',
+                    prefixText: '$currencySymbol ',
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
-                // Due Date
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(labelText: 'Notes / Reason (optional)'),
+                ),
+                const SizedBox(height: 8),
+
+                // Due date picker
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.primaryGreenLight),
+                  leading: const Icon(Icons.calendar_today_rounded, size: 20),
                   title: Text(
-                    selectedDueDate == null ? 'Set Due Date (optional)' : 'Due: ${DateFormat('d MMM yyyy').format(selectedDueDate!)}',
+                    selectedDueDate == null
+                        ? 'No Due Date'
+                        : 'Due: ${DateFormat('d MMM yyyy').format(selectedDueDate!)}',
                     style: const TextStyle(fontSize: 13),
                   ),
                   trailing: selectedDueDate != null
-                      ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => setDialogState(() => selectedDueDate = null))
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () => setDialogState(() => selectedDueDate = null),
+                        )
                       : null,
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: DateTime.now().add(const Duration(days: 7)),
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 3650)),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
                     );
                     if (picked != null) setDialogState(() => selectedDueDate = picked);
                   },
@@ -649,11 +800,11 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
 
                 Navigator.pop(ctx);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Added ${selectedType == DebtType.lent ? "Lent to" : "Borrowed from"} $name ✓'),
-                      duration: const Duration(seconds: 4),
-                    ),
+                  TopCapsuleToast.show(
+                    context,
+                    title: 'Debt Added',
+                    subtitle: '${selectedType == DebtType.lent ? "Lent to" : "Borrowed from"} $name • $currencySymbol$amount',
+                    accentColor: selectedType == DebtType.lent ? AppColors.incomeGreen : AppColors.expenseRed,
                   );
                 }
               },
@@ -730,11 +881,11 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
 
                 Navigator.pop(ctx);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Recorded payment of $currencySymbol${amt.toStringAsFixed(2)} for ${debt.personName} ✓'),
-                      duration: const Duration(seconds: 4),
-                    ),
+                  TopCapsuleToast.show(
+                    context,
+                    title: 'Payment Recorded',
+                    subtitle: '$currencySymbol${amt.toStringAsFixed(2)} for ${debt.personName}',
+                    accentColor: AppColors.incomeGreen,
                   );
                 }
               },
@@ -792,11 +943,11 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     );
                 Navigator.pop(ctx);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Settled debt with ${debt.personName} ✓'),
-                      duration: const Duration(seconds: 4),
-                    ),
+                  TopCapsuleToast.show(
+                    context,
+                    title: 'Debt Settled',
+                    subtitle: 'Settled completely with ${debt.personName}',
+                    accentColor: AppColors.incomeGreen,
                   );
                 }
               },

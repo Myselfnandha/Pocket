@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../models/category_model.dart';
 import '../models/wallet_model.dart';
@@ -12,6 +11,7 @@ class TransactionTile extends ConsumerWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final bool showSignPrefix;
+  final String? runningBalanceText;
 
   const TransactionTile({
     super.key,
@@ -19,6 +19,7 @@ class TransactionTile extends ConsumerWidget {
     this.onTap,
     this.onDelete,
     this.showSignPrefix = true,
+    this.runningBalanceText,
   });
 
   @override
@@ -45,7 +46,7 @@ class TransactionTile extends ConsumerWidget {
     final isIncome = transaction.type == TransactionType.income;
     final amountColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
     final prefix = showSignPrefix ? (isIncome ? '+' : '-') : '';
-    final formattedAmount = NumberFormat('#,##0.00').format(transaction.amount);
+    final formattedAmount = settings.formatCurrency(transaction.amount, includeSymbol: false);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -174,14 +175,39 @@ class TransactionTile extends ConsumerWidget {
                 ),
               ),
 
-              // Amount
-              Text(
-                '$prefix${settings.currencySymbol}$formattedAmount',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: amountColor,
-                ),
+              // Amount and optional running balance shift
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$prefix${settings.currencySymbol}$formattedAmount',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: amountColor,
+                    ),
+                  ),
+                  if (runningBalanceText != null) ...[
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF262626) : const Color(0xFFF0F0F0),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        runningBalanceText!,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),

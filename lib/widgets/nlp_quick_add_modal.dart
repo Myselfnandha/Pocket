@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../models/category_model.dart';
 import '../providers/app_providers.dart';
 import '../services/nlp_parser_service.dart';
 import '../services/learning_suggest_service.dart';
 import '../theme/app_theme.dart';
+import 'blurred_dialog_utils.dart';
+import 'top_capsule_toast.dart';
 
 class NlpQuickAddModal extends ConsumerStatefulWidget {
   const NlpQuickAddModal({super.key});
+
+  static Future<void> show(BuildContext context) {
+    return showBlurredDialog(
+      context: context,
+      builder: (ctx) => const NlpQuickAddModal(),
+    );
+  }
 
   @override
   ConsumerState<NlpQuickAddModal> createState() => _NlpQuickAddModalState();
@@ -54,11 +64,10 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
 
   Future<void> _commitParsedTransaction() async {
     if (_parsed == null || _parsed!.amount == null || _parsed!.amount! <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please mention an amount (e.g. "1200 for dinner")'),
-          duration: Duration(seconds: 3),
-        ),
+      TopCapsuleToast.show(
+        context,
+        title: 'Please mention an amount (e.g. "1200 for dinner")',
+        isSuccess: false,
       );
       return;
     }
@@ -90,15 +99,27 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
     Navigator.pop(context);
 
     final settings = ref.read(settingsProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: const Color(0xFF1E1E1E),
-        content: Text('Added $title (${settings.currencySymbol}${_parsed!.amount!.toStringAsFixed(0)}) ✓'),
-        duration: const Duration(seconds: 3),
-      ),
+    final matchedCat = categories.where((c) => c.id == catId).firstOrNull;
+    TopCapsuleToast.show(
+      context,
+      title: title,
+      amountText: '${_parsed!.type == TransactionType.income ? '+' : '-'}${settings.currencySymbol}${settings.formatCurrency(_parsed!.amount!)}',
+      categoryIcon: matchedCat?.icon ?? '✨',
+      isSuccess: true,
+    );
+  }
+
+  void _openFullEdit(ParsedNlpTransaction parsed) {
+    Navigator.pop(context);
+    context.push(
+      '/add-transaction',
+      extra: {
+        'amount': parsed.amount,
+        'title': parsed.title,
+        'type': parsed.type,
+        'categoryId': parsed.categoryId,
+        'walletId': parsed.walletId,
+      },
     );
   }
 
@@ -121,100 +142,141 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
         ? wallets.where((w) => w.id == parsed!.walletId).firstOrNull ?? wallets.firstOrNull
         : wallets.firstOrNull;
 
-    return Container(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: 440,
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+              width: 1.5,
             ),
-          ),
-          const SizedBox(height: 14),
-
-          const Row(
-            children: [
-              Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
-              SizedBox(width: 8),
-              Text(
-                'Natural Language Entry',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-
-          // Natural Language Input Field
-          TextField(
-            controller: _textCtrl,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'e.g. "1200 for dinner with friends yesterday" or "paid 4500 wifi bill"',
-              hintStyle: TextStyle(
-                fontSize: 13,
-                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Natural Language Entry',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
-              filled: true,
-              fillColor: isDark ? const Color(0xFF262626) : const Color(0xFFF2F2F2),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.all(16),
-              suffixIcon: _textCtrl.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () => _textCtrl.clear(),
-                    )
-                  : null,
-            ),
-          ),
-          const SizedBox(height: 14),
+              const SizedBox(height: 14),
 
-          // Live Parsed Tokens Preview
-          if (parsed != null && (parsed.amount != null || parsed.title != null)) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF242424) : const Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+              // Natural Language Input Field
+              TextField(
+                controller: _textCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'e.g. "1200 for dinner with friends yesterday" or "paid 4500 wifi bill"',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  ),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF262626) : const Color(0xFFF2F2F2),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(16),
+                  suffixIcon: _textCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () => _textCtrl.clear(),
+                        )
+                      : null,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Extracted Details',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
-                      ),
-                      Text(
-                        '${(parsed.confidence * 100).toInt()}% match',
-                        style: const TextStyle(fontSize: 10.5, color: Colors.grey),
-                      ),
-                    ],
+              const SizedBox(height: 14),
+
+              // Live Parsed Tokens Preview
+              if (parsed != null && (parsed.amount != null || parsed.title != null)) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF242424) : const Color(0xFFF9F9F9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                    ),
                   ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Extracted Details',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () => _openFullEdit(parsed),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.edit_rounded, size: 11, color: AppColors.primaryGreenLight),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        '✎ Edit',
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${(parsed.confidence * 100).toInt()}% match',
+                            style: const TextStyle(fontSize: 10.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -223,7 +285,7 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
                       if (parsed.amount != null)
                         _buildTokenChip(
                           icon: Icons.attach_money_rounded,
-                          label: '${settings.currencySymbol}${parsed.amount!.toStringAsFixed(0)}',
+                          label: '${settings.currencySymbol}${settings.formatCurrency(parsed.amount!)}',
                           color: parsed.type == TransactionType.income ? AppColors.incomeGreen : AppColors.expenseRed,
                         ),
                       if (parsed.title != null && parsed.title!.isNotEmpty)
@@ -246,7 +308,7 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
                       if (wallet != null)
                         _buildTokenChip(
                           icon: Icons.account_balance_wallet_outlined,
-                          label: '${wallet.icon} ${wallet.name}',
+                          label: '${wallet.icon} ${wallet.displayName}',
                           color: AppColors.accentOrange,
                         ),
                     ],
@@ -303,7 +365,9 @@ class _NlpQuickAddModalState extends ConsumerState<NlpQuickAddModal> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildTokenChip({

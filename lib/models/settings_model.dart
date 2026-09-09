@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 enum AppThemeMode { autoTime, manual }
 enum ManualThemeStyle { light, dark, pureBlack }
 
@@ -30,6 +32,9 @@ class UserSettingsModel {
   final bool showCategoryTags;
   final bool isOnboarded;
 
+  // Profile Avatar
+  final String selectedAvatarId;
+
   // Custom Theming
   final AppThemePreset themePreset;
   final int customAccentColorValue;
@@ -51,6 +56,7 @@ class UserSettingsModel {
     this.userPhoneNumber,
     this.currencySymbol = '₹',
     this.currencyCode = 'INR',
+    this.selectedAvatarId = 'solar_wealth',
     this.themeMode = AppThemeMode.autoTime,
     this.manualThemeStyle = ManualThemeStyle.pureBlack,
     this.isPureBlackEnabled = true,
@@ -68,11 +74,33 @@ class UserSettingsModel {
     this.homeScreenWidgetStat = HomeScreenWidgetStat.balanceAndTodaySpend,
   });
 
+  /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
+  String formatCurrency(double amount, {bool includeSymbol = true}) {
+    final isIndian = currencyCode.toUpperCase() == 'INR' || currencySymbol == '₹';
+    final formatter = NumberFormat.currency(
+      locale: isIndian ? 'en_IN' : 'en_US',
+      symbol: includeSymbol ? currencySymbol : '',
+      decimalDigits: 2,
+    );
+    return formatter.format(amount).trim();
+  }
+
+  /// Compact currency format with proper grouping (e.g. ₹1.2L or $120K)
+  String formatCompact(double amount, {bool includeSymbol = true}) {
+    final isIndian = currencyCode.toUpperCase() == 'INR' || currencySymbol == '₹';
+    final formatter = NumberFormat.compactCurrency(
+      locale: isIndian ? 'en_IN' : 'en_US',
+      symbol: includeSymbol ? currencySymbol : '',
+    );
+    return formatter.format(amount).trim();
+  }
+
   UserSettingsModel copyWith({
     String? userName,
     String? userPhoneNumber,
     String? currencySymbol,
     String? currencyCode,
+    String? selectedAvatarId,
     AppThemeMode? themeMode,
     ManualThemeStyle? manualThemeStyle,
     bool? isPureBlackEnabled,
@@ -94,6 +122,7 @@ class UserSettingsModel {
       userPhoneNumber: userPhoneNumber ?? this.userPhoneNumber,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       currencyCode: currencyCode ?? this.currencyCode,
+      selectedAvatarId: selectedAvatarId ?? this.selectedAvatarId,
       themeMode: themeMode ?? this.themeMode,
       manualThemeStyle: manualThemeStyle ?? this.manualThemeStyle,
       isPureBlackEnabled: isPureBlackEnabled ?? this.isPureBlackEnabled,
@@ -117,6 +146,7 @@ class UserSettingsModel {
         'userPhoneNumber': userPhoneNumber,
         'currencySymbol': currencySymbol,
         'currencyCode': currencyCode,
+        'selectedAvatarId': selectedAvatarId,
         'themeMode': themeMode.name,
         'manualThemeStyle': manualThemeStyle.name,
         'isPureBlackEnabled': isPureBlackEnabled,
@@ -140,6 +170,7 @@ class UserSettingsModel {
         userPhoneNumber: json['userPhoneNumber'] as String?,
         currencySymbol: json['currencySymbol'] as String? ?? '₹',
         currencyCode: json['currencyCode'] as String? ?? 'INR',
+        selectedAvatarId: json['selectedAvatarId'] as String? ?? 'solar_wealth',
         themeMode: AppThemeMode.values.byName(
           json['themeMode'] as String? ?? 'autoTime',
         ),

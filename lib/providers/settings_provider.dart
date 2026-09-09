@@ -37,6 +37,10 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(isOnboarded: true));
   }
 
+  Future<void> setSelectedAvatarId(String avatarId) async {
+    await updateSettings(state.copyWith(selectedAvatarId: avatarId));
+  }
+
   Future<void> toggleCategoryTags(bool value) async {
     await updateSettings(state.copyWith(showCategoryTags: value));
   }
