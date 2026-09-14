@@ -80,6 +80,66 @@ class PocketNotificationListener : NotificationListenerService() {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit().putString(KEY_PENDING_TX, "[]").apply()
         }
+
+        fun extractAmount(text: String): Double? {
+            val pattern = Pattern.compile("(?:₹|rs\\.?|inr)\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+            val matcher = pattern.matcher(text)
+            if (matcher.find()) {
+                val raw = matcher.group(1)?.replace(",", "") ?: return null
+                return raw.toDoubleOrNull()
+            }
+
+            // Secondary pattern: "paid 450.00" or "debited by 500"
+            val secPattern = Pattern.compile("(?:paid|debited(?:\\s+by)?|spent)\\s+([0-9]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+            val secMatcher = secPattern.matcher(text)
+            if (secMatcher.find()) {
+                val raw = secMatcher.group(1) ?: return null
+                return raw.toDoubleOrNull()
+            }
+
+            return null
+        }
+
+        fun extractMerchant(title: String, content: String): String {
+            // "Paid to [Merchant]" or "Payment to [Merchant]"
+            val toPattern = Pattern.compile("(?:paid to|payment to|transferred to|sent to|at)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
+            val toMatcher = toPattern.matcher(content)
+            if (toMatcher.find()) {
+                val found = toMatcher.group(1)?.trim()
+                if (!found.isNullOrEmpty() && !found.equals("vpa", true)) {
+                    return cleanMerchantName(found)
+                }
+            }
+
+            // Fallback to title if title looks like merchant name
+            if (title.isNotEmpty() && !title.contains("transaction", true) && !title.contains("alert", true) && !title.contains("pocket", true)) {
+                return cleanMerchantName(title)
+            }
+
+            return "Payment"
+        }
+
+        fun extractRefId(text: String): String? {
+            val pattern = Pattern.compile("(?:upi\\s*ref(?:\\s*no)?|ref(?:\\s*id)?|txn(?:\\s*id)?)\\s*[:.-]?\\s*([0-9]{8,16})", Pattern.CASE_INSENSITIVE)
+            val matcher = pattern.matcher(text)
+            if (matcher.find()) {
+                return matcher.group(1)?.trim()
+            }
+            return null
+        }
+
+        fun isCreditTransaction(text: String): Boolean {
+            val lower = text.lowercase()
+            return (lower.contains("credited") || lower.contains("received") || lower.contains("refund")) &&
+                    !lower.contains("debited")
+        }
+
+        private fun cleanMerchantName(name: String): String {
+            return name.replace(Regex("(?i)(ltd|pvt|limited|india|store|upi|payment)$"), "")
+                .trim()
+                .take(30)
+                .ifEmpty { "Payment" }
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -129,65 +189,5 @@ class PocketNotificationListener : NotificationListenerService() {
         }
 
         savePendingTransaction(applicationContext, txJson)
-    }
-
-    private fun extractAmount(text: String): Double? {
-        val pattern = Pattern.compile("(?:₹|rs\\.?|inr)\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
-        val matcher = pattern.matcher(text)
-        if (matcher.find()) {
-            val raw = matcher.group(1)?.replace(",", "") ?: return null
-            return raw.toDoubleOrNull()
-        }
-
-        // Secondary pattern: "paid 450.00" or "debited by 500"
-        val secPattern = Pattern.compile("(?:paid|debited(?:\\s+by)?|spent)\\s+([0-9]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
-        val secMatcher = secPattern.matcher(text)
-        if (secMatcher.find()) {
-            val raw = secMatcher.group(1) ?: return null
-            return raw.toDoubleOrNull()
-        }
-
-        return null
-    }
-
-    private fun extractMerchant(title: String, content: String): String {
-        // "Paid to [Merchant]" or "Payment to [Merchant]"
-        val toPattern = Pattern.compile("(?:paid to|payment to|transferred to|sent to|at)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
-        val toMatcher = toPattern.matcher(content)
-        if (toMatcher.find()) {
-            val found = toMatcher.group(1)?.trim()
-            if (!found.isNullOrEmpty() && !found.equals("vpa", true)) {
-                return cleanMerchantName(found)
-            }
-        }
-
-        // Fallback to title if title looks like merchant name
-        if (title.isNotEmpty() && !title.contains("transaction", true) && !title.contains("alert", true) && !title.contains("pocket", true)) {
-            return cleanMerchantName(title)
-        }
-
-        return "Payment"
-    }
-
-    private fun extractRefId(text: String): String? {
-        val pattern = Pattern.compile("(?:upi\\s*ref(?:\\s*no)?|ref(?:\\s*id)?|txn(?:\\s*id)?)\\s*[:.-]?\\s*([0-9]{8,16})", Pattern.CASE_INSENSITIVE)
-        val matcher = pattern.matcher(text)
-        if (matcher.find()) {
-            return matcher.group(1)?.trim()
-        }
-        return null
-    }
-
-    private fun isCreditTransaction(text: String): Boolean {
-        val lower = text.lowercase()
-        return (lower.contains("credited") || lower.contains("received") || lower.contains("refund")) &&
-                !lower.contains("debited")
-    }
-
-    private fun cleanMerchantName(name: String): String {
-        return name.replace(Regex("(?i)(ltd|pvt|limited|india|store|upi|payment)$"), "")
-            .trim()
-            .take(30)
-            .ifEmpty { "Payment" }
     }
 }

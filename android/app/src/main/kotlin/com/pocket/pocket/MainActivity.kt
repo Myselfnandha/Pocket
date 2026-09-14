@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,8 +19,10 @@ class MainActivity : FlutterActivity() {
     private val WIDGET_CHANNEL = "com.pocket.pocket/widget_events"
     private val AUTO_IMPORT_CHANNEL = "com.pocket.pocket/auto_import"
     private val REQUEST_CODE_PICK_CONTACT = 1001
+    private val REQUEST_CODE_SMS_PERMISSION = 1002
 
     private var pendingResult: MethodChannel.Result? = null
+    private var pendingSmsResult: MethodChannel.Result? = null
     private var sharedTxChannel: MethodChannel? = null
     private var widgetChannel: MethodChannel? = null
     private var autoImportChannel: MethodChannel? = null
@@ -96,9 +100,26 @@ class MainActivity : FlutterActivity() {
                         val map = mapOf(
                             "notificationListener" to isNotificationListenerEnabled(),
                             "accessibility" to isAccessibilityServiceEnabled(),
-                            "screenshotWatcher" to (screenshotObserver != null)
+                            "screenshotWatcher" to (screenshotObserver != null),
+                            "smsListener" to (ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
                         )
                         result.success(map)
+                    }
+                    "requestSmsPermission" -> {
+                        if (ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            result.success(true)
+                        } else {
+                            if (pendingSmsResult != null) {
+                                result.error("ALREADY_PENDING", "An SMS permission request is already pending", null)
+                            } else {
+                                pendingSmsResult = result
+                                ActivityCompat.requestPermissions(
+                                    this@MainActivity,
+                                    arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS),
+                                    REQUEST_CODE_SMS_PERMISSION
+                                )
+                            }
+                        }
                     }
                     "openNotificationListenerSettings" -> {
                         try {
@@ -239,6 +260,17 @@ class MainActivity : FlutterActivity() {
                 "phone" to (contactPhone ?: "")
             )
             result.success(contactMap)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_SMS_PERMISSION) {
+            val result = pendingSmsResult ?: return
+            pendingSmsResult = null
+            
+            val granted = grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED
+            result.success(granted)
         }
     }
 }

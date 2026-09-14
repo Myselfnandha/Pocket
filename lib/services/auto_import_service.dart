@@ -12,15 +12,17 @@ class AutoImportPermissions {
   final bool isNotificationListenerEnabled;
   final bool isAccessibilityEnabled;
   final bool isScreenshotWatcherActive;
+  final bool isSmsListenerEnabled;
 
   const AutoImportPermissions({
     this.isNotificationListenerEnabled = false,
     this.isAccessibilityEnabled = false,
     this.isScreenshotWatcherActive = false,
+    this.isSmsListenerEnabled = false,
   });
 
   bool get hasAnyActive =>
-      isNotificationListenerEnabled || isAccessibilityEnabled || isScreenshotWatcherActive;
+      isNotificationListenerEnabled || isAccessibilityEnabled || isScreenshotWatcherActive || isSmsListenerEnabled;
 }
 
 class AutoImportService {
@@ -38,12 +40,23 @@ class AutoImportService {
           isNotificationListenerEnabled: res['notificationListener'] == true,
           isAccessibilityEnabled: res['accessibility'] == true,
           isScreenshotWatcherActive: res['screenshotWatcher'] == true,
+          isSmsListenerEnabled: res['smsListener'] == true,
         );
       }
     } catch (_) {
       // In tests or non-Android environments, return safe defaults
     }
     return const AutoImportPermissions();
+  }
+
+  /// Requests runtime SMS permissions
+  Future<bool> requestSmsPermission() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('requestSmsPermission');
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Opens Android System Notification Listener Settings.

@@ -200,6 +200,22 @@ class _AutoImportStudioScreenState extends ConsumerState<AutoImportStudioScreen>
                 },
               ),
             ),
+            const SizedBox(height: 12),
+
+            // 4. SMS Bank Alerts
+            _buildListenerCard(
+              context: context,
+              title: 'SMS Bank Alerts',
+              subtitle: 'Parses bank transaction SMS automatically',
+              isActive: _permissions.isSmsListenerEnabled,
+              icon: Icons.sms_outlined,
+              paletteColor: palette.primary,
+              onTapAction: () async {
+                await ref.read(autoImportServiceProvider).requestSmsPermission();
+                _refreshPermissions();
+              },
+              actionLabel: _permissions.isSmsListenerEnabled ? 'Refresh' : 'Grant Access',
+            ),
             const SizedBox(height: 28),
 
             // Testing & Simulation Section
