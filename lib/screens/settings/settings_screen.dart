@@ -259,14 +259,15 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildSettingsGroup({required bool isDark, required List<Widget> children}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+    return Material(
+      color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
+        side: BorderSide(
           color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(children: children),
     );
   }
