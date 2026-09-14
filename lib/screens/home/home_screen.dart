@@ -9,6 +9,7 @@ import '../../widgets/quick_add_transaction_dialog.dart';
 import '../../widgets/nlp_quick_add_modal.dart';
 import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
+import '../../widgets/pending_transactions_capsule.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -104,7 +105,9 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {},
+        onRefresh: () async {
+          await ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
@@ -113,6 +116,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // 1. Hero Balance Summary Card (with Integrated Accounts Carousel)
               const BalanceCard(),
+              const PendingTransactionsCapsule(),
               const SizedBox(height: 14),
 
               // 2. Quick Hub Row: Recurring & Debts

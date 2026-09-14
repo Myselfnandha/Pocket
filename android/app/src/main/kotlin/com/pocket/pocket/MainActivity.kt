@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import android.provider.MediaStore
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -12,11 +15,14 @@ class MainActivity : FlutterActivity() {
     private val CONTACT_CHANNEL = "com.pocket.pocket/contact_picker"
     private val SHARED_TX_CHANNEL = "com.pocket.pocket/shared_transaction"
     private val WIDGET_CHANNEL = "com.pocket.pocket/widget_events"
+    private val AUTO_IMPORT_CHANNEL = "com.pocket.pocket/auto_import"
     private val REQUEST_CODE_PICK_CONTACT = 1001
 
     private var pendingResult: MethodChannel.Result? = null
     private var sharedTxChannel: MethodChannel? = null
     private var widgetChannel: MethodChannel? = null
+    private var autoImportChannel: MethodChannel? = null
+    private var screenshotObserver: PocketScreenshotObserver? = null
     private var pendingSharedTransactionPayload: String? = null
     private var pendingWidgetUri: String? = null
 
@@ -74,9 +80,95 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // 4. Real-Time Auto-Import Channel (Notification Listener, Accessibility & Screenshot Watcher)
+        autoImportChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AUTO_IMPORT_CHANNEL).apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getPendingTransactions" -> {
+                        val data = PocketNotificationListener.getPendingTransactions(applicationContext)
+                        result.success(data)
+                    }
+                    "clearPendingTransactions" -> {
+                        PocketNotificationListener.clearPendingTransactions(applicationContext)
+                        result.success(true)
+                    }
+                    "checkPermissions" -> {
+                        val map = mapOf(
+                            "notificationListener" to isNotificationListenerEnabled(),
+                            "accessibility" to isAccessibilityServiceEnabled(),
+                            "screenshotWatcher" to (screenshotObserver != null)
+                        )
+                        result.success(map)
+                    }
+                    "openNotificationListenerSettings" -> {
+                        try {
+                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("FAILED", e.localizedMessage, null)
+                        }
+                    }
+                    "openAccessibilitySettings" -> {
+                        try {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("FAILED", e.localizedMessage, null)
+                        }
+                    }
+                    "setScreenshotWatcherEnabled" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        setScreenshotWatcher(enabled)
+                        result.success(screenshotObserver != null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+
+        // Auto-enable screenshot watcher by default
+        setScreenshotWatcher(true)
+
         // Check if app was started with intent extra or widget uri
         handleIntentForSharedTransaction(intent)
         handleIntentForWidget(intent)
+    }
+
+    private fun isNotificationListenerEnabled(): Boolean {
+        return NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val enabledServices = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val expectedService = "${packageName}/${PocketAccessibilityService::class.java.name}"
+        return enabledServices.contains(expectedService) || enabledServices.contains(PocketAccessibilityService::class.java.simpleName)
+    }
+
+    private fun setScreenshotWatcher(enabled: Boolean) {
+        if (enabled) {
+            if (screenshotObserver == null) {
+                screenshotObserver = PocketScreenshotObserver(applicationContext)
+                try {
+                    contentResolver.registerContentObserver(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        true,
+                        screenshotObserver!!
+                    )
+                } catch (_: Exception) {}
+            }
+        } else {
+            screenshotObserver?.let {
+                try {
+                    contentResolver.unregisterContentObserver(it)
+                } catch (_: Exception) {}
+                screenshotObserver = null
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

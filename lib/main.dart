@@ -68,6 +68,7 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       ref.read(transactionsProvider.notifier).refreshFromDisk();
       ref.read(walletsProvider.notifier).refreshFromDisk();
       ref.read(notificationsProvider.notifier).refreshFromDisk();
+      ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
     }
   }
 

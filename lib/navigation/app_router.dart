@@ -16,6 +16,7 @@ import '../screens/debts/debts_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/transactions/quick_add_dialog_screen.dart';
 import '../screens/splash/splash_screen.dart';
+import '../screens/settings/auto_import_studio_screen.dart';
 import 'app_scaffold.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -101,6 +102,13 @@ GoRouter createRouter(bool isOnboarded) {
         path: '/data-management',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DataManagementScreen(),
+      ),
+
+      // Auto-Import Studio (Dedicated Screen)
+      GoRoute(
+        path: '/auto-import-studio',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AutoImportStudioScreen(),
       ),
 
       // Debts & Loans (Dedicated Screen)

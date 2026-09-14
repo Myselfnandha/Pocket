@@ -193,7 +193,23 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 6. Section: Data & Account
+          // 6. Section: Real-Time Auto-Import
+          _buildSectionHeader('AUTOMATION & REAL-TIME IMPORT'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('GPay, PhonePe, Paytm, Screen Reader & Screenshot Watcher'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/auto-import-studio'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 7. Section: Data & Account
           _buildSectionHeader('DATA & ACCOUNT'),
           _buildSettingsGroup(
             isDark: isDark,

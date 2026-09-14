@@ -2,4 +2,5 @@
 <resources>
     <string name="widget_name">Pocket Balance &amp; Quick Add</string>
     <string name="widget_description">View real-time balance, today\'s expenses, and instantly log transactions.</string>
+    <string name="accessibility_service_description">Pocket securely detects transaction confirmation screens in payment apps to auto-fill expenses with zero data leaving your device.</string>
 </resources>
