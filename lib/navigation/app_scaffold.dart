@@ -102,16 +102,64 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
       onPopInvokedWithResult: (didPop, result) => _handlePopInvoked(didPop),
       child: Scaffold(
         extendBody: true,
-        body: PageView(
-          controller: _pageController,
-          physics: const BouncingScrollPhysics(),
-          onPageChanged: (index) {
-            widget.navigationShell.goBranch(
-              index,
-              initialLocation: false,
-            );
-          },
-          children: widget.children,
+        body: Stack(
+          children: [
+            PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) {
+                widget.navigationShell.goBranch(
+                  index,
+                  initialLocation: false,
+                );
+              },
+              children: widget.children,
+            ),
+            // Left edge swipe detector (swiping right -> previous tab)
+            if (currentIndex > 0)
+              Positioned(
+                left: 0,
+                top: 80,
+                bottom: 100,
+                width: 24,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity > 150) {
+                      _onNavTapped(currentIndex - 1);
+                    }
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    if ((details.primaryDelta ?? 0) > 18) {
+                      _onNavTapped(currentIndex - 1);
+                    }
+                  },
+                ),
+              ),
+            // Right edge swipe detector (swiping left -> next tab)
+            if (currentIndex < widget.children.length - 1)
+              Positioned(
+                right: 0,
+                top: 80,
+                bottom: 100,
+                width: 24,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity < -150) {
+                      _onNavTapped(currentIndex + 1);
+                    }
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    if ((details.primaryDelta ?? 0) < -18) {
+                      _onNavTapped(currentIndex + 1);
+                    }
+                  },
+                ),
+              ),
+          ],
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(

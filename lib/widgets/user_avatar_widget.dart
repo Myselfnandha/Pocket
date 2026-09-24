@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
@@ -49,6 +50,8 @@ class UserAvatarWidget extends StatelessWidget {
   final double size;
   final Color? glowColor;
   final String? fallbackInitial;
+  final String? customPhotoPath;
+  final bool enableGlow;
 
   const UserAvatarWidget({
     super.key,
@@ -56,6 +59,8 @@ class UserAvatarWidget extends StatelessWidget {
     this.size = 40,
     this.glowColor,
     this.fallbackInitial,
+    this.customPhotoPath,
+    this.enableGlow = false,
   });
 
   @override
@@ -67,31 +72,47 @@ class UserAvatarWidget extends StatelessWidget {
       orElse: () => kAvatarGallery.first,
     );
 
+    final hasCustomPhoto = customPhotoPath != null &&
+        customPhotoPath!.isNotEmpty &&
+        File(customPhotoPath!).existsSync();
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: effectiveGlow.withValues(alpha: 0.65),
-          width: size > 48 ? 2.5 : 1.5,
+          color: enableGlow
+              ? effectiveGlow.withValues(alpha: 0.65)
+              : Colors.white.withValues(alpha: 0.16),
+          width: size > 48 ? 2.0 : 1.2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: effectiveGlow.withValues(alpha: 0.35),
-            blurRadius: size > 48 ? 14 : 8,
-            spreadRadius: 1,
-          ),
-        ],
+        boxShadow: enableGlow
+            ? [
+                BoxShadow(
+                  color: effectiveGlow.withValues(alpha: 0.35),
+                  blurRadius: size > 48 ? 14 : 8,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: ClipOval(
-        child: SvgPicture.asset(
-          item.assetPath,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          placeholderBuilder: (ctx) => _fallbackLetter(effectiveGlow),
-        ),
+        child: hasCustomPhoto
+            ? Image.file(
+                File(customPhotoPath!),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, err, stack) => _fallbackLetter(effectiveGlow),
+              )
+            : SvgPicture.asset(
+                item.assetPath,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                placeholderBuilder: (ctx) => _fallbackLetter(effectiveGlow),
+              ),
       ),
     );
   }

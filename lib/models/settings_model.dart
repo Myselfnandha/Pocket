@@ -32,8 +32,9 @@ class UserSettingsModel {
   final bool showCategoryTags;
   final bool isOnboarded;
 
-  // Profile Avatar
+  // Profile Avatar & Custom Photo
   final String selectedAvatarId;
+  final String? customAvatarPath;
 
   // Custom Theming
   final AppThemePreset themePreset;
@@ -51,12 +52,22 @@ class UserSettingsModel {
   // Widget Customization
   final HomeScreenWidgetStat homeScreenWidgetStat;
 
+  // New Configurations
+  final String? defaultWalletId;
+  final bool autoSaveScreenshots;
+  final int duplicateDetectionWindowSeconds;
+  final int monthStartDay;
+  final bool biometricLockEnabled;
+  final bool hapticFeedbackEnabled;
+  final String defaultQuickAddType;
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
     this.currencySymbol = '₹',
     this.currencyCode = 'INR',
     this.selectedAvatarId = 'solar_wealth',
+    this.customAvatarPath,
     this.themeMode = AppThemeMode.autoTime,
     this.manualThemeStyle = ManualThemeStyle.pureBlack,
     this.isPureBlackEnabled = true,
@@ -72,6 +83,13 @@ class UserSettingsModel {
     this.dailyReminderMinute = 0,
     this.monthlySummaryEnabled = true,
     this.homeScreenWidgetStat = HomeScreenWidgetStat.balanceAndTodaySpend,
+    this.defaultWalletId,
+    this.autoSaveScreenshots = true,
+    this.duplicateDetectionWindowSeconds = 90,
+    this.monthStartDay = 1,
+    this.biometricLockEnabled = false,
+    this.hapticFeedbackEnabled = true,
+    this.defaultQuickAddType = 'expense',
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -101,6 +119,7 @@ class UserSettingsModel {
     String? currencySymbol,
     String? currencyCode,
     String? selectedAvatarId,
+    String? customAvatarPath,
     AppThemeMode? themeMode,
     ManualThemeStyle? manualThemeStyle,
     bool? isPureBlackEnabled,
@@ -116,6 +135,13 @@ class UserSettingsModel {
     int? dailyReminderMinute,
     bool? monthlySummaryEnabled,
     HomeScreenWidgetStat? homeScreenWidgetStat,
+    String? defaultWalletId,
+    bool? autoSaveScreenshots,
+    int? duplicateDetectionWindowSeconds,
+    int? monthStartDay,
+    bool? biometricLockEnabled,
+    bool? hapticFeedbackEnabled,
+    String? defaultQuickAddType,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -123,6 +149,7 @@ class UserSettingsModel {
       currencySymbol: currencySymbol ?? this.currencySymbol,
       currencyCode: currencyCode ?? this.currencyCode,
       selectedAvatarId: selectedAvatarId ?? this.selectedAvatarId,
+      customAvatarPath: customAvatarPath ?? this.customAvatarPath,
       themeMode: themeMode ?? this.themeMode,
       manualThemeStyle: manualThemeStyle ?? this.manualThemeStyle,
       isPureBlackEnabled: isPureBlackEnabled ?? this.isPureBlackEnabled,
@@ -138,6 +165,13 @@ class UserSettingsModel {
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
       monthlySummaryEnabled: monthlySummaryEnabled ?? this.monthlySummaryEnabled,
       homeScreenWidgetStat: homeScreenWidgetStat ?? this.homeScreenWidgetStat,
+      defaultWalletId: defaultWalletId ?? this.defaultWalletId,
+      autoSaveScreenshots: autoSaveScreenshots ?? this.autoSaveScreenshots,
+      duplicateDetectionWindowSeconds: duplicateDetectionWindowSeconds ?? this.duplicateDetectionWindowSeconds,
+      monthStartDay: monthStartDay ?? this.monthStartDay,
+      biometricLockEnabled: biometricLockEnabled ?? this.biometricLockEnabled,
+      hapticFeedbackEnabled: hapticFeedbackEnabled ?? this.hapticFeedbackEnabled,
+      defaultQuickAddType: defaultQuickAddType ?? this.defaultQuickAddType,
     );
   }
 
@@ -147,6 +181,7 @@ class UserSettingsModel {
         'currencySymbol': currencySymbol,
         'currencyCode': currencyCode,
         'selectedAvatarId': selectedAvatarId,
+        'customAvatarPath': customAvatarPath,
         'themeMode': themeMode.name,
         'manualThemeStyle': manualThemeStyle.name,
         'isPureBlackEnabled': isPureBlackEnabled,
@@ -162,6 +197,13 @@ class UserSettingsModel {
         'dailyReminderMinute': dailyReminderMinute,
         'monthlySummaryEnabled': monthlySummaryEnabled,
         'homeScreenWidgetStat': homeScreenWidgetStat.name,
+        'defaultWalletId': defaultWalletId,
+        'autoSaveScreenshots': autoSaveScreenshots,
+        'duplicateDetectionWindowSeconds': duplicateDetectionWindowSeconds,
+        'monthStartDay': monthStartDay,
+        'biometricLockEnabled': biometricLockEnabled,
+        'hapticFeedbackEnabled': hapticFeedbackEnabled,
+        'defaultQuickAddType': defaultQuickAddType,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -171,6 +213,7 @@ class UserSettingsModel {
         currencySymbol: json['currencySymbol'] as String? ?? '₹',
         currencyCode: json['currencyCode'] as String? ?? 'INR',
         selectedAvatarId: json['selectedAvatarId'] as String? ?? 'solar_wealth',
+        customAvatarPath: json['customAvatarPath'] as String?,
         themeMode: AppThemeMode.values.byName(
           json['themeMode'] as String? ?? 'autoTime',
         ),
@@ -194,5 +237,12 @@ class UserSettingsModel {
         homeScreenWidgetStat: HomeScreenWidgetStat.values.byName(
           json['homeScreenWidgetStat'] as String? ?? 'balanceAndTodaySpend',
         ),
+        defaultWalletId: json['defaultWalletId'] as String?,
+        autoSaveScreenshots: json['autoSaveScreenshots'] as bool? ?? true,
+        duplicateDetectionWindowSeconds: json['duplicateDetectionWindowSeconds'] as int? ?? 90,
+        monthStartDay: json['monthStartDay'] as int? ?? 1,
+        biometricLockEnabled: json['biometricLockEnabled'] as bool? ?? false,
+        hapticFeedbackEnabled: json['hapticFeedbackEnabled'] as bool? ?? true,
+        defaultQuickAddType: json['defaultQuickAddType'] as String? ?? 'expense',
       );
 }

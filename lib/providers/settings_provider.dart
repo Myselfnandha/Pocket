@@ -41,6 +41,38 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(selectedAvatarId: avatarId));
   }
 
+  Future<void> setCustomAvatarPath(String? path) async {
+    await updateSettings(state.copyWith(customAvatarPath: path));
+  }
+
+  Future<void> setDefaultWalletId(String? walletId) async {
+    await updateSettings(state.copyWith(defaultWalletId: walletId));
+  }
+
+  Future<void> setAutoSaveScreenshots(bool value) async {
+    await updateSettings(state.copyWith(autoSaveScreenshots: value));
+  }
+
+  Future<void> setDuplicateDetectionWindow(int seconds) async {
+    await updateSettings(state.copyWith(duplicateDetectionWindowSeconds: seconds));
+  }
+
+  Future<void> setMonthStartDay(int day) async {
+    await updateSettings(state.copyWith(monthStartDay: day));
+  }
+
+  Future<void> setBiometricLock(bool value) async {
+    await updateSettings(state.copyWith(biometricLockEnabled: value));
+  }
+
+  Future<void> setHapticFeedback(bool value) async {
+    await updateSettings(state.copyWith(hapticFeedbackEnabled: value));
+  }
+
+  Future<void> setDefaultQuickAddType(String type) async {
+    await updateSettings(state.copyWith(defaultQuickAddType: type));
+  }
+
   Future<void> toggleCategoryTags(bool value) async {
     await updateSettings(state.copyWith(showCategoryTags: value));
   }

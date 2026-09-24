@@ -17,6 +17,8 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import android.widget.Toast
+import java.util.UUID
 import java.util.regex.Pattern
 
 class ShareReceiverActivity : Activity() {
@@ -30,13 +32,29 @@ class ShareReceiverActivity : Activity() {
             return
         }
 
-        // Process in background thread and close activity immediately
-        Thread {
-            try {
-                processSharedImage(uri)
-            } catch (_: Exception) {
+        // Copy input stream immediately before activity finishes so URI permission is not revoked by OS
+        val receiptsDir = File(filesDir, "receipts").apply { if (!exists()) mkdirs() }
+        val savedFile = File(receiptsDir, "upi_shared_${System.currentTimeMillis()}.jpg")
+        try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(savedFile).use { output ->
+                    input.copyTo(output)
+                }
             }
-        }.start()
+        } catch (e: Exception) {
+            android.util.Log.e("PocketShare", "Failed to copy shared image", e)
+        }
+
+        if (savedFile.exists() && savedFile.length() > 0L) {
+            // Process OCR & direct auto-log in background thread
+            Thread {
+                try {
+                    processSharedImage(savedFile)
+                } catch (e: Exception) {
+                    android.util.Log.e("PocketShare", "Error processing shared screenshot", e)
+                }
+            }.start()
+        }
 
         // Immediately close the share dialog so user stays in UPI app / Gallery
         finish()
@@ -55,16 +73,7 @@ class ShareReceiverActivity : Activity() {
         return null
     }
 
-    private fun processSharedImage(sourceUri: Uri) {
-        val receiptsDir = File(filesDir, "receipts").apply { if (!exists()) mkdirs() }
-        val savedFile = File(receiptsDir, "upi_shared_${System.currentTimeMillis()}.jpg")
-
-        contentResolver.openInputStream(sourceUri)?.use { input ->
-            FileOutputStream(savedFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-
+    private fun processSharedImage(savedFile: File) {
         if (!savedFile.exists() || savedFile.length() == 0L) return
 
         val bitmap = BitmapFactory.decodeFile(savedFile.absolutePath) ?: return
@@ -75,10 +84,43 @@ class ShareReceiverActivity : Activity() {
             .addOnSuccessListener { visionText ->
                 val fullText = visionText.text
                 val parsed = parseUpiText(fullText)
+
+                // 1. Direct Background Auto-Save to native pending buffer for immediate commit
+                val amountDouble = parsed.amount.toDoubleOrNull() ?: 0.0
+                if (amountDouble > 0) {
+                    val txJson = JSONObject().apply {
+                        put("id", UUID.randomUUID().toString())
+                        put("amount", amountDouble)
+                        put("merchant", parsed.merchant.ifEmpty { "Shared UPI Receipt" })
+                        put("isIncome", parsed.isIncome)
+                        put("date", System.currentTimeMillis())
+                        put("appSource", parsed.appSource)
+                        put("refId", parsed.refId)
+                        put("senderName", parsed.senderName)
+                        put("receiverName", parsed.receiverName)
+                        put("counterpartyLast4", parsed.counterpartyLast4)
+                        put("detectionSource", "screenshot")
+                        put("imagePath", savedFile.absolutePath)
+                        put("rawPayload", fullText)
+                        put("autoSaveDirect", true)
+                    }
+                    PocketNotificationListener.savePendingTransaction(applicationContext, txJson)
+
+                    runOnUiThread {
+                        val displayAmount = "₹${parsed.amount}"
+                        val msg = if (parsed.isIncome) {
+                            "⚡ Auto-Logged: Received $displayAmount from ${parsed.merchant}"
+                        } else {
+                            "⚡ Auto-Logged: Paid $displayAmount to ${parsed.merchant}"
+                        }
+                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                // 2. Post notification for system tray confirmation & 1-tap view
                 showTransactionNotification(parsed, savedFile.absolutePath, fullText)
             }
             .addOnFailureListener {
-                // Fallback notification with just the image attached
                 val fallbackParsed = ParsedData(
                     amount = "",
                     merchant = "UPI Merchant",

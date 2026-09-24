@@ -303,50 +303,60 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         : null;
     final activeBudget = activeBudgetModel?.monthlyLimit;
 
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
-      surfaceTintColor: Colors.transparent,
-      titlePadding: const EdgeInsets.fromLTRB(20, 18, 16, 10),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                _receiptImagePath != null ? 'UPI Transaction' : 'Quick Transaction',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 20),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: _closeDialog,
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 680),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 16, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _receiptImagePath != null ? 'UPI Transaction' : 'Quick Transaction',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: _closeDialog,
+                  ),
+                ],
+              ),
+            ),
+            // Flexible Scrollable Form Body
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
             // Attached Screenshot / Receipt Preview Chip
             if (_receiptImagePath != null) ...[
               Container(
@@ -822,66 +832,85 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                 ),
               ),
             ],
+                  ],
+                ),
+              ),
+            ),
+            // Pinned Bottom Dock Action Bar (Floating CTA)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1B1B1E) : const Color(0xFFF7F8FA),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  if (!widget.isStandaloneScreen) ...[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        final amount = double.tryParse(_amountController.text.trim());
+                        context.push(
+                          '/add-transaction',
+                          extra: {
+                            'type': _type,
+                            'amount': amount,
+                            'title': _titleController.text.trim(),
+                            'categoryId': _selectedCategoryId,
+                            'walletId': _selectedWalletId,
+                            'note': _notesController.text.trim(),
+                            'receiptImagePath': _receiptImagePath,
+                            'senderName': _senderName,
+                            'receiverName': _receiverName,
+                            'refId': _refId,
+                            'counterpartyLast4': _counterpartyLast4,
+                          },
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      ),
+                      child: const Text('More Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isSaving ? null : _quickSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreenLight,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                          : const Icon(Icons.check_rounded, size: 20, color: Colors.black),
+                      label: Text(
+                        currentAmount > 0
+                            ? 'Quick Save  $currencySymbol${currencyFormat.format(currentAmount)}'
+                            : 'Quick Save',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        if (!widget.isStandaloneScreen)
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              final amount = double.tryParse(_amountController.text.trim());
-              context.push(
-                '/add-transaction',
-                extra: {
-                  'type': _type,
-                  'amount': amount,
-                  'title': _titleController.text.trim(),
-                  'categoryId': _selectedCategoryId,
-                  'walletId': _selectedWalletId,
-                  'note': _notesController.text.trim(),
-                  'receiptImagePath': _receiptImagePath,
-                  'senderName': _senderName,
-                  'receiverName': _receiverName,
-                  'refId': _refId,
-                  'counterpartyLast4': _counterpartyLast4,
-                },
-              );
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            child: const Text('More Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _quickSave,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryGreenLight,
-            foregroundColor: Colors.black,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                )
-              : const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_rounded, size: 18, color: Colors.black),
-                    SizedBox(width: 6),
-                    Text(
-                      'Quick Save',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                    ),
-                  ],
-                ),
-        ),
-      ],
     );
   }
 }

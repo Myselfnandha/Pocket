@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
+import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/blurred_dialog_utils.dart';
@@ -16,7 +19,15 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
+    final wallets = ref.watch(walletsWithBalancesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final defaultWallet = wallets.where((w) => w.id == settings.defaultWalletId).firstOrNull ??
+        wallets.where((w) => w.isDefault).firstOrNull ??
+        (wallets.isNotEmpty ? wallets.first : null);
+    final defaultWalletName = defaultWallet != null
+        ? '${defaultWallet.icon} ${defaultWallet.name}'
+        : 'First Active Account';
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +51,7 @@ class SettingsScreen extends ConsumerWidget {
                 UserAvatarWidget(
                   avatarId: settings.selectedAvatarId,
                   size: 52,
-                  glowColor: AppColors.primaryGreenLight,
+                  customPhotoPath: settings.customAvatarPath,
                   fallbackInitial: settings.userName,
                 ),
                 const SizedBox(width: 14),
@@ -193,6 +204,68 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
+          // New Section: Defaults & Accounting Preferences
+          _buildSectionHeader('PREFERENCES & DEFAULT ACCOUNT'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Default Payment Account', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(defaultWalletName),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showDefaultWalletPicker(context, ref, settings, wallets),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline_rounded, color: AppColors.infoBlue),
+                title: const Text('Default Quick-Add Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.defaultQuickAddType == 'income' ? 'Income' : 'Expense'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showDefaultQuickAddPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
+                title: const Text('Month / Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('Day ${settings.monthStartDay} of every month'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showMonthStartDayPicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // New Section: Security & Experience
+          _buildSectionHeader('SECURITY & EXPERIENCE'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.fingerprint_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Biometric App Lock', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Require fingerprint or device unlock on app open'),
+                value: settings.biometricLockEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setBiometricLock(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.vibration_rounded, color: AppColors.infoBlue),
+                title: const Text('Haptic Touch Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Tactile vibration on buttons and numeric keypad'),
+                value: settings.hapticFeedbackEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setHapticFeedback(val);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
           // 6. Section: Real-Time Auto-Import
           _buildSectionHeader('AUTOMATION & REAL-TIME IMPORT'),
           _buildSettingsGroup(
@@ -204,6 +277,25 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: const Text('GPay, PhonePe, Paytm, Screen Reader & Screenshot Watcher'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push('/auto-import-studio'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Save Screenshot Transactions', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
+                value: settings.autoSaveScreenshots,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
+                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
               ),
             ],
           ),
@@ -900,6 +992,7 @@ class SettingsScreen extends ConsumerWidget {
   void _editProfileDialog(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
     final nameCtrl = TextEditingController(text: settings.userName);
     String selectedAvatar = settings.selectedAvatarId;
+    String? customPhotoPath = settings.customAvatarPath;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showBlurredDialog(
@@ -937,8 +1030,8 @@ class SettingsScreen extends ConsumerWidget {
                       children: [
                         UserAvatarWidget(
                           avatarId: selectedAvatar,
-                          size: 44,
-                          glowColor: palette.primary,
+                          size: 46,
+                          customPhotoPath: customPhotoPath,
                           fallbackInitial: nameCtrl.text,
                         ),
                         const SizedBox(width: 12),
@@ -967,8 +1060,65 @@ class SettingsScreen extends ConsumerWidget {
                       onChanged: (_) => setDialogState(() {}),
                     ),
                     const SizedBox(height: 16),
+
+                    // Custom Photo Picker Row
                     const Text(
-                      'GLASSMORPHIC ORB AVATAR',
+                      'CUSTOM PROFILE PHOTO',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (customPhotoPath != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              File(customPhotoPath!),
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                side: const BorderSide(color: AppColors.expenseRed),
+                              ),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.expenseRed),
+                              label: const Text('Remove Photo', style: TextStyle(color: AppColors.expenseRed, fontSize: 12)),
+                              onPressed: () => setDialogState(() => customPhotoPath = null),
+                            ),
+                          ),
+                        ] else ...[
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? const Color(0xFF262A34) : const Color(0xFFEBEFF5),
+                                foregroundColor: isDark ? Colors.white : Colors.black87,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                              ),
+                              icon: Icon(Icons.add_a_photo_outlined, size: 17, color: palette.primary),
+                              label: const Text('Choose Photo from Gallery', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
+                              onPressed: () async {
+                                final picker = ImagePicker();
+                                final picked = await picker.pickImage(source: ImageSource.gallery);
+                                if (picked != null) {
+                                  setDialogState(() => customPhotoPath = picked.path);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      'OR CHOOSE AN ORB AVATAR',
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Colors.grey),
                     ),
                     const SizedBox(height: 10),
@@ -980,9 +1130,12 @@ class SettingsScreen extends ConsumerWidget {
                         separatorBuilder: (context, index) => const SizedBox(width: 12),
                         itemBuilder: (context, index) {
                           final av = kAvatarGallery[index];
-                          final isSelected = av.id == selectedAvatar;
+                          final isSelected = av.id == selectedAvatar && customPhotoPath == null;
                           return InkWell(
-                            onTap: () => setDialogState(() => selectedAvatar = av.id),
+                            onTap: () => setDialogState(() {
+                              selectedAvatar = av.id;
+                              customPhotoPath = null;
+                            }),
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1002,7 +1155,6 @@ class SettingsScreen extends ConsumerWidget {
                                   UserAvatarWidget(
                                     avatarId: av.id,
                                     size: 38,
-                                    glowColor: isSelected ? palette.primary : Colors.grey,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -1048,6 +1200,7 @@ class SettingsScreen extends ConsumerWidget {
                                 await ref.read(settingsProvider.notifier).setUserName(newName);
                               }
                               await ref.read(settingsProvider.notifier).setSelectedAvatarId(selectedAvatar);
+                              await ref.read(settingsProvider.notifier).setCustomAvatarPath(customPhotoPath);
                               if (ctx.mounted) Navigator.pop(ctx);
                             },
                             child: const Text('Save Profile', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -1062,6 +1215,206 @@ class SettingsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  void _showDefaultWalletPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings, List<WalletModel> wallets) {
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Default Payment Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text('Select default wallet used when logging transactions', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                const SizedBox(height: 16),
+                for (final w in wallets) ...[
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: w.id == settings.defaultWalletId ? palette.primary.withValues(alpha: 0.15) : null,
+                    leading: Text(w.icon, style: const TextStyle(fontSize: 22)),
+                    title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text('${w.walletType.name.toUpperCase()} • ${settings.formatCurrency(w.currentBalance)}'),
+                    trailing: w.id == settings.defaultWalletId ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                    onTap: () async {
+                      await ref.read(settingsProvider.notifier).setDefaultWalletId(w.id);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDefaultQuickAddPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Default Quick-Add Mode', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text('Initial mode selected when opening Quick Add', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                const SizedBox(height: 16),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: settings.defaultQuickAddType != 'income' ? palette.primary.withValues(alpha: 0.15) : null,
+                  leading: const Icon(Icons.arrow_upward_rounded, color: AppColors.expenseRed),
+                  title: const Text('Expense (Spending)', style: TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: settings.defaultQuickAddType != 'income' ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                  onTap: () async {
+                    await ref.read(settingsProvider.notifier).setDefaultQuickAddType('expense');
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 6),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: settings.defaultQuickAddType == 'income' ? palette.primary.withValues(alpha: 0.15) : null,
+                  leading: const Icon(Icons.arrow_downward_rounded, color: AppColors.primaryGreenLight),
+                  title: const Text('Income (Earnings)', style: TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: settings.defaultQuickAddType == 'income' ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                  onTap: () async {
+                    await ref.read(settingsProvider.notifier).setDefaultQuickAddType('income');
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMonthStartDayPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final days = [1, 5, 10, 15, 20, 25];
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Month Start / Salary Day', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text('Align budget calculations with your monthly pay cycle', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                const SizedBox(height: 16),
+                for (final d in days) ...[
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: settings.monthStartDay == d ? palette.primary.withValues(alpha: 0.15) : null,
+                    leading: Icon(Icons.calendar_today_rounded, size: 20, color: palette.primary),
+                    title: Text('Day $d of month', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    trailing: settings.monthStartDay == d ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                    onTap: () async {
+                      await ref.read(settingsProvider.notifier).setMonthStartDay(d);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDuplicateWindowPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final options = [
+      {'label': '5 Minutes', 'seconds': 300},
+      {'label': '15 Minutes (Default)', 'seconds': 900},
+      {'label': '1 Hour', 'seconds': 3600},
+      {'label': '24 Hours', 'seconds': 86400},
+    ];
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Duplicate Detection Window', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text('Transactions with identical amount and note within this window are flagged as duplicates', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                const SizedBox(height: 16),
+                for (final opt in options) ...[
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: settings.duplicateDetectionWindowSeconds == opt['seconds'] ? palette.primary.withValues(alpha: 0.15) : null,
+                    title: Text(opt['label'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    trailing: settings.duplicateDetectionWindowSeconds == opt['seconds'] ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                    onTap: () async {
+                      await ref.read(settingsProvider.notifier).setDuplicateDetectionWindow(opt['seconds'] as int);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

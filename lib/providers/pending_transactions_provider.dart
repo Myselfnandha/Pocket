@@ -1,8 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
+import '../models/notification_model.dart';
 import 'core_providers.dart';
 import 'transactions_provider.dart';
+import 'notifications_provider.dart';
+import 'settings_provider.dart';
 
 final pendingTransactionsProvider =
     StateNotifierProvider<PendingTransactionsNotifier, List<PendingTransactionModel>>((ref) {
@@ -26,6 +30,33 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...fetched]);
       state = merged;
+
+      // Auto-commit shared screenshots and auto-save items directly to database
+      final settings = _ref.read(settingsProvider);
+      final autoCommitItems = merged.where((item) {
+        return item.detectionSource == 'screenshot' ||
+            (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')) ||
+            settings.autoSaveScreenshots;
+      }).toList();
+
+      for (final item in autoCommitItems) {
+        await approve(item.id);
+        await _ref.read(notificationsProvider.notifier).addNotification(
+          AppNotificationModel(
+            id: const Uuid().v4(),
+            title: '📸 Screenshot Auto-Logged',
+            message: '${item.merchant}: ₹${item.amount.toStringAsFixed(2)} was automatically logged.',
+            type: NotificationType.system,
+            createdAt: DateTime.now(),
+            actionData: {
+              'amount': item.amount,
+              'merchant': item.merchant,
+              'refId': item.refId,
+              'imagePath': item.imagePath,
+            },
+          ),
+        );
+      }
     } catch (_) {
       // Non-blocking defensive catch
     }
