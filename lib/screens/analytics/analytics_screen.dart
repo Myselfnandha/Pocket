@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -34,7 +33,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  bool _isMonthBarVisible = true;
 
   @override
   void initState() {
@@ -44,14 +42,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       if (mounted) setState(() {});
     });
 
-    _scrollController.addListener(() {
-      final direction = _scrollController.position.userScrollDirection;
-      if (direction == ScrollDirection.reverse && _isMonthBarVisible) {
-        setState(() => _isMonthBarVisible = false);
-      } else if (direction == ScrollDirection.forward && !_isMonthBarVisible) {
-        setState(() => _isMonthBarVisible = true);
-      }
-    });
+    // Keep month selector bar sticky and visible during scroll
   }
 
   @override
@@ -368,7 +359,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
-            child: (_tabController.index != 2 && _isMonthBarVisible)
+            child: (_tabController.index != 2)
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     child: Container(

@@ -158,76 +158,87 @@ class WalletsScreen extends ConsumerWidget {
 
                   const SizedBox(height: 10),
 
-                  // Embedded Dock Action Bar
+                  // Embedded Dock Quick Actions
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1D2027) : const Color(0xFFF3F5F9),
-                      borderRadius: BorderRadius.circular(18),
+                      color: isDark ? const Color(0xFF1B1E26) : const Color(0xFFF3F5F9),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+                        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
                       ),
                     ),
                     child: Row(
                       children: [
                         Expanded(
-                          child: InkWell(
-                            onTap: () => _showTransferDialog(context, ref, wallets, settings.currencySymbol),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: palette.primary.withValues(alpha: isDark ? 0.16 : 0.12),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.swap_horiz_rounded, size: 16, color: palette.primary),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Transfer Funds',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: palette.primary,
-                                    ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showTransferDialog(context, ref, wallets, settings.currencySymbol),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: palette.primary.withValues(alpha: isDark ? 0.15 : 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                                    width: 1,
                                   ),
-                                ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.swap_horiz_rounded, size: 16, color: palette.primary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Transfer',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: InkWell(
-                            onTap: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF262A34) : Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add_rounded, size: 16, color: isDark ? Colors.white : Colors.black87),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Add Account',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF252934) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.10),
+                                    width: 1,
                                   ),
-                                ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_rounded, size: 16, color: isDark ? Colors.white : Colors.black87),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'New Account',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -1458,13 +1469,13 @@ class WalletsScreen extends ConsumerWidget {
 
           return Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 440, maxHeight: 680),
-              padding: const EdgeInsets.all(20),
+              constraints: const BoxConstraints(maxWidth: 440),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                color: isDark ? const Color(0xFF1E1E22) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
                   width: 1.2,
@@ -1477,308 +1488,393 @@ class WalletsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Edit Account',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Account Name
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Account Name',
-                        hintText: 'e.g. HDFC Bank, Salary A/c',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Account Type Selector
-                    DropdownButtonFormField<WalletType>(
-                      initialValue: selectedType,
-                      decoration: InputDecoration(
-                        labelText: 'Account Type',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                      ),
-                      items: WalletType.values.map((type) {
-                        return DropdownMenuItem(
-                          value: type,
-                          child: Text(type.name.toUpperCase()),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() => selectedType = val);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Last 4 Digits of Account Number (Required for Bank & Card)
-                    if (selectedType == WalletType.bank || selectedType == WalletType.creditCard || selectedType == WalletType.savings) ...[
-                      TextField(
-                        controller: last4Ctrl,
-                        keyboardType: TextInputType.number,
-                        maxLength: 4,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: InputDecoration(
-                          labelText: 'Account Last 4 Digits',
-                          hintText: 'e.g. 4821',
-                          hintStyle: TextStyle(
-                            color: isDark ? Colors.white30 : Colors.black26,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          prefixText: '•••• ',
-                          counterText: '',
-                          filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit Account',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
 
-                    // Current Live Balance (Editable)
-                    TextField(
-                      controller: currentBalanceCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (val) {
-                        final newCurrent = double.tryParse(val.trim());
-                        if (newCurrent != null) {
-                          final newInitial = newCurrent - netTransactions;
-                          initialBalanceCtrl.text = newInitial % 1 == 0
-                              ? newInitial.toInt().toString()
-                              : newInitial.toStringAsFixed(2);
-                        }
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Current Balance',
-                        helperText: 'Adjusts ledger starting balance automatically',
-                        prefixText: '$currencySymbol ',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  // Row 1: Account Name + Account Type
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: nameCtrl,
+                          style: const TextStyle(fontSize: 13.5),
+                          decoration: InputDecoration(
+                            labelText: 'Account Name',
+                            hintText: 'e.g. HDFC Bank',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            filled: true,
+                            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Initial / Starting Balance
-                    TextField(
-                      controller: initialBalanceCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (val) {
-                        final newInitial = double.tryParse(val.trim());
-                        if (newInitial != null) {
-                          final newCurrent = newInitial + netTransactions;
-                          currentBalanceCtrl.text = newCurrent % 1 == 0
-                              ? newCurrent.toInt().toString()
-                              : newCurrent.toStringAsFixed(2);
-                        }
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Starting Balance',
-                        helperText: 'Initial baseline balance at account creation',
-                        prefixText: '$currencySymbol ',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<WalletType>(
+                          initialValue: selectedType,
+                          isDense: true,
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black87),
+                          decoration: InputDecoration(
+                            labelText: 'Type',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                            filled: true,
+                            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                          items: WalletType.values.map((type) {
+                            return DropdownMenuItem(
+                              value: type,
+                              child: Text(type.name.toUpperCase()),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() => selectedType = val);
+                            }
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
 
-                    // Icon Picker
-                    Text('Icon / Emoji', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 48,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: icons.length,
-                        separatorBuilder: (context, i) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) {
-                          final icon = icons[i];
-                          final isSelected = selectedIcon == icon;
-                          return InkWell(
-                            onTap: () => setModalState(() => selectedIcon = icon),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: isSelected ? palette.primary.withValues(alpha: 0.2) : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? palette.primary : Colors.transparent,
-                                  width: 2,
+                  // Row 2: Last 4 digits (if applicable) + Current Balance + Starting Balance
+                  Row(
+                    children: [
+                      if (selectedType == WalletType.bank || selectedType == WalletType.creditCard || selectedType == WalletType.savings) ...[
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: last4Ctrl,
+                            keyboardType: TextInputType.number,
+                            maxLength: 4,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Last 4',
+                              hintText: '4821',
+                              prefixText: '•• ',
+                              counterText: '',
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                              filled: true,
+                              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: currentBalanceCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (val) {
+                            final newCurrent = double.tryParse(val.trim());
+                            if (newCurrent != null) {
+                              final newInitial = newCurrent - netTransactions;
+                              initialBalanceCtrl.text = newInitial % 1 == 0
+                                  ? newInitial.toInt().toString()
+                                  : newInitial.toStringAsFixed(2);
+                            }
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Current Bal',
+                            prefixText: '$currencySymbol ',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            filled: true,
+                            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: initialBalanceCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (val) {
+                            final newInitial = double.tryParse(val.trim());
+                            if (newInitial != null) {
+                              final newCurrent = newInitial + netTransactions;
+                              currentBalanceCtrl.text = newCurrent % 1 == 0
+                                  ? newCurrent.toInt().toString()
+                                  : newCurrent.toStringAsFixed(2);
+                            }
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Starting Bal',
+                            prefixText: '$currencySymbol ',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            filled: true,
+                            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Row 3: Icons
+                  Row(
+                    children: [
+                      Text(
+                        'Icon:',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 36,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: icons.length,
+                            separatorBuilder: (context, i) => const SizedBox(width: 6),
+                            itemBuilder: (context, i) {
+                              final icon = icons[i];
+                              final isSelected = selectedIcon == icon;
+                              return InkWell(
+                                onTap: () => setModalState(() => selectedIcon = icon),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? palette.primary.withValues(alpha: 0.25) : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected ? palette.primary : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(icon, style: const TextStyle(fontSize: 18)),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Row 4: Colors
+                  Row(
+                    children: [
+                      Text(
+                        'Color:',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 28,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: colors.length,
+                            separatorBuilder: (context, i) => const SizedBox(width: 8),
+                            itemBuilder: (context, i) {
+                              final col = colors[i];
+                              final isSelected = selectedColor == col;
+                              return InkWell(
+                                onTap: () => setModalState(() => selectedColor = col),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: Color(col),
+                                    shape: BoxShape.circle,
+                                    border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                                  ),
+                                  child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Row 5: Set as Primary Switch
+                  InkWell(
+                    onTap: () => setModalState(() => isDefault = !isDefault),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Primary Account',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
                                 ),
                               ),
-                              alignment: Alignment.center,
-                              child: Text(icon, style: const TextStyle(fontSize: 22)),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Color Picker
-                    Text('Color Theme', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 40,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: colors.length,
-                        separatorBuilder: (context, i) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) {
-                          final col = colors[i];
-                          final isSelected = selectedColor == col;
-                          return InkWell(
-                            onTap: () => setModalState(() => selectedColor = col),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Color(col),
-                                shape: BoxShape.circle,
-                                border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
+                              Text(
+                                'Default for newly added transactions',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                ),
                               ),
-                              child: isSelected ? const Icon(Icons.check, size: 20, color: Colors.white) : null,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Set as Primary Switch
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Primary Account', style: TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: const Text('Used as default for newly added transactions'),
-                      value: isDefault,
-                      activeTrackColor: palette.primary,
-                      onChanged: (val) => setModalState(() => isDefault = val),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Stacked Actions: Cancel above Save, with optional Delete icon
-                    Row(
-                      children: [
-                        if (ref.read(walletsProvider).length > 1)
-                          IconButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _confirmDeleteWallet(context, ref, wallet);
-                            },
-                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.expenseRed),
-                            tooltip: 'Delete Account',
+                            ],
                           ),
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              side: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                            ),
-                            onPressed: () => Navigator.pop(ctx),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              ),
+                          Switch(
+                            value: isDefault,
+                            activeTrackColor: palette.primary,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            onChanged: (val) => setModalState(() => isDefault = val),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 6: Single-row actions: Delete icon + Cancel + Save
+                  Row(
+                    children: [
+                      if (ref.read(walletsProvider).length > 1) ...[
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _confirmDeleteWallet(context, ref, wallet);
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.expenseRed, size: 20),
+                          tooltip: 'Delete Account',
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) {
-                            TopCapsuleToast.show(
-                              context,
-                              message: 'Please enter an account name',
-                              isSuccess: false,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final name = nameCtrl.text.trim();
+                            if (name.isEmpty) {
+                              TopCapsuleToast.show(
+                                context,
+                                message: 'Please enter an account name',
+                                isSuccess: false,
+                              );
+                              return;
+                            }
+
+                            final initialBal = double.tryParse(initialBalanceCtrl.text.trim()) ?? wallet.initialBalance;
+                            final last4 = last4Ctrl.text.trim();
+
+                            final updated = wallet.copyWith(
+                              name: name,
+                              walletType: selectedType,
+                              accountNumber: last4.isNotEmpty ? last4 : null,
+                              initialBalance: initialBal,
+                              icon: selectedIcon,
+                              colorValue: selectedColor,
+                              isDefault: isDefault,
                             );
-                            return;
-                          }
 
-                          final initialBal = double.tryParse(initialBalanceCtrl.text.trim()) ?? wallet.initialBalance;
-                          final last4 = last4Ctrl.text.trim();
-
-                          final updated = wallet.copyWith(
-                            name: name,
-                            walletType: selectedType,
-                            accountNumber: last4.isNotEmpty ? last4 : null,
-                            initialBalance: initialBal,
-                            icon: selectedIcon,
-                            colorValue: selectedColor,
-                            isDefault: isDefault,
-                          );
-
-                          // If set as default, unset other defaults
-                          if (isDefault && !wallet.isDefault) {
-                            final allWallets = ref.read(walletsProvider);
-                            for (final w in allWallets) {
-                              if (w.id != wallet.id && w.isDefault) {
-                                await ref.read(walletsProvider.notifier).updateWallet(w.copyWith(isDefault: false));
+                            // If set as default, unset other defaults
+                            if (isDefault && !wallet.isDefault) {
+                              final allWallets = ref.read(walletsProvider);
+                              for (final w in allWallets) {
+                                if (w.id != wallet.id && w.isDefault) {
+                                  await ref.read(walletsProvider.notifier).updateWallet(w.copyWith(isDefault: false));
+                                }
                               }
                             }
-                          }
 
-                          await ref.read(walletsProvider.notifier).updateWallet(updated);
+                            await ref.read(walletsProvider.notifier).updateWallet(updated);
 
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (context.mounted) {
-                            TopCapsuleToast.show(
-                              context,
-                              message: 'Account "$name" updated',
-                              isSuccess: true,
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: palette.primary,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (context.mounted) {
+                              TopCapsuleToast.show(
+                                context,
+                                message: 'Account "$name" updated',
+                                isSuccess: true,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: palette.primary,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
                         ),
-                        child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           );

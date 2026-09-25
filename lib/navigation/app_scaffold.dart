@@ -265,24 +265,14 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isSelected
-                ? palette.primary.withValues(alpha: isDark ? 0.22 : 0.14)
+                ? palette.primary.withValues(alpha: isDark ? 0.14 : 0.08)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             border: isSelected
                 ? Border.all(
-                    color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                    color: palette.primary.withValues(alpha: isDark ? 0.30 : 0.20),
                     width: 1.0,
                   )
-                : null,
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
                 : null,
           ),
           child: Column(
@@ -295,14 +285,6 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
                 color: isSelected
                     ? palette.primary
                     : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                shadows: isSelected
-                    ? [
-                        Shadow(
-                          color: palette.primary.withValues(alpha: 0.6),
-                          blurRadius: 8,
-                        ),
-                      ]
-                    : null,
               ),
               const SizedBox(height: 2),
               Text(
@@ -311,8 +293,8 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
                   fontSize: 10.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
-                      ? palette.primary
-                      : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                    ? palette.primary
+                    : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
                 ),
               ),
             ],
@@ -348,9 +330,9 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: palette.primary.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: palette.primary.withValues(alpha: 0.22),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),

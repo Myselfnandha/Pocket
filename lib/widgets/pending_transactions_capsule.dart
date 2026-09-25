@@ -25,19 +25,19 @@ class PendingTransactionsCapsule extends ConsumerWidget {
     final count = pending.length;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: const EdgeInsets.only(top: 14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1B1B22) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: palette.primary.withValues(alpha: 0.5),
-          width: 1.5,
+          color: palette.primary.withValues(alpha: 0.4),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.primary.withValues(alpha: 0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: palette.primary.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
