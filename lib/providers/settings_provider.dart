@@ -73,6 +73,14 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(defaultQuickAddType: type));
   }
 
+  Future<void> setTransactionEntryMode(String mode) async {
+    await updateSettings(state.copyWith(transactionEntryMode: mode));
+  }
+
+  Future<void> setNavBarStyle(String style) async {
+    await updateSettings(state.copyWith(navBarStyle: style));
+  }
+
   Future<void> toggleCategoryTags(bool value) async {
     await updateSettings(state.copyWith(showCategoryTags: value));
   }

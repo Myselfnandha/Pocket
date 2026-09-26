@@ -80,7 +80,10 @@ GoRouter createRouter(bool isOnboarded) {
       GoRoute(
         path: '/transactions',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const TransactionsListScreen(),
+        builder: (context, state) {
+          final walletId = state.uri.queryParameters['walletId'];
+          return TransactionsListScreen(initialWalletId: walletId);
+        },
       ),
 
       // Recurring Rules (Dedicated Screen)

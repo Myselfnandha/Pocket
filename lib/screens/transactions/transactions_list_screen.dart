@@ -12,7 +12,8 @@ import '../../widgets/transaction_tile.dart';
 enum TransactionSortOption { newest, oldest, highestAmount, lowestAmount }
 
 class TransactionsListScreen extends ConsumerStatefulWidget {
-  const TransactionsListScreen({super.key});
+  final String? initialWalletId;
+  const TransactionsListScreen({super.key, this.initialWalletId});
 
   @override
   ConsumerState<TransactionsListScreen> createState() =>
@@ -27,6 +28,12 @@ class _TransactionsListScreenState
   String? _walletFilter;
   DateTimeRange? _dateRange;
   TransactionSortOption _sortOption = TransactionSortOption.newest;
+
+  @override
+  void initState() {
+    super.initState();
+    _walletFilter = widget.initialWalletId;
+  }
 
   @override
   Widget build(BuildContext context) {

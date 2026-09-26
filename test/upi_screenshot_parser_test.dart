@@ -95,5 +95,47 @@ void main() {
       expect(parsed.merchant, 'UPI Payment');
       expect(parsed.amount, null);
     });
+
+    test('Parses PhonePe multi-line receipt layout', () {
+      const phonePeText = '''
+Transaction Successful
+04:25 PM on 24 Oct 2024
+Paid to
+Swiggy
+₹350
+Transfer Details
+Transaction ID
+T2410241625123456789012
+Debited from
+XXXXXX5678
+UTR: 429812345678
+''';
+      expect(UpiScreenshotParserService.extractAmount(phonePeText), 350.0);
+      expect(UpiScreenshotParserService.extractReceiver(phonePeText), 'Swiggy');
+      expect(UpiScreenshotParserService.extractRefId(phonePeText), 'T2410241625123456789012');
+      expect(UpiScreenshotParserService.extractLast4(phonePeText), '5678');
+      expect(UpiScreenshotParserService.detectIsIncome(phonePeText), false);
+    });
+
+    test('Parses Google Pay sent-you income layout', () {
+      const gpayIncomeText = '''
+Rohan Kumar sent you
+₹500.00
+Completed • Oct 24, 2024
+UPI transaction ID: 429898765432
+To: Nandha
+From: Rohan Kumar (State Bank of India)
+''';
+      expect(UpiScreenshotParserService.extractAmount(gpayIncomeText), 500.0);
+      expect(UpiScreenshotParserService.extractSender(gpayIncomeText), 'Rohan Kumar');
+      expect(UpiScreenshotParserService.detectIsIncome(gpayIncomeText), true);
+      expect(UpiScreenshotParserService.extractRefId(gpayIncomeText), '429898765432');
+    });
+
+    test('Recovers amount when currency symbol is OCR-misread as * or ?', () {
+      expect(UpiScreenshotParserService.extractAmount('Paid *500.00 to Ramesh'), 500.0);
+      expect(UpiScreenshotParserService.extractAmount('Payment of ?250 completed'), 250.0);
+      expect(UpiScreenshotParserService.extractAmount('Paid to Uber\n150\nCompleted'), 150.0);
+    });
   });
 }

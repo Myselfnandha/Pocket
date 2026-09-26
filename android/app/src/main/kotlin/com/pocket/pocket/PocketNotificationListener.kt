@@ -58,6 +58,24 @@ class PocketNotificationListener : NotificationListenerService() {
                 val exDate = existing.optLong("date", 0L)
 
                 if (newRef.isNotEmpty() && exRef.isNotEmpty() && newRef == exRef) {
+                    // Two-way enrichment: attach screenshot image, bank details, or richer merchant name
+                    val newImg = jsonObject.optString("imagePath", "")
+                    if (newImg.isNotEmpty() && existing.optString("imagePath", "").isEmpty()) {
+                        existing.put("imagePath", newImg)
+                    }
+                    val newAppSource = jsonObject.optString("appSource", "")
+                    if (newAppSource.contains("SMS") && !existing.optString("appSource", "").contains("SMS")) {
+                        existing.put("smsSource", newAppSource)
+                    }
+                    if (jsonObject.optBoolean("autoSaveDirect", false)) {
+                        existing.put("autoSaveDirect", true)
+                    }
+                    val exMerch = existing.optString("merchant", "")
+                    val newMerch = jsonObject.optString("merchant", "")
+                    if ((exMerch.contains("Payment") || exMerch.contains("Alert") || exMerch == "UPI Payment") &&
+                        newMerch.isNotEmpty() && !newMerch.contains("Payment") && !newMerch.contains("Alert")) {
+                        existing.put("merchant", newMerch)
+                    }
                     isDuplicate = true
                     break
                 }

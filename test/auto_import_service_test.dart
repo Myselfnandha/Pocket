@@ -282,5 +282,79 @@ void main() {
       // Wallet heuristic should detect UPI / Bank wallet over Cash
       expect(result.first.suggestedWalletId, contains('upi'));
     });
+
+    test('Two-way enrichment: attaches screenshot image and richer merchant to existing SMS transaction', () {
+      final existingSmsTx = TransactionModel(
+        id: 'saved_sms_1',
+        title: 'UPI Payment',
+        amount: 350.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'wallet_hdfc',
+        date: DateTime.now(),
+        refId: '429812345678',
+        note: 'Imported via SMS (AD-HDFC)',
+        createdAt: DateTime.now(),
+      );
+
+      final incomingScreenshot = PendingTransactionModel(
+        id: 'pending_screen_1',
+        amount: 350.0,
+        merchant: 'Swiggy',
+        appSource: 'PhonePe',
+        refId: '429812345678',
+        imagePath: '/data/user/0/com.pocket.pocket/files/receipts/swiggy_receipt.jpg',
+        date: DateTime.now(),
+      );
+
+      final enriched = service.enrichSavedTransaction(incomingScreenshot, [existingSmsTx], []);
+      expect(enriched, isNotNull);
+      expect(enriched!.id, 'saved_sms_1');
+      expect(enriched.title, 'Swiggy');
+      expect(enriched.receiptImagePath, '/data/user/0/com.pocket.pocket/files/receipts/swiggy_receipt.jpg');
+      expect(enriched.walletId, 'wallet_hdfc'); // Preserves bank wallet
+    });
+
+    test('Two-way enrichment: updates bank wallet when SMS arrives for existing screenshot transaction', () {
+      final hdfcWallet = WalletModel(
+        id: 'wallet_hdfc_bank',
+        name: 'HDFC Bank',
+        initialBalance: 50000.0,
+        icon: '🏦',
+        colorValue: 0xFF003399,
+        walletType: WalletType.bank,
+        accountNumber: '1234',
+      );
+
+      final existingScreenshotTx = TransactionModel(
+        id: 'saved_screen_1',
+        title: 'Starbucks',
+        amount: 450.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'default_cash',
+        date: DateTime.now(),
+        refId: '429898765432',
+        receiptImagePath: '/data/user/0/com.pocket.pocket/files/receipts/starbucks.jpg',
+        createdAt: DateTime.now(),
+      );
+
+      final incomingSms = PendingTransactionModel(
+        id: 'pending_sms_1',
+        amount: 450.0,
+        merchant: 'Payment to Starbucks',
+        appSource: 'SMS (HDFC)',
+        refId: '429898765432',
+        rawPayload: 'debited by 450 on HDFC Bank A/c ending 1234 to Starbucks',
+        date: DateTime.now(),
+      );
+
+      final enriched = service.enrichSavedTransaction(incomingSms, [existingScreenshotTx], [hdfcWallet]);
+      expect(enriched, isNotNull);
+      expect(enriched!.id, 'saved_screen_1');
+      expect(enriched.title, 'Starbucks'); // Preserves rich title
+      expect(enriched.receiptImagePath, '/data/user/0/com.pocket.pocket/files/receipts/starbucks.jpg'); // Preserves receipt
+      expect(enriched.walletId, 'wallet_hdfc_bank'); // Enriched to HDFC Bank from SMS!
+    });
   });
 }

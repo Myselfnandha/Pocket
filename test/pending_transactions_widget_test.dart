@@ -145,21 +145,24 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Review Detected Payments'), findsOneWidget);
-    expect(find.text('2 pending unconfirmed transactions'), findsOneWidget);
+    expect(find.text('Detected Payments'), findsOneWidget);
+    expect(find.text('2 unconfirmed transactions'), findsOneWidget);
     expect(find.text('Zomato'), findsOneWidget);
     expect(find.text('Uber Auto'), findsOneWidget);
     expect(find.text('Approve All'), findsOneWidget);
 
     // Dismiss first item
-    final dismissButtons = find.byIcon(Icons.close_rounded);
+    final dismissButtons = find.descendant(
+      of: find.byType(ListView),
+      matching: find.byIcon(Icons.close_rounded),
+    );
     expect(dismissButtons, findsNWidgets(2));
     await tester.tap(dismissButtons.first);
     await tester.pumpAndSettle();
 
     // Now 1 item remaining
     expect(container.read(pendingTransactionsProvider).length, 1);
-    expect(find.text('1 pending unconfirmed transactions'), findsOneWidget);
+    expect(find.text('1 unconfirmed transactions'), findsOneWidget);
 
     // Tap Approve All for remaining item
     await tester.tap(find.text('Approve All'));

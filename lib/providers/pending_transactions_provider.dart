@@ -7,6 +7,7 @@ import 'core_providers.dart';
 import 'transactions_provider.dart';
 import 'notifications_provider.dart';
 import 'settings_provider.dart';
+import 'wallets_provider.dart';
 
 final pendingTransactionsProvider =
     StateNotifierProvider<PendingTransactionsNotifier, List<PendingTransactionModel>>((ref) {
@@ -26,6 +27,16 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final service = _ref.read(autoImportServiceProvider);
       final fetched = await service.fetchAndDrainPendingTransactions();
       if (fetched.isEmpty) return;
+
+      // Check for two-way enrichment against existing saved transactions
+      final savedTxs = _ref.read(transactionsProvider);
+      final wallets = _ref.read(walletsProvider);
+      for (final item in fetched) {
+        final enriched = service.enrichSavedTransaction(item, savedTxs, wallets);
+        if (enriched != null) {
+          await _ref.read(transactionsProvider.notifier).updateTransaction(enriched);
+        }
+      }
 
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...fetched]);

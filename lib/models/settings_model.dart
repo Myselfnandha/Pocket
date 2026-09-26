@@ -60,6 +60,8 @@ class UserSettingsModel {
   final bool biometricLockEnabled;
   final bool hapticFeedbackEnabled;
   final String defaultQuickAddType;
+  final String transactionEntryMode; // 'quick' or 'detailed'
+  final String navBarStyle; // 'frosted', 'glassmorphism', 'floating_island', 'neumorphic'
 
   const UserSettingsModel({
     this.userName = '',
@@ -90,6 +92,8 @@ class UserSettingsModel {
     this.biometricLockEnabled = false,
     this.hapticFeedbackEnabled = true,
     this.defaultQuickAddType = 'expense',
+    this.transactionEntryMode = 'quick',
+    this.navBarStyle = 'floating_island',
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -142,6 +146,8 @@ class UserSettingsModel {
     bool? biometricLockEnabled,
     bool? hapticFeedbackEnabled,
     String? defaultQuickAddType,
+    String? transactionEntryMode,
+    String? navBarStyle,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -172,6 +178,8 @@ class UserSettingsModel {
       biometricLockEnabled: biometricLockEnabled ?? this.biometricLockEnabled,
       hapticFeedbackEnabled: hapticFeedbackEnabled ?? this.hapticFeedbackEnabled,
       defaultQuickAddType: defaultQuickAddType ?? this.defaultQuickAddType,
+      transactionEntryMode: transactionEntryMode ?? this.transactionEntryMode,
+      navBarStyle: navBarStyle ?? this.navBarStyle,
     );
   }
 
@@ -204,6 +212,8 @@ class UserSettingsModel {
         'biometricLockEnabled': biometricLockEnabled,
         'hapticFeedbackEnabled': hapticFeedbackEnabled,
         'defaultQuickAddType': defaultQuickAddType,
+        'transactionEntryMode': transactionEntryMode,
+        'navBarStyle': navBarStyle,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -244,5 +254,7 @@ class UserSettingsModel {
         biometricLockEnabled: json['biometricLockEnabled'] as bool? ?? false,
         hapticFeedbackEnabled: json['hapticFeedbackEnabled'] as bool? ?? true,
         defaultQuickAddType: json['defaultQuickAddType'] as String? ?? 'expense',
+        transactionEntryMode: json['transactionEntryMode'] as String? ?? 'quick',
+        navBarStyle: json['navBarStyle'] as String? ?? 'floating_island',
       );
 }

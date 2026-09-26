@@ -107,6 +107,7 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       if (navContext != null) {
         QuickAddTransactionDialog.show(
           navContext,
+          transactionIdToUpdate: tx.id,
           initialType: tx.isIncome ? TransactionType.income : TransactionType.expense,
           initialAmount: tx.amount,
           initialTitle: tx.merchant,

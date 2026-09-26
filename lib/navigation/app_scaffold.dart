@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/app_providers.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quick_add_transaction_dialog.dart';
 
@@ -97,6 +99,118 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
     final currentIndex = widget.navigationShell.currentIndex;
     final palette = ref.watch(activePaletteProvider);
 
+    final settings = ref.watch(settingsProvider);
+    final navStyle = settings.navBarStyle;
+
+    // Ambient styling parameters based on navStyle
+    BoxDecoration barDecoration;
+    double blurSigma = 16.0;
+
+    switch (navStyle) {
+      case 'frosted':
+        blurSigma = 20.0;
+        barDecoration = BoxDecoration(
+          color: isDark
+              ? const Color(0xFF121418).withValues(alpha: 0.78)
+              : Colors.white.withValues(alpha: 0.78),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        );
+        break;
+
+      case 'glassmorphism':
+        blurSigma = 18.0;
+        barDecoration = BoxDecoration(
+          color: isDark
+              ? const Color(0xFF16181F).withValues(alpha: 0.85)
+              : Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: palette.primary.withValues(alpha: isDark ? 0.38 : 0.28),
+            width: 1.4,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: palette.primary.withValues(alpha: isDark ? 0.22 : 0.12),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        );
+        break;
+
+      case 'neumorphic':
+        blurSigma = 0.0;
+        barDecoration = BoxDecoration(
+          color: isDark ? const Color(0xFF1A1C22) : const Color(0xFFF0F3F8),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.white,
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.65)
+                  : const Color(0xFFD1D9E6),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : Colors.white,
+              blurRadius: 10,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        );
+        break;
+
+      case 'floating_island':
+      default:
+        blurSigma = 14.0;
+        barDecoration = BoxDecoration(
+          color: isDark
+              ? const Color(0xFF141416).withValues(alpha: 0.96)
+              : Colors.white.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.10),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        );
+        break;
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) => _handlePopInvoked(didPop),
@@ -164,78 +278,66 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF141414).withValues(alpha: 0.96)
-                    : Colors.white.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.08),
-                  width: 1.2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+                child: Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: barDecoration,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      // 1. Home Tab (Branch 0)
+                      _buildNavItem(
+                        branchIndex: 0,
+                        currentIndex: currentIndex,
+                        selectedIcon: Icons.grid_view_rounded,
+                        unselectedIcon: Icons.grid_view_outlined,
+                        label: 'Home',
+                        isDark: isDark,
+                        palette: palette,
+                      ),
+
+                      // 2. Analytics Tab (Branch 1)
+                      _buildNavItem(
+                        branchIndex: 1,
+                        currentIndex: currentIndex,
+                        selectedIcon: Icons.donut_large_rounded,
+                        unselectedIcon: Icons.donut_large_outlined,
+                        label: 'Analytics',
+                        isDark: isDark,
+                        palette: palette,
+                      ),
+
+                      // 3. Center Floating Elevated (+) Quick Add Button
+                      _buildCenterQuickAddButton(context, palette),
+
+                      // 4. Wallets Tab (Branch 2)
+                      _buildNavItem(
+                        branchIndex: 2,
+                        currentIndex: currentIndex,
+                        selectedIcon: Icons.account_balance_wallet_rounded,
+                        unselectedIcon: Icons.account_balance_wallet_outlined,
+                        label: 'Wallets',
+                        isDark: isDark,
+                        palette: palette,
+                      ),
+
+                      // 5. Settings Tab (Branch 3)
+                      _buildNavItem(
+                        branchIndex: 3,
+                        currentIndex: currentIndex,
+                        selectedIcon: Icons.settings_rounded,
+                        unselectedIcon: Icons.settings_outlined,
+                        label: 'Settings',
+                        isDark: isDark,
+                        palette: palette,
+                      ),
+                    ],
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // 1. Home Tab (Branch 0)
-                  _buildNavItem(
-                    branchIndex: 0,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.grid_view_rounded,
-                    unselectedIcon: Icons.grid_view_outlined,
-                    label: 'Home',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
-
-                  // 2. Analytics Tab (Branch 1)
-                  _buildNavItem(
-                    branchIndex: 1,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.donut_large_rounded,
-                    unselectedIcon: Icons.donut_large_outlined,
-                    label: 'Analytics',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
-
-                  // 3. Center Floating Elevated (+) Quick Add Button
-                  _buildCenterQuickAddButton(context, palette),
-
-                  // 4. Wallets Tab (Branch 2)
-                  _buildNavItem(
-                    branchIndex: 2,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.account_balance_wallet_rounded,
-                    unselectedIcon: Icons.account_balance_wallet_outlined,
-                    label: 'Wallets',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
-
-                  // 5. Settings Tab (Branch 3)
-                  _buildNavItem(
-                    branchIndex: 3,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.settings_rounded,
-                    unselectedIcon: Icons.settings_outlined,
-                    label: 'Settings',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
-                ],
               ),
             ),
           ),
@@ -312,7 +414,12 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
         child: InkWell(
           onTap: () {
             HapticFeedback.mediumImpact();
-            QuickAddTransactionDialog.show(context);
+            final entryMode = ref.read(settingsProvider).transactionEntryMode;
+            if (entryMode == 'detailed') {
+              context.push('/add-transaction');
+            } else {
+              QuickAddTransactionDialog.show(context);
+            }
           },
           borderRadius: BorderRadius.circular(24),
           child: Container(

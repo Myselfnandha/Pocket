@@ -91,7 +91,40 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-
+          // 2. Section: Real-Time Auto-Import (Moved to top below Profile Card)
+          _buildSectionHeader('AUTOMATION & REAL-TIME IMPORT'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('GPay, PhonePe, Paytm, Screen Reader & Screenshot Watcher'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/auto-import-studio'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Save Screenshot Transactions', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
+                value: settings.autoSaveScreenshots,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
+                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
 
           // 3. Section: Notifications & Reminders
           _buildSectionHeader('NOTIFICATIONS & ALERTS'),
@@ -165,6 +198,14 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showWidgetMetricPicker(context, ref, settings),
               ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.view_carousel_rounded, color: AppColors.infoBlue),
+                title: const Text('Bottom Nav Bar Ambient Style', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(_getNavBarStyleName(settings.navBarStyle)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showNavBarStylePicker(context, ref, settings),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -226,6 +267,14 @@ class SettingsScreen extends ConsumerWidget {
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
+                leading: const Icon(Icons.touch_app_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Transaction Entry Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showTransactionEntryModePicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
                 leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
                 title: const Text('Month / Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text('Day ${settings.monthStartDay} of every month'),
@@ -261,41 +310,6 @@ class SettingsScreen extends ConsumerWidget {
                 onChanged: (val) {
                   ref.read(settingsProvider.notifier).setHapticFeedback(val);
                 },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 6. Section: Real-Time Auto-Import
-          _buildSectionHeader('AUTOMATION & REAL-TIME IMPORT'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('GPay, PhonePe, Paytm, Screen Reader & Screenshot Watcher'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/auto-import-studio'),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Save Screenshot Transactions', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
-                value: settings.autoSaveScreenshots,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
-                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
               ),
             ],
           ),
@@ -1312,6 +1326,136 @@ class SettingsScreen extends ConsumerWidget {
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getNavBarStyleName(String style) {
+    switch (style) {
+      case 'frosted':
+        return 'Frosted Glass (Subtle Blur)';
+      case 'glassmorphism':
+        return 'Glassmorphic Glow (Specular)';
+      case 'neumorphic':
+        return 'Neumorphic / Static-Magic';
+      case 'floating_island':
+      default:
+        return 'Floating Island (Elevated)';
+    }
+  }
+
+  void _showTransactionEntryModePicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Transaction Entry Mode', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(
+                  'Choose form experience when tapping + to log spending',
+                  style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: settings.transactionEntryMode != 'detailed' ? palette.primary.withValues(alpha: 0.15) : null,
+                  leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
+                  title: const Text('Quick Mode (Compact Popup)', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Fast amount + category + wallet modal in 2 taps', style: TextStyle(fontSize: 11)),
+                  trailing: settings.transactionEntryMode != 'detailed' ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                  onTap: () async {
+                    await ref.read(settingsProvider.notifier).setTransactionEntryMode('quick');
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  tileColor: settings.transactionEntryMode == 'detailed' ? palette.primary.withValues(alpha: 0.15) : null,
+                  leading: const Icon(Icons.edit_note_rounded, color: AppColors.infoBlue),
+                  title: const Text('Detailed Mode (Full Form)', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Full-screen form with splits, receipts, tags, and recurrence', style: TextStyle(fontSize: 11)),
+                  trailing: settings.transactionEntryMode == 'detailed' ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                  onTap: () async {
+                    await ref.read(settingsProvider.notifier).setTransactionEntryMode('detailed');
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showNavBarStylePicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
+    final styles = [
+      {'key': 'floating_island', 'title': 'Floating Island', 'desc': 'High-contrast floating pill with deep drop shadow'},
+      {'key': 'frosted', 'title': 'Frosted Glass', 'desc': 'Translucent acrylic with heavy background blur'},
+      {'key': 'glassmorphism', 'title': 'Glassmorphic Glow', 'desc': 'Specular accent gradient border & soft glow'},
+      {'key': 'neumorphic', 'title': 'Neumorphic / Static-Magic', 'desc': 'Soft dual embossed shadows & tactile feel'},
+    ];
+
+    showBlurredDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ref.watch(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Nav Bar Ambient Style', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(
+                  'Select bottom navigation dock aesthetic and blur effect',
+                  style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                ),
+                const SizedBox(height: 14),
+                for (final s in styles) ...[
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: settings.navBarStyle == s['key'] ? palette.primary.withValues(alpha: 0.15) : null,
+                    title: Text(s['title']!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                    subtitle: Text(s['desc']!, style: const TextStyle(fontSize: 11)),
+                    trailing: settings.navBarStyle == s['key'] ? Icon(Icons.check_circle_rounded, color: palette.primary) : null,
+                    onTap: () async {
+                      await ref.read(settingsProvider.notifier).setNavBarStyle(s['key']!);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                ],
               ],
             ),
           ),

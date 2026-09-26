@@ -213,18 +213,79 @@ class AutoImportService {
     return categories.isNotEmpty ? categories.first.id : 'food';
   }
 
+  /// Checks if an incoming item matches an already-saved transaction and enriches it
+  /// with new metadata (e.g. attaching screenshot image to SMS tx, or bank wallet to screenshot tx).
+  TransactionModel? enrichSavedTransaction(
+    PendingTransactionModel item,
+    List<TransactionModel> saved,
+    List<WalletModel> wallets,
+  ) {
+    if (item.refId == null || item.refId!.isEmpty) return null;
+
+    for (final tx in saved) {
+      final isMatch = (tx.refId != null && tx.refId == item.refId) ||
+          (tx.note != null && tx.note!.contains(item.refId!));
+
+      if (isMatch) {
+        bool changed = false;
+        String? newImg = tx.receiptImagePath;
+        String newTitle = tx.title;
+        String newWallet = tx.walletId;
+
+        // 1. Attach screenshot image if existing transaction lacked it
+        if ((newImg == null || newImg.isEmpty) && item.imagePath != null && item.imagePath!.isNotEmpty) {
+          newImg = item.imagePath;
+          changed = true;
+        }
+
+        // 2. Enrich generic title with richer merchant name from screenshot
+        final txTitleLower = tx.title.toLowerCase();
+        if ((txTitleLower.contains('payment') || txTitleLower.contains('alert') || txTitleLower.contains('upi')) &&
+            item.merchant.isNotEmpty &&
+            !item.merchant.toLowerCase().contains('payment') &&
+            !item.merchant.toLowerCase().contains('alert')) {
+          newTitle = item.merchant;
+          changed = true;
+        }
+
+        // 3. Enrich bank wallet if existing wallet was default_cash and item has bank SMS details
+        if ((newWallet == 'default_cash' || newWallet.isEmpty) && item.appSource.contains('SMS')) {
+          final matchedWallet = _matchWallet(item, wallets);
+          if (matchedWallet != newWallet) {
+            newWallet = matchedWallet;
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          return tx.copyWith(
+            receiptImagePath: newImg,
+            title: newTitle,
+            walletId: newWallet,
+          );
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
   bool _isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved) {
+    // 1. Exact refId match
+    if (item.refId != null && item.refId!.isNotEmpty) {
+      for (final tx in saved) {
+        if (tx.refId != null && tx.refId == item.refId) {
+          return true;
+        }
+        if (tx.note != null && tx.note!.contains(item.refId!)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Fuzzy match fallback when refId is missing
     final itemMerchant = item.merchant.toLowerCase().trim();
     for (final tx in saved) {
-      // 1. Match by note / refId
-      if (item.refId != null &&
-          item.refId!.isNotEmpty &&
-          tx.note != null &&
-          tx.note!.contains(item.refId!)) {
-        return true;
-      }
-
-      // 2. Fuzzy match: same amount (within 0.01) + matching title + within 90s
       if ((tx.amount - item.amount).abs() < 0.01) {
         final txTitle = tx.title.toLowerCase().trim();
         final isTitleMatch = txTitle == itemMerchant ||
@@ -241,7 +302,7 @@ class AutoImportService {
   }
 
   bool _isSameTransaction(PendingTransactionModel a, PendingTransactionModel b) {
-    // 1. Match by exact refId
+    // 1. Exact refId match
     if (a.refId != null &&
         a.refId!.isNotEmpty &&
         b.refId != null &&
@@ -250,7 +311,7 @@ class AutoImportService {
       return true;
     }
 
-    // 2. Composite match: same amount + same merchant + within 60s
+    // 2. Composite match fallback when refId is missing
     if ((a.amount - b.amount).abs() < 0.01) {
       final aMerch = a.merchant.toLowerCase().trim();
       final bMerch = b.merchant.toLowerCase().trim();
@@ -269,6 +330,16 @@ class AutoImportService {
     if (wallets.isEmpty) return 'default_cash';
 
     final text = '${item.appSource} ${item.rawPayload ?? ''}'.toLowerCase();
+
+    // Match by account number last 4
+    for (final w in wallets) {
+      if (w.accountNumber != null && w.accountNumber!.length >= 4) {
+        final last4 = w.accountNumber!.substring(w.accountNumber!.length - 4);
+        if (text.contains(last4)) {
+          return w.id;
+        }
+      }
+    }
 
     // Match by bank/wallet keywords
     for (final w in wallets) {

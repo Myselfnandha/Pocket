@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
@@ -88,7 +89,7 @@ class WalletsScreen extends ConsumerWidget {
                             Icon(Icons.account_balance_wallet_rounded, size: 13, color: palette.primary),
                             const SizedBox(width: 5),
                             Text(
-                              'LIQUID ASSETS DOCK',
+                              'LIQUID BALANCE',
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
@@ -97,21 +98,6 @@ class WalletsScreen extends ConsumerWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF22262E) : const Color(0xFFEDF1F7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${wallets.length} Accounts',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                          ),
                         ),
                       ),
                     ],
@@ -139,18 +125,6 @@ class WalletsScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2, bottom: 8),
-                      child: Text(
-                        '100% available across active accounts',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
                           color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
@@ -193,7 +167,7 @@ class WalletsScreen extends ConsumerWidget {
                                     Icon(Icons.swap_horiz_rounded, size: 16, color: palette.primary),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Transfer',
+                                      'Self Transfer',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -211,7 +185,7 @@ class WalletsScreen extends ConsumerWidget {
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
+                              onTap: () => _showReconcileDialog(context, ref, wallets, settings.currencySymbol),
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -227,10 +201,10 @@ class WalletsScreen extends ConsumerWidget {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_rounded, size: 16, color: isDark ? Colors.white : Colors.black87),
+                                    Icon(Icons.fact_check_outlined, size: 16, color: isDark ? Colors.white : Colors.black87),
                                     const SizedBox(width: 5),
                                     Text(
-                                      'New Account',
+                                      'Reconcile',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -399,30 +373,36 @@ class WalletsScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                                    decoration: BoxDecoration(
-                                      color: palette.primary.withValues(alpha: isDark ? 0.16 : 0.10),
-                                      borderRadius: BorderRadius.circular(9),
-                                      border: Border.all(
-                                        color: palette.primary.withValues(alpha: 0.28),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.tune_rounded, size: 11, color: palette.primary),
-                                        const SizedBox(width: 3.5),
-                                        Text(
-                                          'Manage',
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: palette.primary,
-                                          ),
+                                  InkWell(
+                                    onTap: () {
+                                      context.push('/transactions?walletId=${wallet.id}');
+                                    },
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                                      decoration: BoxDecoration(
+                                        color: palette.primary.withValues(alpha: isDark ? 0.16 : 0.10),
+                                        borderRadius: BorderRadius.circular(9),
+                                        border: Border.all(
+                                          color: palette.primary.withValues(alpha: 0.28),
+                                          width: 1,
                                         ),
-                                      ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.receipt_long_rounded, size: 11, color: palette.primary),
+                                          const SizedBox(width: 3.5),
+                                          Text(
+                                            'Transactions',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: palette.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1432,7 +1412,6 @@ class WalletsScreen extends ConsumerWidget {
   ) {
     final nameCtrl = TextEditingController(text: wallet.name);
     final last4Ctrl = TextEditingController(text: wallet.accountNumber ?? '');
-    final netTransactions = wallet.currentBalance - wallet.initialBalance;
     final currentBalanceCtrl = TextEditingController(
       text: wallet.currentBalance % 1 == 0
           ? wallet.currentBalance.toInt().toString()
@@ -1591,49 +1570,12 @@ class WalletsScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                       ],
                       Expanded(
-                        flex: 3,
                         child: TextField(
                           controller: currentBalanceCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: const TextStyle(fontSize: 13),
-                          onChanged: (val) {
-                            final newCurrent = double.tryParse(val.trim());
-                            if (newCurrent != null) {
-                              final newInitial = newCurrent - netTransactions;
-                              initialBalanceCtrl.text = newInitial % 1 == 0
-                                  ? newInitial.toInt().toString()
-                                  : newInitial.toStringAsFixed(2);
-                            }
-                          },
                           decoration: InputDecoration(
-                            labelText: 'Current Bal',
-                            prefixText: '$currencySymbol ',
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                            filled: true,
-                            fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: TextField(
-                          controller: initialBalanceCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 13),
-                          onChanged: (val) {
-                            final newInitial = double.tryParse(val.trim());
-                            if (newInitial != null) {
-                              final newCurrent = newInitial + netTransactions;
-                              currentBalanceCtrl.text = newCurrent % 1 == 0
-                                  ? newCurrent.toInt().toString()
-                                  : newCurrent.toStringAsFixed(2);
-                            }
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'Starting Bal',
+                            labelText: 'Current Balance',
                             prefixText: '$currencySymbol ',
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -1647,7 +1589,7 @@ class WalletsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // Row 3: Icons
+                  // Row 3: Emoji Selector
                   Row(
                     children: [
                       Text(
@@ -1656,6 +1598,34 @@ class WalletsScreen extends ConsumerWidget {
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await _showSystemEmojiPicker(context, selectedIcon);
+                          if (picked != null && picked.isNotEmpty) {
+                            setModalState(() => selectedIcon = picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: palette.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: palette.primary.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(selectedIcon, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 6),
+                              Text('Pick Any Emoji', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: palette.primary)),
+                              const SizedBox(width: 3),
+                              Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: palette.primary),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1712,9 +1682,33 @@ class WalletsScreen extends ConsumerWidget {
                           height: 28,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
-                            itemCount: colors.length,
+                            itemCount: colors.length + 1,
                             separatorBuilder: (context, i) => const SizedBox(width: 8),
                             itemBuilder: (context, i) {
+                              if (i == colors.length) {
+                                return InkWell(
+                                  onTap: () async {
+                                    final custom = await _showCustomColorPicker(context, selectedColor);
+                                    if (custom != null) {
+                                      setModalState(() => selectedColor = custom);
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isDark ? const Color(0xFF282B34) : Colors.grey.shade200,
+                                      border: Border.all(
+                                        color: isDark ? Colors.white24 : Colors.black26,
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: const Icon(Icons.add_rounded, size: 16),
+                                  ),
+                                );
+                              }
                               final col = colors[i];
                               final isSelected = selectedColor == col;
                               return InkWell(
@@ -2475,6 +2469,404 @@ class WalletsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // --- Reconcile Account Dialog ---
+  void _showReconcileDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<WalletModel> wallets,
+    String currencySymbol,
+  ) {
+    if (wallets.isEmpty) return;
+
+    String selectedWalletId = wallets.first.id;
+    final bankBalanceCtrl = TextEditingController();
+
+    showBlurredDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final palette = ref.watch(activePaletteProvider);
+          final currentWallet = wallets.firstWhere(
+            (w) => w.id == selectedWalletId,
+            orElse: () => wallets.first,
+          );
+
+          final enteredBalance = double.tryParse(bankBalanceCtrl.text.trim());
+          final diff = enteredBalance != null ? enteredBalance - currentWallet.currentBalance : 0.0;
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 440),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E22) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.fact_check_outlined, color: palette.primary, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Reconcile Account',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Select Account Dropdown
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedWalletId,
+                    isDense: true,
+                    decoration: InputDecoration(
+                      labelText: 'Select Account to Reconcile',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                    items: wallets.map((w) {
+                      return DropdownMenuItem(
+                        value: w.id,
+                        child: Text('${w.icon} ${w.displayName} ($currencySymbol${w.currentBalance.toStringAsFixed(2)})'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() => selectedWalletId = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Calculated App Balance display
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF262A34) : const Color(0xFFF3F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Calculated App Balance',
+                          style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$currencySymbol ${currentWallet.currentBalance.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Actual Bank Balance input
+                  TextField(
+                    controller: bankBalanceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Actual Bank Statement Balance',
+                      hintText: 'e.g. 52400.00',
+                      prefixText: '$currencySymbol ',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                    onChanged: (val) => setDialogState(() {}),
+                  ),
+
+                  if (enteredBalance != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Text(
+                          'Discrepancy: ',
+                          style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                        ),
+                        Text(
+                          diff == 0
+                              ? 'Perfect Match ($currencySymbol 0.00)'
+                              : (diff > 0
+                                  ? '+$currencySymbol${diff.toStringAsFixed(2)} (App undercounted)'
+                                  : '-$currencySymbol${diff.abs().toStringAsFixed(2)} (App overcounted)'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: diff == 0
+                                ? AppColors.incomeGreen
+                                : (diff > 0 ? AppColors.incomeGreen : AppColors.expenseRed),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newBalance = double.tryParse(bankBalanceCtrl.text.trim());
+                        if (newBalance == null) {
+                          TopCapsuleToast.show(context, message: 'Please enter a valid bank balance', isSuccess: false);
+                          return;
+                        }
+
+                        final updatedWallet = currentWallet.copyWith(
+                          initialBalance: currentWallet.initialBalance + (newBalance - currentWallet.currentBalance),
+                        );
+                        await ref.read(walletsProvider.notifier).updateWallet(updatedWallet);
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          TopCapsuleToast.show(
+                            context,
+                            message: '${currentWallet.name} reconciled to $currencySymbol${newBalance.toStringAsFixed(2)}',
+                            isSuccess: true,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: palette.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Reconcile & Update Balance', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<String?> _showSystemEmojiPicker(BuildContext context, String currentEmoji) async {
+    final emojiCtrl = TextEditingController(text: currentEmoji);
+    final popularEmojis = [
+      '🏦', '💳', '💵', '📱', '💰', '🪙', '🏧', '📈', '🏠',
+      '🚗', '🛒', '✈️', '💻', '🍔', '🍕', '⚡', '🛡️', '🎁',
+      '💎', '📦', '🎓', '🏥', '🏖️', '☕', '🎟️', '🚲', '⛽',
+    ];
+
+    return showBlurredDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = ProviderScope.containerOf(context).read(activePaletteProvider);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Choose Account Emoji', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text('Pick from below or type ANY emoji with your keyboard:', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emojiCtrl,
+                  style: const TextStyle(fontSize: 26),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: 'Enter emoji',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    filled: true,
+                    fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: popularEmojis.map((e) {
+                    return InkWell(
+                      onTap: () => Navigator.pop(ctx, e),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF282B34) : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(e, style: const TextStyle(fontSize: 20)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final text = emojiCtrl.text.trim();
+                      if (text.isNotEmpty) {
+                        Navigator.pop(ctx, text);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primary,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Use Emoji', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<int?> _showCustomColorPicker(BuildContext context, int currentColor) async {
+    int selected = currentColor;
+    final customOptions = [
+      0xFFE53935, 0xFFD81B60, 0xFF8E24AA, 0xFF5E35B1, 0xFF3949AB,
+      0xFF1E88E5, 0xFF039BE5, 0xFF00ACC1, 0xFF00897B, 0xFF43A047,
+      0xFF7CB342, 0xFFC0CA33, 0xFFFDD835, 0xFFFFB300, 0xFFFB8C00,
+      0xFFF4511E, 0xFF6D4C41, 0xFF757575, 0xFF546E7A, 0xFF263238,
+    ];
+
+    return showBlurredDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setPickerState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final palette = ProviderScope.containerOf(context).read(activePaletteProvider);
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 380),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Custom Account Color', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text('Pick a custom color tint for this account card', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Color(selected),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(selected).withValues(alpha: 0.45),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: customOptions.map((c) {
+                      final isSel = selected == c;
+                      return InkWell(
+                        onTap: () => setPickerState(() => selected = c),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Color(c),
+                            shape: BoxShape.circle,
+                            border: isSel ? Border.all(color: Colors.white, width: 2.5) : null,
+                          ),
+                          child: isSel ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, selected),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: palette.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Apply Color', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
               ),
             ),
           );

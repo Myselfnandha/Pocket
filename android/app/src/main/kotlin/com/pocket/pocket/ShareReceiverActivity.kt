@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -17,7 +18,6 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import android.widget.Toast
 import java.util.UUID
 import java.util.regex.Pattern
 
@@ -26,6 +26,22 @@ class ShareReceiverActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 1. Check if intent is shared plain text
+        val sharedText = extractTextFromIntent(intent)
+        if (!sharedText.isNullOrBlank()) {
+            Thread {
+                try {
+                    processSharedText(sharedText)
+                } catch (e: Exception) {
+                    android.util.Log.e("PocketShare", "Error processing shared text", e)
+                } finally {
+                    runOnUiThread { finish() }
+                }
+            }.start()
+            return
+        }
+
+        // 2. Check if intent is shared image (screenshot / receipt)
         val uri = extractUriFromIntent(intent)
         if (uri == null) {
             finish()
@@ -46,18 +62,28 @@ class ShareReceiverActivity : Activity() {
         }
 
         if (savedFile.exists() && savedFile.length() > 0L) {
-            // Process OCR & direct auto-log in background thread
             Thread {
                 try {
                     processSharedImage(savedFile)
                 } catch (e: Exception) {
                     android.util.Log.e("PocketShare", "Error processing shared screenshot", e)
+                    runOnUiThread { finish() }
                 }
             }.start()
+        } else {
+            finish()
         }
+    }
 
-        // Immediately close the share dialog so user stays in UPI app / Gallery
-        finish()
+    private fun extractTextFromIntent(intent: Intent?): String? {
+        if (intent == null) return null
+        if (Intent.ACTION_SEND == intent.action && (intent.type == "text/plain" || intent.type?.startsWith("text/") == true)) {
+            val extraText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!extraText.isNullOrBlank()) return extraText
+            val clipText = intent.clipData?.getItemAt(0)?.text?.toString()
+            if (!clipText.isNullOrBlank()) return clipText
+        }
+        return null
     }
 
     private fun extractUriFromIntent(intent: Intent?): Uri? {
@@ -73,10 +99,23 @@ class ShareReceiverActivity : Activity() {
         return null
     }
 
-    private fun processSharedImage(savedFile: File) {
-        if (!savedFile.exists() || savedFile.length() == 0L) return
+    private fun processSharedText(text: String) {
+        val parsed = parseUpiText(text)
+        commitAndNotify(parsed, imagePath = null, rawText = text)
+    }
 
-        val bitmap = BitmapFactory.decodeFile(savedFile.absolutePath) ?: return
+    private fun processSharedImage(savedFile: File) {
+        if (!savedFile.exists() || savedFile.length() == 0L) {
+            runOnUiThread { finish() }
+            return
+        }
+
+        val bitmap = BitmapFactory.decodeFile(savedFile.absolutePath)
+        if (bitmap == null) {
+            runOnUiThread { finish() }
+            return
+        }
+
         val image = InputImage.fromBitmap(bitmap, 0)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
@@ -84,55 +123,65 @@ class ShareReceiverActivity : Activity() {
             .addOnSuccessListener { visionText ->
                 val fullText = visionText.text
                 val parsed = parseUpiText(fullText)
-
-                // 1. Direct Background Auto-Save to native pending buffer for immediate commit
-                val amountDouble = parsed.amount.toDoubleOrNull() ?: 0.0
-                if (amountDouble > 0) {
-                    val txJson = JSONObject().apply {
-                        put("id", UUID.randomUUID().toString())
-                        put("amount", amountDouble)
-                        put("merchant", parsed.merchant.ifEmpty { "Shared UPI Receipt" })
-                        put("isIncome", parsed.isIncome)
-                        put("date", System.currentTimeMillis())
-                        put("appSource", parsed.appSource)
-                        put("refId", parsed.refId)
-                        put("senderName", parsed.senderName)
-                        put("receiverName", parsed.receiverName)
-                        put("counterpartyLast4", parsed.counterpartyLast4)
-                        put("detectionSource", "screenshot")
-                        put("imagePath", savedFile.absolutePath)
-                        put("rawPayload", fullText)
-                        put("autoSaveDirect", true)
-                    }
-                    PocketNotificationListener.savePendingTransaction(applicationContext, txJson)
-
-                    runOnUiThread {
-                        val displayAmount = "₹${parsed.amount}"
-                        val msg = if (parsed.isIncome) {
-                            "⚡ Auto-Logged: Received $displayAmount from ${parsed.merchant}"
-                        } else {
-                            "⚡ Auto-Logged: Paid $displayAmount to ${parsed.merchant}"
-                        }
-                        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                    }
-                }
-
-                // 2. Post notification for system tray confirmation & 1-tap view
-                showTransactionNotification(parsed, savedFile.absolutePath, fullText)
+                commitAndNotify(parsed, savedFile.absolutePath, fullText)
             }
-            .addOnFailureListener {
+            .addOnFailureListener { e ->
+                android.util.Log.e("PocketShare", "ML Kit OCR failed", e)
                 val fallbackParsed = ParsedData(
+                    transactionId = UUID.randomUUID().toString(),
                     amount = "",
-                    merchant = "UPI Merchant",
+                    merchant = "UPI Payment",
                     appSource = "UPI App",
                     dateTime = "",
                     refId = ""
                 )
-                showTransactionNotification(fallbackParsed, savedFile.absolutePath, "")
+                commitAndNotify(fallbackParsed, savedFile.absolutePath, "")
+            }
+            .addOnCompleteListener {
+                recognizer.close()
+                runOnUiThread { finish() }
             }
     }
 
+    private fun commitAndNotify(parsed: ParsedData, imagePath: String?, rawText: String) {
+        val amountDouble = parsed.amount.toDoubleOrNull() ?: 0.0
+
+        if (amountDouble > 0) {
+            val txJson = JSONObject().apply {
+                put("id", parsed.transactionId)
+                put("amount", amountDouble)
+                put("merchant", parsed.merchant.ifEmpty { "UPI Payment" })
+                put("isIncome", parsed.isIncome)
+                put("date", System.currentTimeMillis())
+                put("appSource", parsed.appSource)
+                put("refId", parsed.refId)
+                put("senderName", parsed.senderName)
+                put("receiverName", parsed.receiverName)
+                put("counterpartyLast4", parsed.counterpartyLast4)
+                put("detectionSource", if (imagePath != null) "screenshot" else "shared_text")
+                put("imagePath", imagePath ?: "")
+                put("rawPayload", rawText)
+                put("autoSaveDirect", true)
+            }
+            PocketNotificationListener.savePendingTransaction(applicationContext, txJson)
+
+            runOnUiThread {
+                val displayAmount = "₹${parsed.amount}"
+                val msg = if (parsed.isIncome) {
+                    "⚡ Auto-Logged: Received $displayAmount from ${parsed.merchant}"
+                } else {
+                    "⚡ Auto-Logged: Paid $displayAmount to ${parsed.merchant}"
+                }
+                Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Always show system confirmation notification with 1-tap edit / review
+        showTransactionNotification(parsed, imagePath ?: "", rawText)
+    }
+
     private data class ParsedData(
+        val transactionId: String = UUID.randomUUID().toString(),
         val amount: String,
         val merchant: String,
         val appSource: String,
@@ -144,7 +193,8 @@ class ShareReceiverActivity : Activity() {
         val isIncome: Boolean = false
     )
 
-    private fun parseUpiText(text: String): ParsedData {
+    private fun parseUpiText(rawInput: String): ParsedData {
+        val text = rawInput.replace('\u00A0', ' ')
         var amount = ""
         var merchant = ""
         var appSource = "UPI App"
@@ -154,10 +204,11 @@ class ShareReceiverActivity : Activity() {
         var counterpartyLast4 = ""
         var isIncome = false
 
-        // 1. Detect UPI App Name
         val lower = text.lowercase()
+
+        // 1. Detect App Source
         when {
-            lower.contains("google pay") || lower.contains("gpay") -> appSource = "Google Pay"
+            lower.contains("google pay") || lower.contains("gpay") || lower.contains("google transaction id") -> appSource = "Google Pay"
             lower.contains("phonepe") -> appSource = "PhonePe"
             lower.contains("paytm") -> appSource = "Paytm"
             lower.contains("cred") -> appSource = "CRED"
@@ -172,19 +223,28 @@ class ShareReceiverActivity : Activity() {
             lower.contains("famapp") || lower.contains("fampay") -> appSource = "FamPay"
         }
 
-        // 2. Detect Income (Money Received)
-        if (Pattern.compile("""\b(received from|received|credited|deposit|cashback|refund|money received)\b""", Pattern.CASE_INSENSITIVE).matcher(lower).find()) {
+        // 2. Detect Income vs Expense
+        val incomeSignals = listOf("received from", "money received", "credited to", "deposit", "cashback", "refund", "sent you")
+        val expenseSignals = listOf("paid to", "you paid", "payment to", "payment of", "debited from", "spent", "sent to", "transferred to", "transfer to")
+
+        var hasIncomeSignal = incomeSignals.any { lower.contains(it) }
+        val hasExpenseSignal = expenseSignals.any { lower.contains(it) }
+
+        if (hasIncomeSignal && !hasExpenseSignal) {
+            isIncome = true
+        } else if (lower.contains("received") && !lower.contains("debited") && !lower.contains("paid")) {
             isIncome = true
         }
 
-        // 3. Multi-Stage Amount Scanner (Stage 1: Explicit Currency & Action Verbs)
-        val amountPatterns = listOf(
-            Pattern.compile("""(?:[₹\u20B9]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent|Received)\s*(?:[₹\u20B9]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+        // 3. Amount Extraction (Multi-Stage Resilience)
+        // Stage A: Currency Symbol + Number (including OCR substitutions for ₹ like *, ?, =, or missing)
+        val symbolPatterns = listOf(
+            Pattern.compile("""(?:[₹\u20B9*?=]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("""(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent|Received)\s*(?:[₹\u20B9*?=]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)""", Pattern.CASE_INSENSITIVE),
             Pattern.compile("""([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:[₹\u20B9]|INR|Rs)""", Pattern.CASE_INSENSITIVE)
         )
 
-        for (pattern in amountPatterns) {
+        for (pattern in symbolPatterns) {
             val matcher = pattern.matcher(text)
             if (matcher.find()) {
                 val candidate = matcher.group(1)?.replace(",", "") ?: ""
@@ -196,18 +256,26 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // Stage 2: Line-by-Line Contextual Scanner
+        // Stage B: Line-by-Line Contextual Scan (handles standalone amount lines in GPay / PhonePe / Paytm)
         if (amount.isEmpty()) {
             val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
             for (i in lines.indices) {
                 val line = lines[i]
-                val lineAmountMatch = Pattern.compile("""^[₹\u20B9RsINR\s]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$""", Pattern.CASE_INSENSITIVE).matcher(line)
-                if (lineAmountMatch.find()) {
-                    val candidate = lineAmountMatch.group(1)?.replace(",", "") ?: ""
+                // Number alone or with currency prefix
+                val lineMatch = Pattern.compile("""^[₹\u20B9*?=\sRsINR]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$""", Pattern.CASE_INSENSITIVE).matcher(line)
+                if (lineMatch.find()) {
+                    val candidate = lineMatch.group(1)?.replace(",", "") ?: ""
                     val num = candidate.toDoubleOrNull()
                     if (num != null && num > 0 && num < 10000000) {
                         val prevLine = if (i > 0) lines[i - 1].lowercase() else ""
-                        if (prevLine.contains("₹") || prevLine.contains("rs") || prevLine.contains("paid") || prevLine.contains("sent") || prevLine.contains("received") || prevLine.contains("amount") || line.contains("₹")) {
+                        val nextLine = if (i < lines.size - 1) lines[i + 1].lowercase() else ""
+                        val isNearContext = prevLine.contains("paid") || prevLine.contains("sent") ||
+                                prevLine.contains("received") || prevLine.contains("amount") ||
+                                prevLine.contains("successful") || prevLine.contains("completed") ||
+                                nextLine.contains("completed") || nextLine.contains("successful") ||
+                                line.contains("₹") || prevLine.contains("₹")
+
+                        if (isNearContext) {
                             amount = candidate
                             break
                         }
@@ -216,7 +284,7 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // Stage 3: Fallback largest decimal monetary amount
+        // Stage C: Standalone Decimal Candidate (e.g. 150.00 or 500.50)
         if (amount.isEmpty()) {
             val decimalPattern = Pattern.compile("""\b([0-9]{1,6}\.[0-9]{2})\b""")
             val matcher = decimalPattern.matcher(text)
@@ -224,26 +292,69 @@ class ShareReceiverActivity : Activity() {
             while (matcher.find()) {
                 val candidate = matcher.group(1) ?: ""
                 val num = candidate.toDoubleOrNull()
-                if (num != null && num > 0 && num < 10000000) {
-                    if (num > maxCandidate) {
-                        maxCandidate = num
-                        amount = candidate
+                if (num != null && num > 0 && num < 10000000 && num > maxCandidate) {
+                    maxCandidate = num
+                    amount = candidate
+                }
+            }
+        }
+
+        // 4. Sender & Receiver Extraction (Multi-Line Aware)
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+        for (i in lines.indices) {
+            val l = lines[i].lowercase()
+
+            // Outflow: "Paid to", "Payment to", "To:", "Transfer to", "Sent to"
+            if (receiverName.isEmpty() && (l == "paid to" || l == "to:" || l == "to" || l == "payment to" || l == "sent to" || l == "transfer to")) {
+                if (i + 1 < lines.size) {
+                    val candidate = cleanMerchantCandidate(lines[i + 1])
+                    if (candidate.isNotEmpty() && !isTechnicalKeyword(candidate)) {
+                        receiverName = candidate
+                    }
+                }
+            }
+
+            // Inflow: "Received from", "From:", "From", "Payer:"
+            if (senderName.isEmpty() && (l == "received from" || l == "from:" || l == "from" || l == "payer:")) {
+                if (i + 1 < lines.size) {
+                    val candidate = cleanMerchantCandidate(lines[i + 1])
+                    if (candidate.isNotEmpty() && !isTechnicalKeyword(candidate)) {
+                        senderName = candidate
                     }
                 }
             }
         }
 
-        // 4. Detect Sender & Receiver
-        val senderPattern = Pattern.compile("""(?:Received from|From:|Sent by|Payer:|Paid by|Transferred from)\s+([A-Za-z0-9\s&.\-_]{2,35}?)(?:\n|\r|UPI|Banking|A/c|Account|Ref|₹|Rs|$)""", Pattern.CASE_INSENSITIVE)
-        val senderMatcher = senderPattern.matcher(text)
-        if (senderMatcher.find()) {
-            senderName = cleanMerchantName(senderMatcher.group(1) ?: "")
+        // Fallback inline regex for single-line format: "Paid to Swiggy" or "To: Ramesh"
+        if (receiverName.isEmpty()) {
+            val toMatcher = Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35})""", Pattern.CASE_INSENSITIVE).matcher(text)
+            if (toMatcher.find()) {
+                val found = cleanMerchantCandidate(toMatcher.group(1) ?: "")
+                if (found.isNotEmpty() && !isTechnicalKeyword(found)) {
+                    receiverName = found
+                }
+            }
         }
 
-        val receiverPattern = Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35}?)(?:\n|\r|UPI|Banking|A/c|Account|Ref|₹|Rs|$)""", Pattern.CASE_INSENSITIVE)
-        val receiverMatcher = receiverPattern.matcher(text)
-        if (receiverMatcher.find()) {
-            receiverName = cleanMerchantName(receiverMatcher.group(1) ?: "")
+        if (senderName.isEmpty()) {
+            val fromMatcher = Pattern.compile("""(?:Received from|From:|Sent by|Payer:|Transferred from)\s+([A-Za-z0-9\s&.\-_]{2,35})""", Pattern.CASE_INSENSITIVE).matcher(text)
+            if (fromMatcher.find()) {
+                val found = cleanMerchantCandidate(fromMatcher.group(1) ?: "")
+                if (found.isNotEmpty() && !isTechnicalKeyword(found)) {
+                    senderName = found
+                }
+            }
+        }
+
+        // "Rohan sent you ₹500" format in GPay
+        val sentYouMatcher = Pattern.compile("""([A-Za-z0-9\s&.\-_]{2,30})\s+sent you""", Pattern.CASE_INSENSITIVE).matcher(text)
+        if (sentYouMatcher.find()) {
+            val found = cleanMerchantCandidate(sentYouMatcher.group(1) ?: "")
+            if (found.isNotEmpty() && !isTechnicalKeyword(found)) {
+                senderName = found
+                isIncome = true
+            }
         }
 
         merchant = if (isIncome && senderName.isNotEmpty()) {
@@ -251,39 +362,33 @@ class ShareReceiverActivity : Activity() {
         } else if (receiverName.isNotEmpty()) {
             receiverName
         } else {
-            ""
+            if (appSource != "UPI App") "$appSource Payment" else "UPI Transaction"
         }
 
-        // 5. Detect Phone number or Account last 4 digits
-        val phonePattern = Pattern.compile("""(?:\+91\s*|91\s*)?[6-9]\d{5}\s*(\d{4})\b""")
-        val phoneMatcher = phonePattern.matcher(text)
-        if (phoneMatcher.find()) {
-            counterpartyLast4 = phoneMatcher.group(1) ?: ""
+        // 5. Account Last 4 / Phone number
+        val acctMatcher = Pattern.compile("""(?:A/c|Account|Card|Bank)?\s*(?:[xX*•]+|\.{2,})\s*(\d{4})\b""", Pattern.CASE_INSENSITIVE).matcher(text)
+        if (acctMatcher.find()) {
+            counterpartyLast4 = acctMatcher.group(1) ?: ""
         } else {
-            val acctPattern = Pattern.compile("""(?:A/c|Account|Card)?\s*(?:[xX*•]+|\.{2,})\s*(\d{4})\b""", Pattern.CASE_INSENSITIVE)
-            val acctMatcher = acctPattern.matcher(text)
-            if (acctMatcher.find()) {
-                counterpartyLast4 = acctMatcher.group(1) ?: ""
+            val phoneMatcher = Pattern.compile("""(?:\+?91[\s\-]*)?[6-9]\d{5}\s*(\d{4})\b""").matcher(text)
+            if (phoneMatcher.find()) {
+                counterpartyLast4 = phoneMatcher.group(1) ?: ""
             }
         }
 
-        // 6. UPI Ref / Transaction ID / UTR Scanner
-        val refPattern = Pattern.compile("""(?:UPI\s*(?:Ref(?:erence)?|Txn|Transaction)?\s*(?:No|ID|Num)?[:\s]*|UTR[:\s]*|Txn\s*ID[:\s]*|Transaction\s*ID[:\s]*|Ref\s*(?:No|ID)?[:\s]*|Google transaction ID[:\s]*|PhonePe transaction ID[:\s]*)([0-9A-Za-z]{8,24})""", Pattern.CASE_INSENSITIVE)
-        val refMatcher = refPattern.matcher(text)
+        // 6. UPI Ref / UTR / Transaction ID
+        val refMatcher = Pattern.compile("""(?:UPI\s*(?:Ref(?:erence)?|Txn|Transaction)?\s*(?:No|ID|Num)?[:\s]*|UTR[:\s]*|Txn\s*ID[:\s]*|Transaction\s*ID[:\s]*|Ref\s*(?:No|ID)?[:\s]*|Google transaction ID[:\s]*|PhonePe transaction ID[:\s]*)([0-9A-Za-z]{8,24})""", Pattern.CASE_INSENSITIVE).matcher(text)
         if (refMatcher.find()) {
             refId = refMatcher.group(1)?.trim() ?: ""
         } else {
-            val utr12Matcher = Pattern.compile("""\b([0-9]{12})\b""").matcher(text)
-            if (utr12Matcher.find()) {
-                refId = utr12Matcher.group(1) ?: ""
+            val utrMatcher = Pattern.compile("""\b([0-9]{12})\b""").matcher(text)
+            if (utrMatcher.find()) {
+                refId = utrMatcher.group(1) ?: ""
             }
         }
 
-        if (merchant.isEmpty()) {
-            merchant = if (appSource != "UPI App") "$appSource Payment" else "UPI Transaction"
-        }
-
         return ParsedData(
+            transactionId = UUID.randomUUID().toString(),
             amount = amount,
             merchant = merchant,
             appSource = appSource,
@@ -296,11 +401,18 @@ class ShareReceiverActivity : Activity() {
         )
     }
 
-    private fun cleanMerchantName(name: String): String {
-        return name.replace(Regex("""(?i)@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi"""), "")
-            .replace(Regex("""(?i)\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe)\b"""), "")
-            .trim()
-            .take(35)
+    private fun cleanMerchantCandidate(candidate: String): String {
+        return candidate.lines().firstOrNull()?.trim()
+            ?.replace(Regex("""(?i)@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi|@axl"""), "")
+            ?.replace(Regex("""(?i)\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe|banking name|upi id)\b"""), "")
+            ?.replace(Regex("""^[^\w]+|[^\w]+$"""), "")
+            ?.trim()
+            ?.take(35) ?: ""
+    }
+
+    private fun isTechnicalKeyword(word: String): Boolean {
+        val lower = word.lowercase()
+        return lower in setOf("completed", "successful", "upi", "banking", "account", "ref", "details", "transfer", "payment", "rupees", "rs")
     }
 
     private fun showTransactionNotification(parsedData: ParsedData, imagePath: String, rawText: String) {
@@ -313,13 +425,14 @@ class ShareReceiverActivity : Activity() {
                 "UPI & Receipt Shares",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Instant 1-tap logging for shared UPI and banking screenshots"
+                description = "Instant 1-tap confirmation and editing for shared UPI receipts"
                 enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
 
         val payloadJson = JSONObject().apply {
+            put("id", parsedData.transactionId)
             put("amount", parsedData.amount)
             put("merchant", parsedData.merchant)
             put("app_source", parsedData.appSource)
@@ -330,20 +443,21 @@ class ShareReceiverActivity : Activity() {
             put("is_income", parsedData.isIncome)
             put("image_path", imagePath)
             put("raw_text", rawText)
+            put("auto_save_direct", true)
         }.toString()
 
         // Launch QuickAddActivity directly as a transparent floating popup over system home screen
-        val intent = Intent(this, QuickAddActivity::class.java).apply {
+        val editIntent = Intent(this, QuickAddActivity::class.java).apply {
             action = Intent.ACTION_VIEW
             setData(Uri.parse("pocket://quick-add-dialog"))
             putExtra("shared_transaction_payload", payloadJson)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
-        val logPendingIntent = PendingIntent.getActivity(
+        val editPendingIntent = PendingIntent.getActivity(
             this,
             System.currentTimeMillis().toInt(),
-            intent,
+            editIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
@@ -356,8 +470,12 @@ class ShareReceiverActivity : Activity() {
         )
 
         val amountDisplay = if (parsedData.amount.isNotEmpty()) "₹${parsedData.amount}" else "Receipt"
-        val title = if (parsedData.isIncome) "💰 Received $amountDisplay from ${parsedData.merchant}" else "💳 $amountDisplay at ${parsedData.merchant}"
-        val body = "via ${parsedData.appSource} • Tap to log transaction"
+        val title = if (parsedData.isIncome) {
+            "💰 Auto-Logged: Received $amountDisplay from ${parsedData.merchant}"
+        } else {
+            "⚡ Auto-Logged: Paid $amountDisplay to ${parsedData.merchant}"
+        }
+        val body = "via ${parsedData.appSource} • Tap to view or edit"
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -366,8 +484,8 @@ class ShareReceiverActivity : Activity() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setContentIntent(logPendingIntent)
-            .addAction(R.mipmap.ic_launcher, "⚡ Log Now", logPendingIntent)
+            .setContentIntent(editPendingIntent)
+            .addAction(R.mipmap.ic_launcher, "✏️ Edit", editPendingIntent)
             .addAction(R.mipmap.ic_launcher, "✕ Dismiss", dismissPendingIntent)
             .build()
 

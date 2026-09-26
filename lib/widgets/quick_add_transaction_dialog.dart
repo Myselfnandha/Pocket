@@ -24,6 +24,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
   final String? initialReceiverName;
   final String? initialRefId;
   final String? initialCounterpartyLast4;
+  final String? transactionIdToUpdate;
   final bool autoFocusNote;
   final bool isStandaloneScreen;
 
@@ -40,6 +41,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     this.initialReceiverName,
     this.initialRefId,
     this.initialCounterpartyLast4,
+    this.transactionIdToUpdate,
     this.autoFocusNote = false,
     this.isStandaloneScreen = false,
   });
@@ -59,6 +61,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
     String? initialReceiverName,
     String? initialRefId,
     String? initialCounterpartyLast4,
+    String? transactionIdToUpdate,
     bool autoFocusNote = false,
     bool isStandaloneScreen = false,
   }) async {
@@ -79,6 +82,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
           initialReceiverName: initialReceiverName,
           initialRefId: initialRefId,
           initialCounterpartyLast4: initialCounterpartyLast4,
+          transactionIdToUpdate: transactionIdToUpdate,
           autoFocusNote: autoFocusNote,
           isStandaloneScreen: isStandaloneScreen,
         ),
@@ -142,6 +146,35 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
         _notesFocusNode.requestFocus();
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(QuickAddTransactionDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTitle != null && widget.initialTitle != oldWidget.initialTitle && widget.initialTitle!.isNotEmpty) {
+      _titleController.text = widget.initialTitle!;
+    }
+    if (widget.initialAmount != null && widget.initialAmount != oldWidget.initialAmount && widget.initialAmount! > 0) {
+      _amountController.text = widget.initialAmount! % 1 == 0
+          ? widget.initialAmount!.toInt().toString()
+          : widget.initialAmount!.toStringAsFixed(2);
+    }
+    if (widget.initialType != oldWidget.initialType) {
+      _type = widget.initialType;
+    }
+    if (widget.initialCategoryId != null && widget.initialCategoryId != oldWidget.initialCategoryId) {
+      _selectedCategoryId = widget.initialCategoryId;
+    }
+    if (widget.initialWalletId != null && widget.initialWalletId != oldWidget.initialWalletId) {
+      _selectedWalletId = widget.initialWalletId;
+    }
+    if (widget.initialReceiptImagePath != null && widget.initialReceiptImagePath != oldWidget.initialReceiptImagePath) {
+      _receiptImagePath = widget.initialReceiptImagePath;
+    }
+    if (widget.initialSenderName != null) _senderName = widget.initialSenderName;
+    if (widget.initialReceiverName != null) _receiverName = widget.initialReceiverName;
+    if (widget.initialRefId != null) _refId = widget.initialRefId;
+    if (widget.initialCounterpartyLast4 != null) _counterpartyLast4 = widget.initialCounterpartyLast4;
   }
 
   @override
@@ -229,20 +262,59 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final title = _titleController.text.trim().isEmpty ? 'Quick ${_type.name.capitalize()}' : _titleController.text.trim();
     final note = _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null;
 
-    await ref.read(transactionsProvider.notifier).addTransaction(
-          title: title,
-          amount: amount,
-          type: _type,
-          categoryId: catId,
-          walletId: walletId,
-          date: _selectedDate,
-          note: note,
-          receiptImagePath: _receiptImagePath,
-          senderName: _senderName,
-          receiverName: _receiverName,
-          refId: _refId,
-          counterpartyLast4: _counterpartyLast4,
-        );
+    if (widget.transactionIdToUpdate != null) {
+      final existingList = ref.read(transactionsProvider);
+      final existingTx = existingList.where((t) => t.id == widget.transactionIdToUpdate).firstOrNull;
+      if (existingTx != null) {
+        await ref.read(transactionsProvider.notifier).updateTransaction(
+              existingTx.copyWith(
+                title: title,
+                amount: amount,
+                type: _type,
+                categoryId: catId,
+                walletId: walletId,
+                date: _selectedDate,
+                note: note,
+                receiptImagePath: _receiptImagePath,
+                senderName: _senderName,
+                receiverName: _receiverName,
+                refId: _refId,
+                counterpartyLast4: _counterpartyLast4,
+              ),
+            );
+      } else {
+        await ref.read(transactionsProvider.notifier).addTransaction(
+              title: title,
+              amount: amount,
+              type: _type,
+              categoryId: catId,
+              walletId: walletId,
+              date: _selectedDate,
+              note: note,
+              receiptImagePath: _receiptImagePath,
+              senderName: _senderName,
+              receiverName: _receiverName,
+              refId: _refId,
+              counterpartyLast4: _counterpartyLast4,
+            );
+      }
+      ref.read(pendingTransactionsProvider.notifier).dismiss(widget.transactionIdToUpdate!);
+    } else {
+      await ref.read(transactionsProvider.notifier).addTransaction(
+            title: title,
+            amount: amount,
+            type: _type,
+            categoryId: catId,
+            walletId: walletId,
+            date: _selectedDate,
+            note: note,
+            receiptImagePath: _receiptImagePath,
+            senderName: _senderName,
+            receiverName: _receiverName,
+            refId: _refId,
+            counterpartyLast4: _counterpartyLast4,
+          );
+    }
 
     if (!mounted) return;
     _closeDialog();

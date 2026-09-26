@@ -594,24 +594,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
           ),
           const SizedBox(height: 12),
 
-          // 3. Bento Row 2: Savings Rate & Top Spending Category Side-by-Side
-          _buildSavingsAndTopCatRow(
-            isDark: isDark,
-            settings: settings,
-            savingsRate: savingsRate,
-            netSavings: netSavings,
-            topCategory: topCategory,
-            topCatSpend: topCatSpend,
-            totalExpense: totalExpense,
-            primaryColor: palette.primary,
-          ),
-          const SizedBox(height: 14),
-
-          // 4. Financial Health Score Hero
-          const FinancialHealthGauge(),
-          const SizedBox(height: 14),
-
-          // 5. Quick Stats Row: Daily Average & Budget Left
+          // 3. Top Bento Row 2: Daily Avg Spend & Safe to Spend / Budget Left (Moved to top cards)
           Row(
             children: [
               Expanded(
@@ -754,6 +737,26 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
               ),
             ],
           ),
+          const SizedBox(height: 14),
+
+          // 4. Financial Health Score Hero (Moved directly below top summary cards)
+          const FinancialHealthGauge(),
+          const SizedBox(height: 14),
+
+          // 5. Bento Row 3: Savings Rate & Top Spending Category (Conditionally visible only if month has data)
+          if (monthTxs.isNotEmpty) ...[
+            _buildSavingsAndTopCatRow(
+              isDark: isDark,
+              settings: settings,
+              savingsRate: savingsRate,
+              netSavings: netSavings,
+              topCategory: topCategory,
+              topCatSpend: topCatSpend,
+              totalExpense: totalExpense,
+              primaryColor: palette.primary,
+            ),
+            const SizedBox(height: 14),
+          ],
           const SizedBox(height: 20),
         ],
       ),

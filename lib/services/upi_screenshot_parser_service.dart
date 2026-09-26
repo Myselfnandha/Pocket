@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 class UpiParsedTransaction {
+  final String? id;
   final double? amount;
   final String merchant;
   final String appSource;
@@ -13,9 +14,11 @@ class UpiParsedTransaction {
   final String? receiverName;
   final String? counterpartyLast4;
   final bool isIncome;
+  final bool autoSaveDirect;
   final DateTime date;
 
   const UpiParsedTransaction({
+    this.id,
     this.amount,
     required this.merchant,
     this.appSource = 'UPI App',
@@ -27,10 +30,14 @@ class UpiParsedTransaction {
     this.receiverName,
     this.counterpartyLast4,
     this.isIncome = false,
+    this.autoSaveDirect = false,
     required this.date,
   });
 
   factory UpiParsedTransaction.fromJson(Map<String, dynamic> json) {
+    final id = (json['id'] as String?)?.trim();
+    final autoSaveDirect = json['auto_save_direct'] == true || json['autoSaveDirect'] == true;
+
     double? parsedAmount;
     final amtVal = json['amount'];
     if (amtVal != null) {
@@ -74,7 +81,16 @@ class UpiParsedTransaction {
       }
     }
 
+    if (merchant.isEmpty || merchant == 'UPI Transaction' || merchant == 'UPI Payment') {
+      if (isIncome && senderName != null && senderName.isNotEmpty) {
+        merchant = senderName;
+      } else if (receiverName != null && receiverName.isNotEmpty) {
+        merchant = receiverName;
+      }
+    }
+
     return UpiParsedTransaction(
+      id: id,
       amount: (parsedAmount != null && parsedAmount > 0) ? parsedAmount : null,
       merchant: merchant.isNotEmpty ? merchant : 'UPI Payment',
       appSource: appSource.isNotEmpty ? appSource : 'UPI App',
@@ -86,6 +102,7 @@ class UpiParsedTransaction {
       receiverName: (receiverName != null && receiverName.isNotEmpty) ? receiverName : null,
       counterpartyLast4: (counterpartyLast4 != null && counterpartyLast4.isNotEmpty) ? counterpartyLast4 : null,
       isIncome: isIncome,
+      autoSaveDirect: autoSaveDirect,
       date: DateTime.now(),
     );
   }
@@ -105,16 +122,18 @@ class UpiParsedTransaction {
 
   @override
   String toString() =>
-      'UpiParsedTransaction(amount: $amount, merchant: $merchant, app: $appSource, ref: $refId, sender: $senderName, receiver: $receiverName, last4: $counterpartyLast4, isIncome: $isIncome, image: $imagePath)';
+      'UpiParsedTransaction(id: $id, amount: $amount, merchant: $merchant, app: $appSource, ref: $refId, sender: $senderName, receiver: $receiverName, last4: $counterpartyLast4, isIncome: $isIncome, autoSave: $autoSaveDirect, image: $imagePath)';
 }
 
 class UpiScreenshotParserService {
   /// Robust multi-pattern Amount Extractor
-  static double? extractAmount(String text) {
+  static double? extractAmount(String rawText) {
+    final text = rawText.replaceAll('\u00A0', ' ');
+
     // 1. Explicit Currency and Transaction verbs
     final patterns = [
-      RegExp(r'(?:[₹\u20B9]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)', caseSensitive: false),
-      RegExp(r'(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent)\s*(?:[₹\u20B9]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)', caseSensitive: false),
+      RegExp(r'(?:[₹\u20B9*?=]|Rs\.?|INR|\$)\s*([0-9,]+(?:\.[0-9]{1,2})?)', caseSensitive: false),
+      RegExp(r'(?:Paid|Payment of|Sent|Transferred|Amount|Total|Debited|Debited by|Spent|Received)\s*(?:[₹\u20B9*?=]|Rs\.?|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)', caseSensitive: false),
       RegExp(r'([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:[₹\u20B9]|INR|Rs)', caseSensitive: false),
     ];
 
@@ -129,17 +148,24 @@ class UpiScreenshotParserService {
       }
     }
 
-    // 2. Line-by-Line Contextual Scanner (e.g. ₹ on line 1, 450.00 on line 2)
+    // 2. Line-by-Line Contextual Scanner (e.g. ₹ on line 1, 450.00 or 500 on line 2)
     final lines = text.split(RegExp(r'[\r\n]+')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
-      final lineMatch = RegExp(r'^[₹\u20B9RsINR\s]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$', caseSensitive: false).firstMatch(line);
+      final lineMatch = RegExp(r'^[₹\u20B9*?=\sRsINR]*([0-9,]+(?:\.[0-9]{1,2})?)\s*$', caseSensitive: false).firstMatch(line);
       if (lineMatch != null) {
         final candidate = lineMatch.group(1)?.replaceAll(',', '').trim() ?? '';
         final val = double.tryParse(candidate);
         if (val != null && val > 0 && val < 10000000) {
           final prevLine = (i > 0) ? lines[i - 1].toLowerCase() : '';
-          if (prevLine.contains('₹') || prevLine.contains('rs') || prevLine.contains('paid') || prevLine.contains('sent') || prevLine.contains('amount') || line.contains('₹')) {
+          final nextLine = (i < lines.length - 1) ? lines[i + 1].toLowerCase() : '';
+          final isNearContext = prevLine.contains('paid') || prevLine.contains('sent') ||
+              prevLine.contains('received') || prevLine.contains('amount') ||
+              prevLine.contains('successful') || prevLine.contains('completed') ||
+              nextLine.contains('completed') || nextLine.contains('successful') ||
+              line.contains('₹') || prevLine.contains('₹');
+
+          if (isNearContext) {
             return val;
           }
         }
@@ -180,16 +206,38 @@ class UpiScreenshotParserService {
     return null;
   }
 
-  /// Extracts Sender / Payer Name
+  /// Extracts Sender / Payer Name (Multi-line aware)
   static String? extractSender(String text) {
+    final lines = text.split(RegExp(r'[\r\n]+')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+
+    for (int i = 0; i < lines.length; i++) {
+      final l = lines[i].toLowerCase();
+      if (l == 'received from' || l == 'from:' || l == 'from' || l == 'payer:') {
+        if (i + 1 < lines.length) {
+          final candidate = cleanMerchantCandidate(lines[i + 1]);
+          if (candidate.isNotEmpty && !isTechnicalKeyword(candidate)) {
+            return candidate;
+          }
+        }
+      }
+    }
+
+    final sentYouMatch = RegExp(r'([A-Za-z0-9\s&.\-_]{2,30})\s+sent you', caseSensitive: false).firstMatch(text);
+    if (sentYouMatch != null) {
+      final found = cleanMerchantCandidate(sentYouMatch.group(1) ?? '');
+      if (found.isNotEmpty && !isTechnicalKeyword(found)) {
+        return found;
+      }
+    }
+
     final patterns = [
       RegExp(r'(?:Received from|From:|Sent by|Payer:|Paid by|Transferred from)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
     ];
     for (final p in patterns) {
       final m = p.firstMatch(text);
       if (m != null) {
-        final candidate = m.group(1)?.trim() ?? '';
-        if (candidate.isNotEmpty && !candidate.toLowerCase().contains('google pay') && !candidate.toLowerCase().contains('phonepe')) {
+        final candidate = cleanMerchantCandidate(m.group(1) ?? '');
+        if (candidate.isNotEmpty && !isTechnicalKeyword(candidate)) {
           return candidate;
         }
       }
@@ -197,16 +245,30 @@ class UpiScreenshotParserService {
     return null;
   }
 
-  /// Extracts Receiver / Payee Name
+  /// Extracts Receiver / Payee Name (Multi-line aware)
   static String? extractReceiver(String text) {
+    final lines = text.split(RegExp(r'[\r\n]+')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+
+    for (int i = 0; i < lines.length; i++) {
+      final l = lines[i].toLowerCase();
+      if (l == 'paid to' || l == 'to:' || l == 'to' || l == 'payment to' || l == 'sent to' || l == 'transfer to') {
+        if (i + 1 < lines.length) {
+          final candidate = cleanMerchantCandidate(lines[i + 1]);
+          if (candidate.isNotEmpty && !isTechnicalKeyword(candidate)) {
+            return candidate;
+          }
+        }
+      }
+    }
+
     final patterns = [
       RegExp(r'(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
     ];
     for (final p in patterns) {
       final m = p.firstMatch(text);
       if (m != null) {
-        final candidate = m.group(1)?.trim() ?? '';
-        if (candidate.isNotEmpty && !candidate.toLowerCase().contains('google pay') && !candidate.toLowerCase().contains('phonepe')) {
+        final candidate = cleanMerchantCandidate(m.group(1) ?? '');
+        if (candidate.isNotEmpty && !isTechnicalKeyword(candidate)) {
           return candidate;
         }
       }
@@ -239,7 +301,29 @@ class UpiScreenshotParserService {
   /// Detects whether transaction is Income (Received / Credited)
   static bool detectIsIncome(String text) {
     final lower = text.toLowerCase();
-    return RegExp(r'\b(received from|received|credited|deposit|cashback|refund|money received)\b').hasMatch(lower);
+    if (lower.contains('received from') || lower.contains('money received') || lower.contains('credited to') || lower.contains('credited') || lower.contains('sent you')) {
+      return true;
+    }
+    if (lower.contains('deposit') || lower.contains('cashback') || lower.contains('refund')) {
+      return true;
+    }
+    if (lower.contains('received') && !lower.contains('debited')) {
+      return true;
+    }
+    return false;
+  }
+
+  static String cleanMerchantCandidate(String candidate) {
+    return candidate.split(RegExp(r'[\r\n]+')).firstOrNull?.trim()
+            .replaceAll(RegExp(r'@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi|@axl', caseSensitive: false), '')
+            .replaceAll(RegExp(r'\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe|banking name|upi id)\b', caseSensitive: false), '')
+            .replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '')
+            .trim() ?? '';
+  }
+
+  static bool isTechnicalKeyword(String word) {
+    final lower = word.toLowerCase();
+    return const {'completed', 'successful', 'upi', 'banking', 'account', 'ref', 'details', 'transfer', 'payment', 'rupees', 'rs'}.contains(lower);
   }
 
   /// Matches merchant keywords to default categories
@@ -253,42 +337,41 @@ class UpiScreenshotParserService {
     }
 
     // Groceries
-    if (RegExp(r'\b(blinkit|zepto|instamart|bigbasket|dmart|supermarket|grocery|groceries|spencer|nature basket|milk|vegetable|fruits)\b')
+    if (RegExp(r'\b(blinkit|zepto|instamart|bigbasket|supermarket|kirana|vegetable|fruits|grocery|groceries|mart|store|dmart|spencer)\b')
         .hasMatch(combined)) {
       return 'cat_groceries';
     }
 
-    // Shopping
-    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|zara|h&m|shopping|retail|store|mart|electronics|croma|reliance)\b')
-        .hasMatch(combined)) {
-      return 'cat_shopping';
-    }
-
     // Transport & Fuel
-    if (RegExp(r'\b(uber|ola|rapido|petrol|fuel|hpcl|bpcl|ioc|diesel|metro|irctc|redbus|flight|indigo|transport|parking|toll|fastag)\b')
+    if (RegExp(r'\b(uber|ola|rapido|metro|petrol|diesel|fuel|hpcl|bpcl|ioc|indian oil|auto|cab|toll|fastag|parking)\b')
         .hasMatch(combined)) {
       return 'cat_transport';
     }
 
-    // Entertainment
-    if (RegExp(r'\b(bookmyshow|netflix|prime|hotstar|spotify|cinema|movie|gaming|steam|playstation|youtube)\b')
+    // Shopping & E-Commerce
+    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|shopping|cloth|apparel|retail|mall)\b')
+        .hasMatch(combined)) {
+      return 'cat_shopping';
+    }
+
+    // Entertainment & Subscriptions
+    if (RegExp(r'\b(netflix|spotify|hotstar|prime|youtube|cinema|movie|pvr|inox|bookmyshow|steam|playstation)\b')
         .hasMatch(combined)) {
       return 'cat_entertainment';
     }
 
-    // Bills & Utilities
-    if (RegExp(r'\b(bescom|electricity|water|gas|wifi|broadband|airtel|jio|vi|recharge|dth|bill|rent|cylinder)\b')
+    // Utilities & Bills
+    if (RegExp(r'\b(electricity|bescom|water|gas|broadband|wifi|jio|airtel|vi|recharge|bill|cylinder|postpaid)\b')
         .hasMatch(combined)) {
       return 'cat_bills';
     }
 
-    // Health & Medical
-    if (RegExp(r'\b(apollo|pharmacy|medplus|1mg|practo|hospital|clinic|doctor|pharma|lab|dental|diagnostic)\b')
+    // Health & Fitness
+    if (RegExp(r'\b(pharmacy|apollo|medplus|pharmeasy|hospital|clinic|doctor|gym|fitness|cult|medicine)\b')
         .hasMatch(combined)) {
       return 'cat_health';
     }
 
-    // Fallback: Default to Other or General
-    return 'cat_other';
+    return 'cat_others';
   }
 }
