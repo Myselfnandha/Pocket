@@ -192,11 +192,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
-                leading: const Icon(Icons.widgets_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Home Screen Widget Metric', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(_getWidgetMetricTitle(settings.homeScreenWidgetStat)),
+                leading: const Icon(Icons.widgets_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Home Screen Widgets Suite', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Card 4x2, Safe-to-Spend 2x2, Quick Bar 4x1 & Desktop Pinning'),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showWidgetMetricPicker(context, ref, settings),
+                onTap: () => context.push('/widget-customizer'),
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
@@ -1844,109 +1844,6 @@ class SettingsScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
-    );
-  }
-
-  String _getWidgetMetricTitle(HomeScreenWidgetStat stat) {
-    switch (stat) {
-      case HomeScreenWidgetStat.balanceAndTodaySpend:
-        return 'Total Balance & Today\'s Spend';
-      case HomeScreenWidgetStat.netWorth:
-        return 'Total Net Worth (Assets - Liabilities)';
-      case HomeScreenWidgetStat.monthlySavings:
-        return 'Monthly Savings & Savings Rate';
-      case HomeScreenWidgetStat.budgetRemaining:
-        return 'Monthly Category Budget Remaining';
-      case HomeScreenWidgetStat.debtsSummary:
-        return 'Total Balance & Accounts Overview';
-      case HomeScreenWidgetStat.forecastTrajectory:
-        return 'Live Spend Forecast & Sparkline Trajectory';
-    }
-  }
-
-  void _showWidgetMetricPicker(BuildContext context, WidgetRef ref, UserSettingsModel settings) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Home Screen Widget Metric',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Choose what primary statistic appears on your Android home-screen widget.',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...HomeScreenWidgetStat.values.map((stat) {
-              final isSel = settings.homeScreenWidgetStat == stat;
-              return ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: isSel
-                    ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
-                    : Colors.transparent,
-                leading: Icon(
-                  stat == HomeScreenWidgetStat.balanceAndTodaySpend
-                      ? Icons.account_balance_wallet_outlined
-                      : stat == HomeScreenWidgetStat.netWorth
-                          ? Icons.trending_up_rounded
-                          : stat == HomeScreenWidgetStat.monthlySavings
-                              ? Icons.savings_outlined
-                              : stat == HomeScreenWidgetStat.budgetRemaining
-                                  ? Icons.pie_chart_outline_rounded
-                                  : Icons.receipt_long_outlined,
-                  color: isSel ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
-                ),
-                title: Text(
-                  _getWidgetMetricTitle(stat),
-                  style: TextStyle(
-                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
-                    color: isSel ? AppColors.primaryGreenLight : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                  ),
-                ),
-                trailing: isSel ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight) : null,
-                onTap: () {
-                  final updated = settings.copyWith(homeScreenWidgetStat: stat);
-                  ref.read(settingsProvider.notifier).updateSettings(updated);
-                  Navigator.pop(ctx);
-                },
-              );
-            }),
-            const SizedBox(height: 10),
-          ],
-        ),
       ),
     );
   }

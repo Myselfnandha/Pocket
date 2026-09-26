@@ -2,5 +2,11 @@
 <resources>
     <string name="widget_name">Pocket Balance &amp; Quick Add</string>
     <string name="widget_description">View real-time balance, today\'s expenses, and instantly log transactions.</string>
+    <string name="widget_card_name">Pocket Card (4x2)</string>
+    <string name="widget_card_description">Real-time debit card view with balance, today\'s spend, and 1-tap quick actions.</string>
+    <string name="widget_runway_name">Pocket Safe-to-Spend (2x2)</string>
+    <string name="widget_runway_description">Glanceable daily spending allowance, budget burn pace, and 1-tap expense logging.</string>
+    <string name="widget_bar_name">Pocket Quick Bar (4x1)</string>
+    <string name="widget_bar_description">Minimalist launcher bar with live balance and 1-tap Add, Scan, and Voice buttons.</string>
     <string name="accessibility_service_description">Pocket securely detects transaction confirmation screens in payment apps to auto-fill expenses with zero data leaving your device.</string>
 </resources>

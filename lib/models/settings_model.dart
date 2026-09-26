@@ -63,6 +63,11 @@ class UserSettingsModel {
   final String transactionEntryMode; // 'quick' or 'detailed'
   final String navBarStyle; // 'frosted', 'glassmorphism', 'floating_island', 'neumorphic'
 
+  // Dedicated Widget Suite Settings
+  final bool widgetPrivacyMode;
+  final String? widgetSelectedWalletId;
+  final String widgetSecondaryAction; // 'scan' or 'voice'
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
@@ -94,6 +99,9 @@ class UserSettingsModel {
     this.defaultQuickAddType = 'expense',
     this.transactionEntryMode = 'quick',
     this.navBarStyle = 'floating_island',
+    this.widgetPrivacyMode = false,
+    this.widgetSelectedWalletId,
+    this.widgetSecondaryAction = 'scan',
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -148,6 +156,10 @@ class UserSettingsModel {
     String? defaultQuickAddType,
     String? transactionEntryMode,
     String? navBarStyle,
+    bool? widgetPrivacyMode,
+    String? widgetSelectedWalletId,
+    bool clearWidgetSelectedWalletId = false,
+    String? widgetSecondaryAction,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -180,6 +192,11 @@ class UserSettingsModel {
       defaultQuickAddType: defaultQuickAddType ?? this.defaultQuickAddType,
       transactionEntryMode: transactionEntryMode ?? this.transactionEntryMode,
       navBarStyle: navBarStyle ?? this.navBarStyle,
+      widgetPrivacyMode: widgetPrivacyMode ?? this.widgetPrivacyMode,
+      widgetSelectedWalletId: clearWidgetSelectedWalletId
+          ? null
+          : (widgetSelectedWalletId ?? this.widgetSelectedWalletId),
+      widgetSecondaryAction: widgetSecondaryAction ?? this.widgetSecondaryAction,
     );
   }
 
@@ -214,6 +231,9 @@ class UserSettingsModel {
         'defaultQuickAddType': defaultQuickAddType,
         'transactionEntryMode': transactionEntryMode,
         'navBarStyle': navBarStyle,
+        'widgetPrivacyMode': widgetPrivacyMode,
+        'widgetSelectedWalletId': widgetSelectedWalletId,
+        'widgetSecondaryAction': widgetSecondaryAction,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -256,5 +276,8 @@ class UserSettingsModel {
         defaultQuickAddType: json['defaultQuickAddType'] as String? ?? 'expense',
         transactionEntryMode: json['transactionEntryMode'] as String? ?? 'quick',
         navBarStyle: json['navBarStyle'] as String? ?? 'floating_island',
+        widgetPrivacyMode: json['widgetPrivacyMode'] as bool? ?? false,
+        widgetSelectedWalletId: json['widgetSelectedWalletId'] as String?,
+        widgetSecondaryAction: json['widgetSecondaryAction'] as String? ?? 'scan',
       );
 }

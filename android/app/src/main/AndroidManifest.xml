@@ -42,7 +42,7 @@
                 <data android:scheme="pocket" />
             </intent-filter>
         </activity>
-        <!-- Android System Home Screen App Widget Receiver -->
+        <!-- Android System Home Screen App Widget Receivers -->
         <receiver
             android:name=".PocketWidgetProvider"
             android:label="@string/widget_name"
@@ -54,6 +54,45 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/pocket_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".PocketCardWidgetProvider"
+            android:label="@string/widget_card_name"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pocket_card_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".PocketRunwayWidgetProvider"
+            android:label="@string/widget_runway_name"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pocket_runway_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".PocketBarWidgetProvider"
+            android:label="@string/widget_bar_name"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pocket_bar_widget_info" />
         </receiver>
 
         <!-- Silent Instant Share Target for UPI & Banking Screenshots -->

@@ -17,6 +17,7 @@ import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/transactions/quick_add_dialog_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/settings/auto_import_studio_screen.dart';
+import '../screens/settings/widgets_customizer_screen.dart';
 import 'app_scaffold.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -119,6 +120,13 @@ GoRouter createRouter(bool isOnboarded) {
         path: '/debts',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DebtsScreen(),
+      ),
+
+      // Android Home Screen Widgets Customizer
+      GoRoute(
+        path: '/widget-customizer',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WidgetsCustomizerScreen(),
       ),
 
       // Transaction Detail

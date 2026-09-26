@@ -8,7 +8,7 @@ import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
-class PocketWidgetProvider : HomeWidgetProvider() {
+class PocketCardWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -17,7 +17,7 @@ class PocketWidgetProvider : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { widgetId ->
             try {
-                val views = RemoteViews(context.packageName, R.layout.pocket_widget_layout).apply {
+                val views = RemoteViews(context.packageName, R.layout.pocket_card_widget_layout).apply {
                     val totalBalance = widgetData.getString("card_balance", widgetData.getString("total_balance", "₹0.00")) ?: "₹0.00"
                     val todayExpense = widgetData.getString("today_expense", "₹0.00 Today") ?: "₹0.00 Today"
                     val walletName = widgetData.getString("card_wallet_name", "Main Account") ?: "Main Account"
@@ -29,6 +29,7 @@ class PocketWidgetProvider : HomeWidgetProvider() {
                     setTextViewText(R.id.widget_card_wallet_name, walletName)
                     setTextViewText(R.id.widget_budget_tag, budgetTag)
 
+                    // Secondary action button text
                     if (secondaryAction == "voice") {
                         setTextViewText(R.id.txt_secondary_action, "🎙️ Voice")
                     } else {
@@ -43,7 +44,7 @@ class PocketWidgetProvider : HomeWidgetProvider() {
                     )
                     setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
 
-                    // Quick Add button -> open instant transparent floating quick-add popup
+                    // 1-Tap Quick Add -> open lightweight transparent floating HUD
                     val quickAddPendingIntent = HomeWidgetLaunchIntent.getActivity(
                         context,
                         QuickAddActivity::class.java,

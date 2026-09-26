@@ -84,6 +84,21 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
   Future<void> toggleCategoryTags(bool value) async {
     await updateSettings(state.copyWith(showCategoryTags: value));
   }
+
+  Future<void> setWidgetPrivacyMode(bool value) async {
+    await updateSettings(state.copyWith(widgetPrivacyMode: value));
+  }
+
+  Future<void> setWidgetSelectedWalletId(String? walletId) async {
+    await updateSettings(state.copyWith(
+      widgetSelectedWalletId: walletId,
+      clearWidgetSelectedWalletId: walletId == null,
+    ));
+  }
+
+  Future<void> setWidgetSecondaryAction(String action) async {
+    await updateSettings(state.copyWith(widgetSecondaryAction: action));
+  }
 }
 
 final settingsProvider =

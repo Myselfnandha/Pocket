@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'models/category_model.dart';
 import 'navigation/app_router.dart';
 import 'providers/app_providers.dart';
 import 'services/notification_service.dart';
+import 'services/receipt_service.dart';
 import 'services/shared_transaction_handler.dart';
 import 'services/storage_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/system_widget_service.dart';
 import 'services/upi_screenshot_parser_service.dart';
+import 'widgets/nlp_quick_add_modal.dart';
 import 'widgets/quick_add_transaction_dialog.dart';
 
 void main() async {
@@ -79,25 +83,69 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       return;
     }
 
+    void executeWithContext(void Function(BuildContext ctx) action, [int retries = 0]) {
+      if (!mounted) return;
+      final navContext = rootNavigatorKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        action(navContext);
+      } else if (retries < 12) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          executeWithContext(action, retries + 1);
+        });
+      }
+    }
+
+    // 1. Scan Receipt via Camera
+    if (uri.host == 'scan' || uri.path.contains('scan')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) async {
+          final receiptFile = await ReceiptService().pickOrCaptureReceipt(source: ImageSource.camera);
+          if (receiptFile != null && ctx.mounted) {
+            QuickAddTransactionDialog.show(
+              ctx,
+              initialReceiptImagePath: receiptFile.path,
+              initialType: TransactionType.expense,
+            );
+          }
+        });
+      });
+      return;
+    }
+
+    // 2. Voice / NLP AI Quick Add
+    if (uri.host == 'voice' || uri.path.contains('voice')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          NlpQuickAddModal.show(ctx);
+        });
+      });
+      return;
+    }
+
+    // 3. Budgets Deep Link
+    if (uri.host == 'budget' || uri.path.contains('budget')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/budgets');
+        });
+      });
+      return;
+    }
+
+    // 4. Quick Add Dialog Launch
     if (uri.host == 'quick-add' || uri.path == '/quick-add' || uri.path == 'quick-add') {
       if (QuickAddTransactionDialog.isOpen) return;
 
       final typeParam = uri.queryParameters['type'];
       final initialType = typeParam == 'income' ? TransactionType.income : TransactionType.expense;
 
-      void showPopup([int retries = 0]) {
-        if (!mounted || QuickAddTransactionDialog.isOpen) return;
-        final navContext = rootNavigatorKey.currentContext;
-        if (navContext != null && navContext.mounted) {
-          QuickAddTransactionDialog.show(navContext, initialType: initialType);
-        } else if (retries < 12) {
-          Future.delayed(const Duration(milliseconds: 100), () {
-            showPopup(retries + 1);
-          });
-        }
-      }
-
-      WidgetsBinding.instance.addPostFrameCallback((_) => showPopup());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          if (!QuickAddTransactionDialog.isOpen) {
+            QuickAddTransactionDialog.show(ctx, initialType: initialType);
+          }
+        });
+      });
     }
   }
 
@@ -151,6 +199,9 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       monthlySavings: monthlyStats.netSavings,
       budgetRemaining: budgetRemaining,
       forecast: forecast,
+      privacyMode: settings.widgetPrivacyMode,
+      selectedWalletId: settings.widgetSelectedWalletId,
+      secondaryAction: settings.widgetSecondaryAction,
     );
   }
 

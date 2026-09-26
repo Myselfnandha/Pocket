@@ -1,6 +1,8 @@
 package com.pocket.pocket
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
@@ -71,15 +73,40 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // 3. Widget Quick Add Launch Channel
+        // 3. Widget Quick Add Launch Channel & Desktop Pinning
         widgetChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).apply {
             setMethodCallHandler { call, result ->
-                if (call.method == "getPendingWidgetUri") {
-                    val uri = pendingWidgetUri
-                    pendingWidgetUri = null
-                    result.success(uri)
-                } else {
-                    result.notImplemented()
+                when (call.method) {
+                    "getPendingWidgetUri" -> {
+                        val uri = pendingWidgetUri
+                        pendingWidgetUri = null
+                        result.success(uri)
+                    }
+                    "requestPinWidget" -> {
+                        val widgetType = call.argument<String>("widgetType") ?: "card"
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            try {
+                                val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+                                if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                                    val providerClass = when (widgetType) {
+                                        "runway" -> PocketRunwayWidgetProvider::class.java
+                                        "bar" -> PocketBarWidgetProvider::class.java
+                                        else -> PocketCardWidgetProvider::class.java
+                                    }
+                                    val myProvider = ComponentName(applicationContext, providerClass)
+                                    val success = appWidgetManager.requestPinAppWidget(myProvider, null, null)
+                                    result.success(success)
+                                } else {
+                                    result.success(false)
+                                }
+                            } catch (e: Exception) {
+                                result.success(false)
+                            }
+                        } else {
+                            result.success(false)
+                        }
+                    }
+                    else -> result.notImplemented()
                 }
             }
         }
@@ -209,7 +236,7 @@ class MainActivity : FlutterActivity() {
 
     private fun handleIntentForWidget(intent: Intent?) {
         val dataUri = intent?.dataString
-        if (dataUri != null && dataUri.contains("quick-add")) {
+        if (dataUri != null && (dataUri.startsWith("pocket://") || dataUri.contains("quick-add"))) {
             pendingWidgetUri = dataUri
             widgetChannel?.invokeMethod("onWidgetUriReceived", dataUri)
         }
