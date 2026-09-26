@@ -469,18 +469,24 @@ class ShareReceiverActivity : Activity() {
         )
 
         val amountDisplay = if (parsedData.amount.isNotEmpty()) "₹${parsedData.amount}" else "Receipt"
+        val merchantDisplay = parsedData.merchant.ifEmpty { "UPI Payment" }
         val title = if (parsedData.isIncome) {
-            "💰 Auto-Logged: Received $amountDisplay from ${parsedData.merchant}"
+            "💰 Received $amountDisplay from $merchantDisplay"
         } else {
-            "⚡ Auto-Logged: Paid $amountDisplay to ${parsedData.merchant}"
+            "⚡ Paid $amountDisplay to $merchantDisplay"
         }
+        val subText = "Pocket • Auto-Logged"
         val body = "via ${parsedData.appSource} • Tap to view or edit"
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
+            .setColor(0xFF00C853.toInt()) // Pocket vibrant brand green accent
             .setContentTitle(title)
+            .setSubText(subText)
             .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText(body)
+                .setSummaryText(subText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(editPendingIntent)

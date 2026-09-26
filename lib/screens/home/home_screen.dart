@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../models/transaction_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
@@ -16,7 +18,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final todayTxs = ref.watch(todayTransactionsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -114,13 +115,13 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // 1. Top Pinned Area: Hero Balance Card + Quick Hub + Capsule + Section Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Balance Summary Card (with Integrated Accounts Carousel)
                     const BalanceCard(),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Quick Hub Row: Recurring & Debts
                     Consumer(
@@ -254,26 +255,22 @@ class HomeScreen extends ConsumerWidget {
                       },
                     ),
 
-                    // Detected Payments Capsule (repositioned between Quick Hub and Recent Activity)
+                    // Detected Payments Capsule
                     const PendingTransactionsCapsule(),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
 
-                    // Section Header (clean "See All ->" navigation, removed redundant '+')
+                    // Section Header: Recent Transactions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            todayTxs.isNotEmpty ? "Today's Transactions" : "Recent Activity",
-                            style: TextStyle(
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w700,
-                              color: isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.lightTextPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          'Recent Transactions',
+                          style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
                           ),
                         ),
                         TextButton(
@@ -308,16 +305,16 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
-              // 2. Containerized Scrolling Recent Activity Section
+              // 2. Containerized Scrolling Recent Activity Section with Day Indicators
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
                   child: Consumer(
                     builder: (context, ref, _) {
                       final allTxs = ref.watch(transactionsProvider);
-                      final displayList = todayTxs.isNotEmpty ? todayTxs : allTxs.take(10).toList();
+                      final displayList = allTxs.take(30).toList();
 
                       if (displayList.isEmpty) {
                         return SingleChildScrollView(
@@ -371,6 +368,15 @@ class HomeScreen extends ConsumerWidget {
                         );
                       }
 
+                      // Group recent transactions by day header
+                      final Map<String, List<TransactionModel>> grouped = {};
+                      for (final tx in displayList) {
+                        final key = _formatDateHeader(tx.date);
+                        grouped.putIfAbsent(key, () => []).add(tx);
+                      }
+
+                      final groupKeys = grouped.keys.toList();
+
                       return Container(
                         decoration: BoxDecoration(
                           color: isDark
@@ -384,24 +390,86 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: ListView.separated(
+                        child: ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.zero,
-                          itemCount: displayList.length,
-                          separatorBuilder: (context, index) => Divider(
-                            height: 1,
-                            color: isDark
-                                ? AppColors.darkCardBorder
-                                : AppColors.lightCardBorder,
-                          ),
-                          itemBuilder: (context, index) {
-                            final tx = displayList[index];
-                            return TransactionTile(
-                              transaction: tx,
-                              onTap: () => context.push(
-                                '/transaction-detail',
-                                extra: tx,
-                              ),
+                          itemCount: groupKeys.length,
+                          itemBuilder: (context, groupIndex) {
+                            final dateKey = groupKeys[groupIndex];
+                            final txs = grouped[dateKey]!;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Day Indicator Header Bar
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF191D26)
+                                        : const Color(0xFFF4F6FA),
+                                    border: Border(
+                                      top: groupIndex > 0
+                                          ? BorderSide(
+                                              color: isDark
+                                                  ? AppColors.darkCardBorder
+                                                  : AppColors.lightCardBorder,
+                                              width: 1,
+                                            )
+                                          : BorderSide.none,
+                                      bottom: BorderSide(
+                                        color: isDark
+                                            ? AppColors.darkCardBorder
+                                            : AppColors.lightCardBorder,
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        dateKey.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.8,
+                                          color: isDark
+                                              ? AppColors.darkTextSecondary
+                                              : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Colors.white38 : Colors.black38,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Transaction Tiles for this date
+                                for (int i = 0; i < txs.length; i++) ...[
+                                  TransactionTile(
+                                    transaction: txs[i],
+                                    onTap: () => context.push(
+                                      '/transaction-detail',
+                                      extra: txs[i],
+                                    ),
+                                  ),
+                                  if (i < txs.length - 1)
+                                    Divider(
+                                      height: 1,
+                                      color: isDark
+                                          ? AppColors.darkCardBorder
+                                          : AppColors.lightCardBorder,
+                                    ),
+                                ],
+                              ],
                             );
                           },
                         ),
@@ -415,5 +483,22 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _formatDateHeader(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return 'Today, ${DateFormat('d MMM').format(dt)}';
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (dt.year == yesterday.year &&
+        dt.month == yesterday.month &&
+        dt.day == yesterday.day) {
+      return 'Yesterday, ${DateFormat('d MMM').format(dt)}';
+    }
+    if (dt.year == now.year) {
+      return DateFormat('EEE, d MMM').format(dt);
+    }
+    return DateFormat('d MMM yyyy').format(dt);
   }
 }

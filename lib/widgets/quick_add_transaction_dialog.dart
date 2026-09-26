@@ -379,8 +379,13 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      clipBehavior: Clip.antiAlias,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 440, maxHeight: 680),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161616) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -621,6 +626,29 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                       hintText: '0.00',
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF202024) : const Color(0xFFF4F5F8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: _type == TransactionType.expense
+                              ? AppColors.expenseRed
+                              : AppColors.incomeGreen,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -908,17 +936,12 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                 ),
               ),
             ),
-            // Pinned Bottom Dock Action Bar (Floating CTA)
+            // Pinned Bottom Dock Action Bar (Seamless Floating CTA)
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1B1B1E) : const Color(0xFFF7F8FA),
+                color: isDark ? const Color(0xFF161616) : Colors.white,
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
-                  ),
-                ),
               ),
               child: Row(
                 children: [
