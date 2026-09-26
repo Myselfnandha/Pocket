@@ -31,11 +31,12 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Metallic EMV Chip Shape -->
-            <View
+            <!-- Metallic EMV Chip Shape using ImageView for RemoteViews compatibility -->
+            <ImageView
                 android:layout_width="18dp"
                 android:layout_height="13dp"
-                android:background="@drawable/widget_chip_emv" />
+                android:background="@drawable/widget_chip_emv"
+                android:contentDescription="@null" />
 
             <!-- Contactless Wave Symbol -->
             <TextView
@@ -49,10 +50,11 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <View
+        <ImageView
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:contentDescription="@null" />
 
         <TextView
             android:id="@+id/widget_card_wallet_name"
@@ -127,7 +129,8 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="6dp"
+                android:layout_marginLeft="6dp"
+                android:layout_marginRight="6dp"
                 android:text="•"
                 android:textColor="#44444E"
                 android:textSize="10sp" />

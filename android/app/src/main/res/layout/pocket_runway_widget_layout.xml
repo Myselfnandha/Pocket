@@ -45,7 +45,7 @@
             android:id="@+id/widget_safe_amount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="₹850.00"
+            android:text="₹0.00"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -78,8 +78,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/widget_status_pill"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp">
+            android:paddingLeft="6dp"
+            android:paddingRight="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp">
 
             <TextView
                 android:id="@+id/widget_runway_status"
@@ -98,7 +100,7 @@
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="₹12,400 remaining this month"
+            android:text="No active budget"
             android:textColor="#A0A0AA"
             android:textSize="10sp" />
     </LinearLayout>
