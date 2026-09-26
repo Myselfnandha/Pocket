@@ -446,10 +446,9 @@ class ShareReceiverActivity : Activity() {
             put("auto_save_direct", true)
         }.toString()
 
-        // Launch QuickAddActivity directly as a transparent floating popup over system home screen
-        val editIntent = Intent(this, QuickAddActivity::class.java).apply {
+        // Launch MainActivity directly with shared transaction payload to show QuickAdd dialog
+        val editIntent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            setData(Uri.parse("pocket://quick-add-dialog"))
             putExtra("shared_transaction_payload", payloadJson)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

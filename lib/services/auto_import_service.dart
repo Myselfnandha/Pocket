@@ -248,13 +248,22 @@ class AutoImportService {
           changed = true;
         }
 
-        // 3. Enrich bank wallet if existing wallet was default_cash and item has bank SMS details
-        if ((newWallet == 'default_cash' || newWallet.isEmpty) && item.appSource.contains('SMS')) {
+        // 3. Enrich bank wallet if item has bank SMS details
+        if (item.appSource.contains('SMS') || item.detectionSource == 'sms') {
           final matchedWallet = _matchWallet(item, wallets);
-          if (matchedWallet != newWallet) {
+          if (matchedWallet != newWallet && matchedWallet != 'default_cash') {
             newWallet = matchedWallet;
             changed = true;
           }
+        }
+
+        // 4. Enrich note with SMS source if previously missing
+        String? newNote = tx.note;
+        if ((newNote == null || newNote.isEmpty || newNote.startsWith('Ref:')) && item.appSource.contains('SMS')) {
+          newNote = tx.refId != null && tx.refId!.isNotEmpty
+              ? 'Ref: ${tx.refId} • ${item.appSource}'
+              : item.appSource;
+          if (newNote != tx.note) changed = true;
         }
 
         if (changed) {
@@ -262,6 +271,7 @@ class AutoImportService {
             receiptImagePath: newImg,
             title: newTitle,
             walletId: newWallet,
+            note: newNote,
           );
         }
         return null;
