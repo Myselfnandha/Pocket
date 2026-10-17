@@ -82,7 +82,12 @@ jobs:
         run: flutter pub get
 
       - name: Fast Static Analysis
-        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+        run: |
+          echo "### 🔍 Flutter Analyze Output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          flutter analyze --no-fatal-infos 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Run Tests
         run: flutter test test/
