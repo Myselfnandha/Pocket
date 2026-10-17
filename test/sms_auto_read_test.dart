@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pocket/models/category_model.dart';
 import 'package:pocket/models/pending_transaction_model.dart';
 import 'package:pocket/models/settings_model.dart';
+import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/services/auto_import_service.dart';
 import 'package:pocket/services/storage_service.dart';
@@ -31,10 +33,10 @@ class FakeStorageService extends Fake implements StorageService {
       ];
 
   @override
-  List getCategories() => [];
+  List<CategoryModel> getCategories() => [];
 
   @override
-  List getTransactions() => [];
+  List<TransactionModel> getTransactions() => [];
 }
 
 void main() {
