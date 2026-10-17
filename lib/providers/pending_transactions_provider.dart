@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
 import '../models/notification_model.dart';
+import '../services/notification_service.dart';
 import 'core_providers.dart';
 import 'transactions_provider.dart';
 import 'notifications_provider.dart';
@@ -69,6 +70,16 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             },
           ),
         );
+
+        // Heads-up instant Android notification
+        final matchedWallet = wallets.where((w) => w.id == item.suggestedWalletId).firstOrNull;
+        NotificationService().showTransactionLoggedNotification(
+          title: item.merchant,
+          amount: item.amount,
+          currencySymbol: settings.currencySymbol,
+          isIncome: item.isIncome,
+          walletName: matchedWallet?.name,
+        );
       }
     } catch (_) {
       // Non-blocking defensive catch
@@ -102,7 +113,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         : ((item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
             ? item.suggestedWalletId!
             : fallbackWalletId);
-    final effectiveCategoryId = categoryId ?? item.suggestedCategoryId ?? 'food';
+    final effectiveCategoryId = categoryId ?? item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
 
     final effectiveNote = note ??
         (item.refId != null && item.refId!.isNotEmpty
@@ -118,6 +129,9 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       date: item.date,
       note: effectiveNote,
       refId: item.refId,
+      counterpartyLast4: item.counterpartyLast4,
+      appSource: item.appSource,
+      rawPayload: item.rawPayload,
       receiptImagePath: item.imagePath,
     );
 
@@ -139,7 +153,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final effectiveWalletId = (item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
           ? item.suggestedWalletId!
           : fallbackWalletId;
-      final effectiveCategoryId = item.suggestedCategoryId ?? 'food';
+      final effectiveCategoryId = item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
 
       await _ref.read(transactionsProvider.notifier).addTransaction(
         title: item.merchant,
@@ -152,6 +166,9 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             ? 'Ref: ${item.refId}'
             : 'Imported via ${item.appSource}',
         refId: item.refId,
+        counterpartyLast4: item.counterpartyLast4,
+        appSource: item.appSource,
+        rawPayload: item.rawPayload,
         receiptImagePath: item.imagePath,
       );
       approved++;

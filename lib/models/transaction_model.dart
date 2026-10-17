@@ -14,6 +14,8 @@ class TransactionModel {
   final String? receiverName;
   final String? refId;
   final String? counterpartyLast4;
+  final String? appSource;
+  final String? rawPayload;
   final List<String> tags;
   final List<String> attachments; // Invoices, receipts, warranties, warranty PDFs/images
   final DateTime createdAt;
@@ -32,6 +34,8 @@ class TransactionModel {
     this.receiverName,
     this.refId,
     this.counterpartyLast4,
+    this.appSource,
+    this.rawPayload,
     this.tags = const [],
     this.attachments = const [],
     required this.createdAt,
@@ -51,6 +55,8 @@ class TransactionModel {
     String? receiverName,
     String? refId,
     String? counterpartyLast4,
+    String? appSource,
+    String? rawPayload,
     List<String>? tags,
     List<String>? attachments,
     DateTime? createdAt,
@@ -69,6 +75,8 @@ class TransactionModel {
       receiverName: receiverName ?? this.receiverName,
       refId: refId ?? this.refId,
       counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
+      appSource: appSource ?? this.appSource,
+      rawPayload: rawPayload ?? this.rawPayload,
       tags: tags ?? this.tags,
       attachments: attachments ?? this.attachments,
       createdAt: createdAt ?? this.createdAt,
@@ -89,6 +97,8 @@ class TransactionModel {
         'receiverName': receiverName,
         'refId': refId,
         'counterpartyLast4': counterpartyLast4,
+        'appSource': appSource,
+        'rawPayload': rawPayload,
         'tags': tags,
         'attachments': attachments,
         'createdAt': createdAt.toIso8601String(),
@@ -110,6 +120,8 @@ class TransactionModel {
         receiverName: json['receiverName'] as String?,
         refId: json['refId'] as String?,
         counterpartyLast4: json['counterpartyLast4'] as String?,
+        appSource: json['appSource'] as String?,
+        rawPayload: json['rawPayload'] as String?,
         tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
             const [],
         attachments: (json['attachments'] as List<dynamic>?)

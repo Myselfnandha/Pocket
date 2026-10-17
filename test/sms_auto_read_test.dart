@@ -129,5 +129,90 @@ void main() {
       expect(processed.length, 1);
       expect(processed.first.refId, '428901234567');
     });
+
+    test('TransactionModel serializes and deserializes appSource, rawPayload, and counterpartyLast4', () {
+      final tx = TransactionModel(
+        id: 'tx_meta_1',
+        title: 'Salary Credit',
+        amount: 85000.0,
+        type: TransactionType.income,
+        categoryId: 'salary',
+        walletId: 'w_hdfc',
+        date: DateTime(2026, 10, 15, 10, 0),
+        counterpartyLast4: '1234',
+        appSource: 'SMS (AD-HDFCBK)',
+        rawPayload: 'Your A/C 1234 is credited with Rs 85,000 on 15-OCT-26 by Salary',
+        createdAt: DateTime(2026, 10, 15, 10, 1),
+      );
+
+      final json = tx.toJson();
+      expect(json['counterpartyLast4'], '1234');
+      expect(json['appSource'], 'SMS (AD-HDFCBK)');
+      expect(json['rawPayload'], contains('Salary'));
+
+      final reconstructed = TransactionModel.fromJson(json);
+      expect(reconstructed.counterpartyLast4, '1234');
+      expect(reconstructed.appSource, 'SMS (AD-HDFCBK)');
+      expect(reconstructed.rawPayload, tx.rawPayload);
+    });
+
+    test('AutoImportService assigns income category rather than expense category for credits', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final salaryItem = PendingTransactionModel(
+        id: 'sms_sal_1',
+        amount: 75000.0,
+        merchant: 'Infosys Payroll',
+        appSource: 'SMS (VK-INDBNK)',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+        isIncome: true,
+        rawPayload: 'A/c 0511 credited with INR 75,000 for monthly salary payroll',
+      );
+
+      final processed = service.deduplicateAndAssignHeuristics([salaryItem]);
+      expect(processed.length, 1);
+      expect(processed.first.suggestedCategoryId, 'salary');
+    });
+
+    test('AutoImportService.isAlreadySaved correctly identifies duplicates in saved transactions', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final savedTxs = [
+        TransactionModel(
+          id: 'existing_1',
+          title: 'Swiggy',
+          amount: 340.0,
+          type: TransactionType.expense,
+          categoryId: 'food',
+          walletId: 'w_ind',
+          refId: 'UTR99887766',
+          date: DateTime(2026, 10, 17, 12, 0),
+          createdAt: DateTime(2026, 10, 17, 12, 1),
+        ),
+      ];
+
+      final matchingItem = PendingTransactionModel(
+        id: 'new_item_1',
+        amount: 340.0,
+        merchant: 'Swiggy Food',
+        refId: 'UTR99887766',
+        date: DateTime(2026, 10, 17, 12, 0),
+      );
+
+      expect(service.isAlreadySaved(matchingItem, savedTxs), isTrue);
+
+      final differentItem = PendingTransactionModel(
+        id: 'new_item_2',
+        amount: 550.0,
+        merchant: 'Amazon',
+        refId: 'UTR11223344',
+        date: DateTime(2026, 10, 17, 12, 0),
+      );
+
+      expect(service.isAlreadySaved(differentItem, savedTxs), isFalse);
+    });
   });
 }

@@ -23,6 +23,8 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
     String? receiverName,
     String? refId,
     String? counterpartyLast4,
+    String? appSource,
+    String? rawPayload,
     List<String> tags = const [],
     List<String> attachments = const [],
   }) async {
@@ -45,6 +47,8 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
       receiverName: receiverName,
       refId: refId,
       counterpartyLast4: counterpartyLast4,
+      appSource: appSource,
+      rawPayload: rawPayload,
       tags: tags,
       attachments: effectiveAttachments,
       createdAt: DateTime.now(),

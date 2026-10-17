@@ -217,7 +217,7 @@ class AutoImportService {
 
       // Assign suggested category and wallet
       final suggestedCat = item.suggestedCategoryId ??
-          _predictCategory(item.merchant, item.rawPayload ?? '', categories);
+          _predictCategory(item.merchant, item.rawPayload ?? '', categories, isIncome: item.isIncome);
       final suggestedWallet = _matchWallet(item, wallets);
 
       result.add(item.copyWith(
@@ -229,15 +229,38 @@ class AutoImportService {
     return result;
   }
 
-  String _predictCategory(String merchant, String rawPayload, List<CategoryModel> categories) {
-    final pred = UpiScreenshotParserService.predictCategory(merchant, rawPayload);
+  String _predictCategory(
+    String merchant,
+    String rawPayload,
+    List<CategoryModel> categories, {
+    bool isIncome = false,
+  }) {
+    final pred = UpiScreenshotParserService.predictCategory(merchant, rawPayload, isIncome: isIncome);
     final normalized = pred.replaceFirst('cat_', '');
+
+    // 1. First try matching categories matching transaction type
+    for (final c in categories) {
+      if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
+          (c.id == normalized || c.id == pred || c.name.toLowerCase().contains(normalized))) {
+        return c.id;
+      }
+    }
+
+    // 2. Fallback search across all categories
     for (final c in categories) {
       if (c.id == normalized || c.id == pred || c.name.toLowerCase().contains(normalized)) {
         return c.id;
       }
     }
-    return categories.isNotEmpty ? categories.first.id : 'food';
+
+    // 3. Direction-aware defaults
+    if (isIncome) {
+      final incomeCats = categories.where((c) => c.type == TransactionType.income).toList();
+      return incomeCats.isNotEmpty ? incomeCats.first.id : 'salary';
+    }
+
+    final expenseCats = categories.where((c) => c.type == TransactionType.expense).toList();
+    return expenseCats.isNotEmpty ? expenseCats.first.id : 'food';
   }
 
   /// Checks if an incoming item matches an already-saved transaction and enriches it
@@ -307,7 +330,8 @@ class AutoImportService {
     return null;
   }
 
-  bool _isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved) {
+  /// Public helper to check if a pending transaction has already been saved into the database
+  bool isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved) {
     // 1. Exact refId match
     if (item.refId != null && item.refId!.isNotEmpty) {
       for (final tx in saved) {
@@ -330,13 +354,16 @@ class AutoImportService {
             itemMerchant.contains(txTitle);
 
         final timeDiff = tx.date.difference(item.date).inSeconds.abs();
-        if (isTitleMatch && timeDiff <= 90) {
+        if (isTitleMatch && timeDiff <= 120) {
           return true;
         }
       }
     }
     return false;
   }
+
+  bool _isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved) =>
+      isAlreadySaved(item, saved);
 
   bool _isSameTransaction(PendingTransactionModel a, PendingTransactionModel b) {
     // 1. Exact refId match

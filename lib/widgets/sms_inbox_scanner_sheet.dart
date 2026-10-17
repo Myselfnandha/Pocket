@@ -9,6 +9,7 @@ import '../services/auto_import_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/wallets_provider.dart';
+import '../providers/categories_provider.dart';
 
 class SmsInboxScannerSheet extends ConsumerStatefulWidget {
   const SmsInboxScannerSheet({super.key});
@@ -80,13 +81,19 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
     }
 
     final results = await autoImportService.scanSmsInbox(daysLookback: _selectedDaysLookback);
+    final existingTxs = ref.read(transactionsProvider);
 
     if (mounted) {
       setState(() {
         _isScanning = false;
         _hasScanned = true;
         _scannedTransactions = results;
-        _selectedIds.addAll(results.map((e) => e.id));
+        // Select only items that have not already been logged
+        for (final item in results) {
+          if (!autoImportService.isAlreadySaved(item, existingTxs)) {
+            _selectedIds.add(item.id);
+          }
+        }
       });
     }
   }
@@ -103,13 +110,20 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
     final fallbackWalletId = wallets.isNotEmpty
         ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
         : 'cash';
+    final existingTxs = ref.read(transactionsProvider);
+    final autoImportService = ref.read(autoImportServiceProvider);
 
     int importedCount = 0;
+    int skippedDuplicateCount = 0;
     for (final item in selectedItems) {
+      if (autoImportService.isAlreadySaved(item, existingTxs)) {
+        skippedDuplicateCount++;
+        continue;
+      }
       final effectiveWalletId = (item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
           ? item.suggestedWalletId!
           : fallbackWalletId;
-      final effectiveCategoryId = item.suggestedCategoryId ?? 'food';
+      final effectiveCategoryId = item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
       final effectiveNote = item.refId != null && item.refId!.isNotEmpty
           ? 'Ref: ${item.refId}'
           : (item.appSource.isNotEmpty ? 'Imported via ${item.appSource}' : null);
@@ -123,6 +137,9 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
         date: item.date,
         note: effectiveNote,
         refId: item.refId,
+        counterpartyLast4: item.counterpartyLast4,
+        appSource: item.appSource,
+        rawPayload: item.rawPayload,
       );
       importedCount++;
     }
@@ -132,9 +149,12 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
         _isImporting = false;
       });
       Navigator.of(context).pop();
+      final msg = skippedDuplicateCount > 0
+          ? 'Imported $importedCount transactions ($skippedDuplicateCount duplicate${skippedDuplicateCount > 1 ? 's' : ''} skipped)'
+          : 'Successfully imported $importedCount SMS transactions!';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Successfully imported $importedCount SMS transactions!'),
+          content: Text(msg),
           backgroundColor: const Color(0xFF2E7D32),
           behavior: SnackBarBehavior.floating,
         ),
@@ -355,6 +375,23 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
                                     final isSelected = _selectedIds.contains(tx.id);
                                     final isIncome = tx.isIncome;
                                     final amountColor = isIncome ? const Color(0xFF00E676) : const Color(0xFFFF5252);
+                                    final existingTxs = ref.watch(transactionsProvider);
+                                    final autoImportService = ref.watch(autoImportServiceProvider);
+                                    final isDuplicate = autoImportService.isAlreadySaved(tx, existingTxs);
+
+                                    final categories = ref.watch(categoriesProvider);
+                                    final wallets = ref.watch(walletsProvider);
+                                    final currentCat = categories.firstWhere(
+                                      (c) => c.id == tx.suggestedCategoryId,
+                                      orElse: () => categories.firstWhere(
+                                        (c) => isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense,
+                                        orElse: () => categories.first,
+                                      ),
+                                    );
+                                    final currentWallet = wallets.firstWhere(
+                                      (w) => w.id == tx.suggestedWalletId,
+                                      orElse: () => wallets.first,
+                                    );
 
                                     return InkWell(
                                       onTap: () {
@@ -379,82 +416,173 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
                                             width: isSelected ? 1.5 : 1.0,
                                           ),
                                         ),
-                                        child: Row(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Checkbox(
-                                              value: isSelected,
-                                              activeColor: palette.primary,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                              onChanged: (val) {
-                                                setState(() {
-                                                  if (val == true) {
-                                                    _selectedIds.add(tx.id);
-                                                  } else {
-                                                    _selectedIds.remove(tx.id);
-                                                  }
-                                                });
-                                              },
-                                            ),
-                                            Container(
-                                              width: 38,
-                                              height: 38,
-                                              decoration: BoxDecoration(
-                                                color: amountColor.withValues(alpha: 0.12),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Icon(
-                                                isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
-                                                color: amountColor,
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    tx.merchant,
-                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                            Row(
+                                              children: [
+                                                Checkbox(
+                                                  value: isSelected,
+                                                  activeColor: palette.primary,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                  onChanged: (val) {
+                                                    setState(() {
+                                                      if (val == true) {
+                                                        _selectedIds.add(tx.id);
+                                                      } else {
+                                                        _selectedIds.remove(tx.id);
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                                Container(
+                                                  width: 38,
+                                                  height: 38,
+                                                  decoration: BoxDecoration(
+                                                    color: amountColor.withValues(alpha: 0.12),
+                                                    shape: BoxShape.circle,
                                                   ),
-                                                  const SizedBox(height: 2),
-                                                  Row(
+                                                  child: Icon(
+                                                    isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
+                                                    color: amountColor,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
                                                       Text(
-                                                        DateFormat('dd MMM, hh:mm a').format(tx.date),
-                                                        style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                                        tx.merchant,
+                                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
                                                       ),
-                                                      if (tx.counterpartyLast4 != null) ...[
-                                                        const SizedBox(width: 6),
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                          decoration: BoxDecoration(
-                                                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                                            borderRadius: BorderRadius.circular(4),
+                                                      const SizedBox(height: 2),
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            DateFormat('dd MMM, hh:mm a').format(tx.date),
+                                                            style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                                                           ),
-                                                          child: Text(
-                                                            '•••• ${tx.counterpartyLast4}',
-                                                            style: TextStyle(
-                                                              fontSize: 9.5,
-                                                              fontWeight: FontWeight.w600,
-                                                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                                          if (tx.counterpartyLast4 != null) ...[
+                                                            const SizedBox(width: 6),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                              decoration: BoxDecoration(
+                                                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                                borderRadius: BorderRadius.circular(4),
+                                                              ),
+                                                              child: Text(
+                                                                '•••• ${tx.counterpartyLast4}',
+                                                                style: TextStyle(
+                                                                  fontSize: 9.5,
+                                                                  fontWeight: FontWeight.w600,
+                                                                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                                                ),
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ),
-                                                      ],
+                                                          ],
+                                                          if (isDuplicate) ...[
+                                                            const SizedBox(width: 6),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.amber.withValues(alpha: 0.18),
+                                                                borderRadius: BorderRadius.circular(4),
+                                                              ),
+                                                              child: const Text(
+                                                                'Already Logged',
+                                                                style: TextStyle(
+                                                                  fontSize: 9.5,
+                                                                  fontWeight: FontWeight.w700,
+                                                                  color: Colors.amber,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ],
+                                                      ),
                                                     ],
                                                   ),
-                                                ],
-                                              ),
+                                                ),
+                                                Text(
+                                                  '${isIncome ? '+' : '-'}${settings.currencySymbol}${tx.amount.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14.5,
+                                                    color: amountColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            Text(
-                                              '${isIncome ? '+' : '-'}${settings.currencySymbol}${tx.amount.toStringAsFixed(2)}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14.5,
-                                                color: amountColor,
+                                            const SizedBox(height: 8),
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 50),
+                                              child: Wrap(
+                                                spacing: 6,
+                                                runSpacing: 4,
+                                                children: [
+                                                  // Category chip
+                                                  InkWell(
+                                                    onTap: () => _pickCategoryForTx(index, categories),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                      decoration: BoxDecoration(
+                                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Text(currentCat.icon, style: const TextStyle(fontSize: 11)),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            currentCat.name,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 2),
+                                                          const Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  // Wallet chip
+                                                  InkWell(
+                                                    onTap: () => _pickWalletForTx(index, wallets),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                      decoration: BoxDecoration(
+                                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Text(currentWallet.icon, style: const TextStyle(fontSize: 11)),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            currentWallet.name,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 2),
+                                                          const Icon(Icons.arrow_drop_down, size: 14, color: Colors.grey),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],
@@ -500,6 +628,67 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  void _pickCategoryForTx(int index, List<CategoryModel> categories) {
+    final item = _scannedTransactions[index];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Select Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: categories.length,
+            itemBuilder: (c, i) {
+              final cat = categories[i];
+              return ListTile(
+                leading: Text(cat.icon, style: const TextStyle(fontSize: 22)),
+                title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  setState(() {
+                    _scannedTransactions[index] = item.copyWith(suggestedCategoryId: cat.id);
+                  });
+                  Navigator.pop(ctx);
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickWalletForTx(int index, List<dynamic> wallets) {
+    final item = _scannedTransactions[index];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Select Wallet / Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: wallets.length,
+            itemBuilder: (c, i) {
+              final w = wallets[i];
+              return ListTile(
+                leading: Text(w.icon, style: const TextStyle(fontSize: 22)),
+                title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: w.accountNumber != null ? Text(w.accountNumber!) : null,
+                onTap: () {
+                  setState(() {
+                    _scannedTransactions[index] = item.copyWith(suggestedWalletId: w.id);
+                  });
+                  Navigator.pop(ctx);
+                },
+              );
+            },
+          ),
+        ),
       ),
     );
   }

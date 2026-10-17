@@ -97,7 +97,7 @@ class UpiParsedTransaction {
       refId: (refId != null && refId.isNotEmpty) ? refId : null,
       imagePath: (imagePath != null && imagePath.isNotEmpty) ? imagePath : null,
       rawText: rawText,
-      suggestedCategoryId: UpiScreenshotParserService.predictCategory(merchant, rawText ?? ''),
+      suggestedCategoryId: UpiScreenshotParserService.predictCategory(merchant, rawText ?? '', isIncome: isIncome),
       senderName: (senderName != null && senderName.isNotEmpty) ? senderName : null,
       receiverName: (receiverName != null && receiverName.isNotEmpty) ? receiverName : null,
       counterpartyLast4: (counterpartyLast4 != null && counterpartyLast4.isNotEmpty) ? counterpartyLast4 : null,
@@ -327,8 +327,33 @@ class UpiScreenshotParserService {
   }
 
   /// Matches merchant keywords to default categories
-  static String predictCategory(String merchant, String rawText) {
+  static String predictCategory(String merchant, String rawText, {bool isIncome = false}) {
     final combined = '$merchant $rawText'.toLowerCase();
+
+    // Income Categories
+    if (isIncome) {
+      if (RegExp(r'\b(salary|payroll|stipend|wages|employer|direct dep|direct deposit|pension)\b')
+          .hasMatch(combined)) {
+        return 'cat_salary';
+      }
+      if (RegExp(r'\b(freelance|client|project|consulting|invoice|upwork|fiverr|contract)\b')
+          .hasMatch(combined)) {
+        return 'cat_freelance';
+      }
+      if (RegExp(r'\b(dividend|interest|groww|zerodha|upstox|mutual fund|stock|shares|returns|investment)\b')
+          .hasMatch(combined)) {
+        return 'cat_investments';
+      }
+      if (RegExp(r'\b(gift|reward|cashback|bonus|prize|cash back)\b')
+          .hasMatch(combined)) {
+        return 'cat_gifts';
+      }
+      if (RegExp(r'\b(refund|reversal|reimbursement|return|cred)\b')
+          .hasMatch(combined)) {
+        return 'cat_other_inc';
+      }
+      return 'cat_salary';
+    }
 
     // Food & Dining
     if (RegExp(r'\b(zomato|swiggy|mcdonalds|dominos|kfc|starbucks|burger|restaurant|cafe|bakery|dhabha|food|dining|pizza|tea|coffee|biryani|subway)\b')

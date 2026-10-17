@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
 import '../providers/pending_transactions_provider.dart';
 import '../providers/categories_provider.dart';
@@ -8,6 +9,7 @@ import '../providers/wallets_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/currency_formatter.dart';
 import 'top_capsule_toast.dart';
+import 'quick_add_transaction_dialog.dart';
 
 Future<void> showPendingTransactionsSheet(BuildContext context) {
   return showDialog<void>(
@@ -410,6 +412,29 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                                 ),
                               ),
                               const Spacer(),
+                              // Edit Details Button
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                color: palette.primary,
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Edit Full Details',
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  QuickAddTransactionDialog.show(
+                                    context,
+                                    initialAmount: item.amount,
+                                    initialTitle: item.merchant,
+                                    initialType: item.isIncome ? TransactionType.income : TransactionType.expense,
+                                    initialCategoryId: item.suggestedCategoryId,
+                                    initialWalletId: item.suggestedWalletId,
+                                    initialRefId: item.refId,
+                                    initialCounterpartyLast4: item.counterpartyLast4,
+                                    initialReceiptImagePath: item.imagePath,
+                                    transactionIdToUpdate: item.id,
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 4),
                               // Dismiss Button
                               IconButton(
                                 icon: const Icon(Icons.close_rounded, size: 20),

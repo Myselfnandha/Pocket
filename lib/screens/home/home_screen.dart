@@ -11,6 +11,7 @@ import '../../widgets/nlp_quick_add_modal.dart';
 import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
 import '../../widgets/pending_transactions_capsule.dart';
+import '../../widgets/sms_inbox_scanner_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -59,6 +60,11 @@ class HomeScreen extends ConsumerWidget {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sms_outlined, size: 22),
+            tooltip: 'Scan SMS Inbox',
+            onPressed: () => SmsInboxScannerSheet.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
             tooltip: 'Natural Language Entry',

@@ -160,15 +160,49 @@ class TransactionTile extends ConsumerWidget {
                             ),
                           ),
                         ],
-                        Text(
-                          '${wallet.icon} ${wallet.name}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
+                        Flexible(
+                          child: Text(
+                            '${wallet.icon} ${wallet.name}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
                           ),
                         ),
+                        if (transaction.counterpartyLast4 != null ||
+                            (transaction.appSource != null && transaction.appSource!.isNotEmpty)) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (transaction.appSource?.toUpperCase().contains('SMS') == true) ...[
+                                  Icon(Icons.sms_rounded, size: 9, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  const SizedBox(width: 3),
+                                ],
+                                Text(
+                                  transaction.counterpartyLast4 != null
+                                      ? '•••• ${transaction.counterpartyLast4}'
+                                      : transaction.appSource!,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

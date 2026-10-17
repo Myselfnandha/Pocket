@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated_at": "2026-09-17T05:37:08.603684+00:00",
+  "updated_at": "2026-10-17T17:41:03.739421+00:00",
   "strategies": [
     {
       "id": "STR-0001",
@@ -14,6 +14,25 @@
       "project": "agent",
       "hash": "7102f16b7c3f991e",
       "captured_at": "2026-09-17T05:37:08.603526+00:00",
+      "synced": false
+    },
+    {
+      "id": "STR-0002",
+      "type": "error_recovery",
+      "type_label": "Error Recovery Patterns",
+      "title": "CI Pipefail Enforcement",
+      "content": "Always set -e -o pipefail in CI bash scripts when piping build tools (flutter build, gradle) to tee to prevent masked failures and missing artifact distribution errors.",
+      "ecosystem": "general",
+      "tags": [
+        "ci",
+        "github-actions",
+        "bash",
+        "pipefail"
+      ],
+      "source": "agent",
+      "project": "Pocket",
+      "hash": "5c848e3e8e6afd7b",
+      "captured_at": "2026-10-17T17:41:03.739329+00:00",
       "synced": false
     }
   ]

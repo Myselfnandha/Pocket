@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -182,11 +183,12 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // Dedicated Transfer & Payment Details Card (Sender, Receiver, UTR, Last 4)
+            // Dedicated Transfer & Payment Details Card (Sender, Receiver, UTR, Last 4, Source)
             if (currentTx.senderName != null ||
                 currentTx.receiverName != null ||
                 currentTx.refId != null ||
-                currentTx.counterpartyLast4 != null) ...[
+                currentTx.counterpartyLast4 != null ||
+                currentTx.appSource != null) ...[
               Container(
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
@@ -236,6 +238,87 @@ class TransactionDetailScreen extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ],
+                    if (currentTx.appSource != null && currentTx.appSource!.isNotEmpty) ...[
+                      _buildDivider(isDark),
+                      _buildDetailRow(
+                        context,
+                        icon: currentTx.appSource!.toUpperCase().contains('SMS')
+                            ? Icons.sms_rounded
+                            : Icons.hub_rounded,
+                        label: 'Source / Channel',
+                        value: currentTx.appSource!,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Auto-Import & Raw Message Verification Card
+            if (currentTx.rawPayload != null && currentTx.rawPayload!.trim().isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.verified_outlined, size: 18, color: AppColors.primaryGreenLight),
+                            SizedBox(width: 8),
+                            Text('Source Message & Verification', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy_rounded, size: 16),
+                          tooltip: 'Copy source message',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: currentTx.rawPayload!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Source message copied to clipboard'),
+                                duration: Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF141419) : const Color(0xFFF7F8FA),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                        ),
+                      ),
+                      child: SelectableText(
+                        currentTx.rawPayload!.trim(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.45,
+                          fontFamily: 'monospace',
+                          color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
