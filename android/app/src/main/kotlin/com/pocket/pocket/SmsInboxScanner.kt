@@ -1,7 +1,7 @@
 package com.pocket.pocket
 
 import android.content.Context
-import android.provider.Telephony
+import android.net.Uri
 import org.json.JSONArray
 
 object SmsInboxScanner {
@@ -16,28 +16,24 @@ object SmsInboxScanner {
             0L
         }
 
-        val projection = arrayOf(
-            Telephony.Sms.Inbox.ADDRESS,
-            Telephony.Sms.Inbox.BODY,
-            Telephony.Sms.Inbox.DATE,
-            Telephony.Sms.Inbox._ID
-        )
+        val inboxUri = Uri.parse("content://sms/inbox")
+        val projection = arrayOf("address", "body", "date", "_id")
 
-        val selection = if (cutoff > 0) "${Telephony.Sms.Inbox.DATE} >= ?" else null
+        val selection = if (cutoff > 0) "date >= ?" else null
         val selectionArgs = if (cutoff > 0) arrayOf(cutoff.toString()) else null
-        val sortOrder = "${Telephony.Sms.Inbox.DATE} DESC"
+        val sortOrder = "date DESC"
 
         try {
             resolver.query(
-                Telephony.Sms.Inbox.CONTENT_URI,
+                inboxUri,
                 projection,
                 selection,
                 selectionArgs,
                 sortOrder
             )?.use { cursor ->
-                val addressIdx = cursor.getColumnIndex(Telephony.Sms.Inbox.ADDRESS)
-                val bodyIdx = cursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
-                val dateIdx = cursor.getColumnIndex(Telephony.Sms.Inbox.DATE)
+                val addressIdx = cursor.getColumnIndex("address")
+                val bodyIdx = cursor.getColumnIndex("body")
+                val dateIdx = cursor.getColumnIndex("date")
 
                 var count = 0
                 val maxLimit = 600
@@ -63,7 +59,6 @@ object SmsInboxScanner {
                 }
             }
         } catch (e: Exception) {
-            // Permission denied or query error
             e.printStackTrace()
         }
 
