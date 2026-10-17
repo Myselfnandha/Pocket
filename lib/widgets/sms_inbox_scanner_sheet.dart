@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
 import '../models/transaction_model.dart';
 import '../providers/core_providers.dart';
@@ -348,7 +349,7 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
                                 child: ListView.separated(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                   itemCount: _scannedTransactions.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                  separatorBuilder: (context, index) => const SizedBox(height: 8),
                                   itemBuilder: (ctx, index) {
                                     final tx = _scannedTransactions[index];
                                     final isSelected = _selectedIds.contains(tx.id);

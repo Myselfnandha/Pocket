@@ -105,16 +105,18 @@ jobs:
 
       - name: Turbo Universal Release APK Build (Signed)
         run: |
+          set -e -o pipefail
           if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
           flutter build apk --release --no-pub --tree-shake-icons \
             --android-skip-build-dependency-validation \
             --build-name="${{ steps.versioning.outputs.VERSION_NAME }}" \
             --build-number="${{ steps.versioning.outputs.BUILD_NUMBER }}" 2>&1 | tee /tmp/flutter_build.log || {
-              echo "### ❌ Build APK Error Log" >> $GITHUB_STEP_SUMMARY
+              EXIT_CODE=$?
+              echo "### ❌ Build APK Error Log (Exit Code: $EXIT_CODE)" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
               tail -n 120 /tmp/flutter_build.log >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
-              exit 1
+              exit $EXIT_CODE
             }
 
       - name: Package APK for Distribution

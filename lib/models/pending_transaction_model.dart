@@ -10,6 +10,7 @@ class PendingTransactionModel {
   final String? imagePath;
   final String detectionSource; // 'notification', 'screen_reader', 'screenshot'
   final String? rawPayload;
+  final String? counterpartyLast4;
   final bool isIncome;
 
   const PendingTransactionModel({
@@ -24,6 +25,7 @@ class PendingTransactionModel {
     this.imagePath,
     this.detectionSource = 'notification',
     this.rawPayload,
+    this.counterpartyLast4,
     this.isIncome = false,
   });
 
@@ -39,6 +41,7 @@ class PendingTransactionModel {
     String? imagePath,
     String? detectionSource,
     String? rawPayload,
+    String? counterpartyLast4,
     bool? isIncome,
   }) {
     return PendingTransactionModel(
@@ -53,6 +56,7 @@ class PendingTransactionModel {
       imagePath: imagePath ?? this.imagePath,
       detectionSource: detectionSource ?? this.detectionSource,
       rawPayload: rawPayload ?? this.rawPayload,
+      counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
       isIncome: isIncome ?? this.isIncome,
     );
   }
@@ -69,6 +73,7 @@ class PendingTransactionModel {
         'imagePath': imagePath,
         'detectionSource': detectionSource,
         'rawPayload': rawPayload,
+        'counterpartyLast4': counterpartyLast4,
         'isIncome': isIncome,
       };
 
@@ -105,6 +110,7 @@ class PendingTransactionModel {
       imagePath: json['imagePath'] as String?,
       detectionSource: json['detectionSource'] as String? ?? 'notification',
       rawPayload: json['rawPayload'] as String?,
+      counterpartyLast4: json['counterpartyLast4'] as String?,
       isIncome: json['isIncome'] == true,
     );
   }
