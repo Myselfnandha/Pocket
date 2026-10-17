@@ -99,6 +99,14 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
   Future<void> setWidgetSecondaryAction(String action) async {
     await updateSettings(state.copyWith(widgetSecondaryAction: action));
   }
+
+  Future<void> setAutoSaveSms(bool value) async {
+    await updateSettings(state.copyWith(autoSaveSms: value));
+  }
+
+  Future<void> setAutoReadSmsEnabled(bool value) async {
+    await updateSettings(state.copyWith(autoReadSmsEnabled: value));
+  }
 }
 
 final settingsProvider =

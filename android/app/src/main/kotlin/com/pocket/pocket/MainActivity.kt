@@ -125,16 +125,20 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                     "checkPermissions" -> {
+                        val hasReceiveSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        val hasReadSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
                         val map = mapOf(
                             "notificationListener" to isNotificationListenerEnabled(),
                             "accessibility" to isAccessibilityServiceEnabled(),
                             "screenshotWatcher" to (screenshotObserver != null),
-                            "smsListener" to (ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            "smsListener" to (hasReceiveSms && hasReadSms)
                         )
                         result.success(map)
                     }
                     "requestSmsPermission" -> {
-                        if (ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        val hasReceiveSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        val hasReadSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (hasReceiveSms && hasReadSms) {
                             result.success(true)
                         } else {
                             if (pendingSmsResult != null) {
@@ -148,6 +152,21 @@ class MainActivity : FlutterActivity() {
                                 )
                             }
                         }
+                    }
+                    "scanSmsInbox" -> {
+                        val days = call.argument<Int>("days") ?: 30
+                        Thread {
+                            val data = SmsInboxScanner.scanInbox(applicationContext, days)
+                            runOnUiThread {
+                                result.success(data)
+                            }
+                        }.start()
+                    }
+                    "setAutoSaveSmsPreference" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val prefs = applicationContext.getSharedPreferences(PocketNotificationListener.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+                        prefs.edit().putBoolean("auto_save_sms", enabled).apply()
+                        result.success(true)
                     }
                     "openNotificationListenerSettings" -> {
                         try {
@@ -297,7 +316,7 @@ class MainActivity : FlutterActivity() {
             val result = pendingSmsResult ?: return
             pendingSmsResult = null
             
-            val granted = grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val granted = grantResults.isNotEmpty() && grantResults.all { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
             result.success(granted)
         }
     }

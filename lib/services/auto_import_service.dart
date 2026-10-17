@@ -89,6 +89,33 @@ class AutoImportService {
     }
   }
 
+  /// Sets native SharedPreferences auto-save preference for background SmsReceiver.
+  Future<bool> setAutoSaveSmsPreference(bool enabled) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setAutoSaveSmsPreference', {'enabled': enabled});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Scans the device SMS inbox for bank transactions within [daysLookback] days (0 = all).
+  Future<List<PendingTransactionModel>> scanSmsInbox({int daysLookback = 30}) async {
+    try {
+      final raw = await _channel.invokeMethod<String>('scanSmsInbox', {'days': daysLookback});
+      if (raw != null && raw.trim().isNotEmpty && raw != '[]') {
+        final List<dynamic> list = jsonDecode(raw) as List<dynamic>;
+        final incoming = list
+            .map((e) => PendingTransactionModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return deduplicateAndAssignHeuristics(incoming);
+      }
+    } catch (_) {
+      // Safe fallback on platform error or non-Android
+    }
+    return [];
+  }
+
   /// Fetches pending transactions from native buffer, runs smart deduplication,
   /// resolves screenshot OCR if needed, and clears the native queue buffer.
   Future<List<PendingTransactionModel>> fetchAndDrainPendingTransactions() async {
@@ -251,7 +278,7 @@ class AutoImportService {
         // 3. Enrich bank wallet if item has bank SMS details
         if (item.appSource.contains('SMS') || item.detectionSource == 'sms') {
           final matchedWallet = _matchWallet(item, wallets);
-          if (matchedWallet != newWallet && matchedWallet != 'default_cash') {
+          if (matchedWallet != newWallet) {
             newWallet = matchedWallet;
             changed = true;
           }
@@ -337,11 +364,20 @@ class AutoImportService {
   }
 
   String _matchWallet(PendingTransactionModel item, List<WalletModel> wallets) {
-    if (wallets.isEmpty) return 'default_cash';
+    if (wallets.isEmpty) return 'cash';
+
+    // 1. Direct match by counterparty account last 4 digits
+    if (item.counterpartyLast4 != null && item.counterpartyLast4!.isNotEmpty) {
+      for (final w in wallets) {
+        if (w.accountNumber != null && w.accountNumber!.contains(item.counterpartyLast4!)) {
+          return w.id;
+        }
+      }
+    }
 
     final text = '${item.appSource} ${item.rawPayload ?? ''}'.toLowerCase();
 
-    // Match by account number last 4
+    // 2. Match by account number last 4 in raw text
     for (final w in wallets) {
       if (w.accountNumber != null && w.accountNumber!.length >= 4) {
         final last4 = w.accountNumber!.substring(w.accountNumber!.length - 4);

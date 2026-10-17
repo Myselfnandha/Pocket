@@ -68,6 +68,10 @@ class UserSettingsModel {
   final String? widgetSelectedWalletId;
   final String widgetSecondaryAction; // 'scan' or 'voice'
 
+  // SMS Auto-Read & Auto-Log Settings
+  final bool autoSaveSms;
+  final bool autoReadSmsEnabled;
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
@@ -102,6 +106,8 @@ class UserSettingsModel {
     this.widgetPrivacyMode = false,
     this.widgetSelectedWalletId,
     this.widgetSecondaryAction = 'scan',
+    this.autoSaveSms = false,
+    this.autoReadSmsEnabled = true,
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -160,6 +166,8 @@ class UserSettingsModel {
     String? widgetSelectedWalletId,
     bool clearWidgetSelectedWalletId = false,
     String? widgetSecondaryAction,
+    bool? autoSaveSms,
+    bool? autoReadSmsEnabled,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -197,6 +205,8 @@ class UserSettingsModel {
           ? null
           : (widgetSelectedWalletId ?? this.widgetSelectedWalletId),
       widgetSecondaryAction: widgetSecondaryAction ?? this.widgetSecondaryAction,
+      autoSaveSms: autoSaveSms ?? this.autoSaveSms,
+      autoReadSmsEnabled: autoReadSmsEnabled ?? this.autoReadSmsEnabled,
     );
   }
 
@@ -234,6 +244,8 @@ class UserSettingsModel {
         'widgetPrivacyMode': widgetPrivacyMode,
         'widgetSelectedWalletId': widgetSelectedWalletId,
         'widgetSecondaryAction': widgetSecondaryAction,
+        'autoSaveSms': autoSaveSms,
+        'autoReadSmsEnabled': autoReadSmsEnabled,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -279,5 +291,7 @@ class UserSettingsModel {
         widgetPrivacyMode: json['widgetPrivacyMode'] as bool? ?? false,
         widgetSelectedWalletId: json['widgetSelectedWalletId'] as String?,
         widgetSecondaryAction: json['widgetSecondaryAction'] as String? ?? 'scan',
+        autoSaveSms: json['autoSaveSms'] as bool? ?? false,
+        autoReadSmsEnabled: json['autoReadSmsEnabled'] as bool? ?? true,
       );
 }

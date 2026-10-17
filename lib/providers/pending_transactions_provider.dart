@@ -45,17 +45,19 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       // Auto-commit shared screenshots and auto-save items directly to database
       final settings = _ref.read(settingsProvider);
       final autoCommitItems = merged.where((item) {
-        return item.detectionSource == 'screenshot' ||
-            (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')) ||
-            settings.autoSaveScreenshots;
+        return (item.detectionSource == 'screenshot' && settings.autoSaveScreenshots) ||
+            (item.detectionSource == 'sms' && settings.autoSaveSms) ||
+            (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true'));
       }).toList();
 
       for (final item in autoCommitItems) {
         await approve(item.id);
+        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
+        final title = isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged';
         await _ref.read(notificationsProvider.notifier).addNotification(
           AppNotificationModel(
             id: const Uuid().v4(),
-            title: '📸 Screenshot Auto-Logged',
+            title: title,
             message: '${item.merchant}: ₹${item.amount.toStringAsFixed(2)} was automatically logged.',
             type: NotificationType.system,
             createdAt: DateTime.now(),
@@ -91,7 +93,15 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     if (index == -1) return;
 
     final item = state[index];
-    final effectiveWalletId = walletId ?? item.suggestedWalletId ?? 'default_cash';
+    final wallets = _ref.read(walletsProvider);
+    final fallbackWalletId = wallets.isNotEmpty
+        ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
+        : 'cash';
+    final effectiveWalletId = (walletId != null && wallets.any((w) => w.id == walletId))
+        ? walletId
+        : ((item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
+            ? item.suggestedWalletId!
+            : fallbackWalletId);
     final effectiveCategoryId = categoryId ?? item.suggestedCategoryId ?? 'food';
 
     final effectiveNote = note ??
@@ -119,9 +129,16 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     final items = List<PendingTransactionModel>.from(state);
     if (items.isEmpty) return 0;
 
+    final wallets = _ref.read(walletsProvider);
+    final fallbackWalletId = wallets.isNotEmpty
+        ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
+        : 'cash';
+
     int approved = 0;
     for (final item in items) {
-      final effectiveWalletId = item.suggestedWalletId ?? 'default_cash';
+      final effectiveWalletId = (item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
+          ? item.suggestedWalletId!
+          : fallbackWalletId;
       final effectiveCategoryId = item.suggestedCategoryId ?? 'food';
 
       await _ref.read(transactionsProvider.notifier).addTransaction(

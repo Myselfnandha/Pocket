@@ -1,0 +1,221 @@
+package com.pocket.pocket
+
+import org.json.JSONObject
+import java.util.UUID
+import java.util.regex.Pattern
+
+data class ParsedSmsTransaction(
+    val id: String = UUID.randomUUID().toString(),
+    val amount: Double,
+    val merchant: String,
+    val appSource: String,
+    val refId: String?,
+    val date: Long,
+    val detectionSource: String = "sms",
+    val rawPayload: String,
+    val isIncome: Boolean,
+    val accountLast4: String? = null
+) {
+    fun toJson(): JSONObject {
+        return JSONObject().apply {
+            put("id", id)
+            put("amount", amount)
+            put("merchant", merchant)
+            put("appSource", appSource)
+            put("refId", refId ?: "")
+            put("date", date)
+            put("detectionSource", detectionSource)
+            put("rawPayload", rawPayload)
+            put("isIncome", isIncome)
+            if (accountLast4 != null) {
+                put("counterpartyLast4", accountLast4)
+            }
+        }
+    }
+}
+
+object SmsParser {
+
+    private val AMOUNT_PATTERN = Pattern.compile(
+        "(?:₹|rs\\.?|inr|usd|\\$)\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    private val SECONDARY_AMOUNT_PATTERN = Pattern.compile(
+        "(?:paid|debited(?:\\s+by|\\s+for)?|spent|credited(?:\\s+with)?|transferred)\\s+(?:₹|rs\\.?|inr|usd|\\$)?\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    private val ACCOUNT_LAST4_PATTERN = Pattern.compile(
+        "(?:a/c|ac|account|card)\\s*(?:no\\.?)?\\s*(?:ending)?\\s*[*xX-]*([0-9]{3,4})\\b",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    private val REF_ID_PATTERN = Pattern.compile(
+        "(?:upi\\s*ref(?:\\s*no)?|ref(?:\\s*id|\\s*no)?|txn(?:\\s*id)?|rrn)[:\\s.-]*([0-9]{8,18})",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    private val MERCHANT_PATTERNS = listOf(
+        // "trf to Maggi", "transfer to John", "transferred to Alex"
+        Pattern.compile("(?:trf\\s+to|transfer\\s+to|transferred\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|refno|upi|via|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "paid to Zomato", "payment to Swiggy", "sent to Blinkit"
+        Pattern.compile("(?:paid\\s+to|payment\\s+to|sent\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "towards AMAZON PAY", "for NETFLIX"
+        Pattern.compile("(?:towards|for)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "at RELIANCE RETAIL", "at STARBUCKS"
+        Pattern.compile("(?:\\bat\\s+)([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:on|via|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "credited by transfer from TECHCORP"
+        Pattern.compile("(?:from|by\\s+transfer\\s+from)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|upi|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
+    )
+
+    fun parse(sender: String, body: String, timestamp: Long): ParsedSmsTransaction? {
+        val lower = body.lowercase()
+
+        // 1. Check for transaction indicators
+        val isDebit = isDebitText(lower)
+        val isCredit = isCreditText(lower)
+
+        if (!isDebit && !isCredit) {
+            return null
+        }
+
+        // 2. Extract Amount
+        val amount = extractAmount(body) ?: return null
+        if (amount <= 0.0) return null
+
+        // 3. Extract Merchant
+        val merchant = extractMerchant(sender, body, isCredit)
+
+        // 4. Extract Ref ID
+        val refId = extractRefId(body)
+
+        // 5. Extract Account Last 4
+        val accountLast4 = extractAccountLast4(body)
+
+        // Clean sender display
+        val cleanSender = cleanSenderAddress(sender)
+
+        return ParsedSmsTransaction(
+            amount = amount,
+            merchant = merchant,
+            appSource = "SMS ($cleanSender)",
+            refId = refId,
+            date = if (timestamp > 0) timestamp else System.currentTimeMillis(),
+            rawPayload = body,
+            isIncome = isCredit,
+            accountLast4 = accountLast4
+        )
+    }
+
+    private fun isDebitText(lower: String): Boolean {
+        val hasDebitKeyword = lower.contains("debited") ||
+                lower.contains("spent") ||
+                lower.contains("paid") ||
+                lower.contains("sent rs") ||
+                lower.contains("sent inr") ||
+                lower.contains("withdrawn") ||
+                lower.contains("purchase") ||
+                lower.contains("payment of") ||
+                lower.contains("transferred to")
+        val hasCurrency = lower.contains("₹") || lower.contains("rs.") || lower.contains("rs ") || lower.contains("inr") || lower.contains("$")
+        return hasDebitKeyword && hasCurrency && !lower.contains("request") && !lower.contains("failed")
+    }
+
+    private fun isCreditText(lower: String): Boolean {
+        val hasCreditKeyword = lower.contains("credited") ||
+                lower.contains("received rs") ||
+                lower.contains("received inr") ||
+                lower.contains("received ₹") ||
+                lower.contains("deposited") ||
+                lower.contains("salary") ||
+                lower.contains("refund") ||
+                lower.contains("cashback") ||
+                lower.contains("added to your account") ||
+                lower.contains("payment received")
+        val hasCurrency = lower.contains("₹") || lower.contains("rs.") || lower.contains("rs ") || lower.contains("inr") || lower.contains("$")
+        return hasCreditKeyword && hasCurrency && !lower.contains("debited") && !lower.contains("request")
+    }
+
+    fun extractAmount(text: String): Double? {
+        val matcher = AMOUNT_PATTERN.matcher(text)
+        if (matcher.find()) {
+            val raw = matcher.group(1)?.replace(",", "")?.trim()
+            val parsed = raw?.toDoubleOrNull()
+            if (parsed != null && parsed > 0.0) return parsed
+        }
+
+        val secMatcher = SECONDARY_AMOUNT_PATTERN.matcher(text)
+        if (secMatcher.find()) {
+            val raw = secMatcher.group(1)?.replace(",", "")?.trim()
+            return raw?.toDoubleOrNull()
+        }
+
+        return null
+    }
+
+    fun extractMerchant(sender: String, body: String, isCredit: Boolean): String {
+        for (pattern in MERCHANT_PATTERNS) {
+            val matcher = pattern.matcher(body)
+            if (matcher.find()) {
+                val candidate = matcher.group(1)?.trim()
+                if (!candidate.isNullOrEmpty() &&
+                    !candidate.equals("vpa", true) &&
+                    !candidate.equals("account", true) &&
+                    !candidate.equals("bank", true)
+                ) {
+                    val cleaned = cleanMerchantName(candidate)
+                    if (cleaned.length >= 2) return cleaned
+                }
+            }
+        }
+
+        // Contextual fallback
+        if (isCredit) {
+            if (body.contains("salary", ignoreCase = true)) return "Salary"
+            if (body.contains("refund", ignoreCase = true)) return "Refund"
+            if (body.contains("cashback", ignoreCase = true)) return "Cashback"
+            return "Payment Received"
+        }
+
+        // Bank sender address fallback if clean
+        val cleanSender = cleanSenderAddress(sender)
+        if (cleanSender.isNotEmpty() && !cleanSender.contains("OTP", true)) {
+            return cleanSender
+        }
+
+        return "Payment"
+    }
+
+    fun extractRefId(text: String): String? {
+        val matcher = REF_ID_PATTERN.matcher(text)
+        if (matcher.find()) {
+            return matcher.group(1)?.trim()
+        }
+        return null
+    }
+
+    fun extractAccountLast4(text: String): String? {
+        val matcher = ACCOUNT_LAST4_PATTERN.matcher(text)
+        if (matcher.find()) {
+            return matcher.group(1)?.trim()
+        }
+        return null
+    }
+
+    private fun cleanMerchantName(name: String): String {
+        return name
+            .replace(Regex("(?i)\\b(ltd|pvt|limited|india|store|upi|payment|pos|ecom|vpa)\\b"), "")
+            .replace(Regex("[^a-zA-Z0-9&'._\\s-]"), "")
+            .trim()
+            .take(30)
+            .ifEmpty { "Payment" }
+    }
+
+    private fun cleanSenderAddress(sender: String): String {
+        // Indian bank SMS format has a 2-letter operator prefix e.g. "VK-INDBNK", "AD-HDFCBK", "JM-SBIINB"
+        val parts = sender.split("-")
+        val core = if (parts.size > 1) parts[1] else sender
+        return core.trim().take(12)
+    }
+}

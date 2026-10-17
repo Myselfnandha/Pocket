@@ -110,15 +110,11 @@ class HomeScreen extends ConsumerWidget {
           onRefresh: () async {
             await ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
-              // 1. Top Pinned Area: Hero Balance Card + Quick Hub + Capsule + Section Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              // Hero Balance Card + Quick Hub + Capsule + Section Header
                     // Balance Summary Card (with Integrated Accounts Carousel)
                     const BalanceCard(),
                     const SizedBox(height: 14),
@@ -302,16 +298,10 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 8),
 
-              // 2. Containerized Scrolling Recent Activity Section with Day Indicators
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
-                  child: Consumer(
+              // 2. Recent Transactions Section
+              Consumer(
                     builder: (context, ref, _) {
                       final allTxs = ref.watch(transactionsProvider);
                       final displayList = allTxs.take(30).toList();
@@ -390,97 +380,100 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: groupKeys.length,
-                          itemBuilder: (context, groupIndex) {
-                            final dateKey = groupKeys[groupIndex];
-                            final txs = grouped[dateKey]!;
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (int groupIndex = 0; groupIndex < groupKeys.length; groupIndex++) ...[
+                              Builder(
+                                builder: (context) {
+                                  final dateKey = groupKeys[groupIndex];
+                                  final txs = grouped[dateKey]!;
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Day Indicator Header Bar
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? const Color(0xFF191D26)
-                                        : const Color(0xFFF4F6FA),
-                                    border: Border(
-                                      top: groupIndex > 0
-                                          ? BorderSide(
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Day Indicator Header Bar
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF191D26)
+                                              : const Color(0xFFF4F6FA),
+                                          border: Border(
+                                            top: groupIndex > 0
+                                                ? BorderSide(
+                                                    color: isDark
+                                                        ? AppColors.darkCardBorder
+                                                        : AppColors.lightCardBorder,
+                                                    width: 1,
+                                                  )
+                                                : BorderSide.none,
+                                            bottom: BorderSide(
                                               color: isDark
                                                   ? AppColors.darkCardBorder
                                                   : AppColors.lightCardBorder,
-                                              width: 1,
-                                            )
-                                          : BorderSide.none,
-                                      bottom: BorderSide(
-                                        color: isDark
-                                            ? AppColors.darkCardBorder
-                                            : AppColors.lightCardBorder,
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        dateKey.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.8,
-                                          color: isDark
-                                              ? AppColors.darkTextSecondary
-                                              : AppColors.lightTextSecondary,
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              dateKey.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.8,
+                                                color: isDark
+                                                    ? AppColors.darkTextSecondary
+                                                    : AppColors.lightTextSecondary,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
+                                              style: TextStyle(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.white38 : Colors.black38,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark ? Colors.white38 : Colors.black38,
+                                      // Transaction Tiles for this date
+                                      for (int i = 0; i < txs.length; i++) ...[
+                                        TransactionTile(
+                                          transaction: txs[i],
+                                          onTap: () => context.push(
+                                            '/transaction-detail',
+                                            extra: txs[i],
+                                          ),
                                         ),
-                                      ),
+                                        if (i < txs.length - 1)
+                                          Divider(
+                                            height: 1,
+                                            color: isDark
+                                                ? AppColors.darkCardBorder
+                                                : AppColors.lightCardBorder,
+                                          ),
+                                      ],
                                     ],
-                                  ),
-                                ),
-                                // Transaction Tiles for this date
-                                for (int i = 0; i < txs.length; i++) ...[
-                                  TransactionTile(
-                                    transaction: txs[i],
-                                    onTap: () => context.push(
-                                      '/transaction-detail',
-                                      extra: txs[i],
-                                    ),
-                                  ),
-                                  if (i < txs.length - 1)
-                                    Divider(
-                                      height: 1,
-                                      color: isDark
-                                          ? AppColors.darkCardBorder
-                                          : AppColors.lightCardBorder,
-                                    ),
-                                ],
-                              ],
-                            );
-                          },
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
                         ),
                       );
                     },
                   ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ),
     );
   }

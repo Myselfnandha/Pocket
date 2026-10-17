@@ -308,10 +308,11 @@ class BalanceCard extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: SizedBox(
-              height: 34,
+              height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(right: 6),
                 itemCount: wallets.length + 1,
                 separatorBuilder: (context, index) => const SizedBox(width: 6),
                 itemBuilder: (context, index) {
@@ -320,7 +321,7 @@ class BalanceCard extends ConsumerWidget {
                       onTap: () => context.push('/wallets'),
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         decoration: BoxDecoration(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.05)
@@ -361,7 +362,7 @@ class BalanceCard extends ConsumerWidget {
                     onTap: () => context.push('/wallets'),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
                         color: isDark
                             ? const Color(0xFF1E232F)
@@ -407,6 +408,9 @@ class BalanceCard extends ConsumerWidget {
                           const SizedBox(width: 6),
                           Text(
                             settings.formatCurrency(wallet.currentBalance),
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
