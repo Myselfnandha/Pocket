@@ -120,8 +120,23 @@ jobs:
       - name: Package APK for Distribution
         run: |
           mkdir -p dist/
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/Pocket-latest.apk"
+          echo "Searching for generated release APKs..."
+          APK_FILE=$(find build/ android/app/build/ -name "*release*.apk" 2>/dev/null | head -n 1)
+          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
+            APK_FILE=$(find build/ android/ -name "*.apk" 2>/dev/null | head -n 1)
+          fi
+          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
+            echo "::error::Could not find generated APK file!"
+            echo "Listing all files in build/:"
+            find build/ -maxdepth 5 2>/dev/null || true
+            echo "Listing all files in android/app/build/:"
+            find android/app/build/ -maxdepth 5 2>/dev/null || true
+            exit 1
+          fi
+          echo "Found APK at: $APK_FILE ($(du -h "$APK_FILE" | cut -f1))"
+          cp "$APK_FILE" "dist/Pocket-${{ steps.versioning.outputs.VERSION_TAG }}-universal.apk"
+          cp "$APK_FILE" "dist/Pocket-latest.apk"
+          ls -lh dist/
 
       - name: Upload Universal APK Artifact (Fast)
         uses: actions/upload-artifact@v4

@@ -37,6 +37,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
 *.jks
 !android/app/pocket-release-key.jks
 *.keystore
@@ -44,4 +45,5 @@ key.properties
 *Development_Export.md
 docs/*
 *.apk
+.agents/cache/
 
