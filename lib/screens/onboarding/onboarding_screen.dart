@@ -248,9 +248,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     await storage.saveCategoryBudgets(budgetsToSave);
     ref.invalidate(categoryBudgetsProvider);
 
-    // 5. Request Notification & Alarm Permissions
+    // 5. Request Notification & SMS Permissions
     try {
       await NotificationService().requestPermissions();
+      await ref.read(autoImportServiceProvider).requestSmsPermission();
     } catch (_) {}
 
     if (!mounted) return;

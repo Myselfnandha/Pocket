@@ -12,12 +12,91 @@ import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
 import '../../widgets/pending_transactions_capsule.dart';
 import '../../widgets/sms_inbox_scanner_sheet.dart';
+import '../../widgets/top_capsule_toast.dart';
+import '../../services/notification_service.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+  bool _checkedStartupPermissions = false;
+  bool _smsPermissionMissing = false;
+  bool _dismissedPermissionBanner = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndAskStartupPermissions();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _verifyCurrentPermissions();
+    }
+  }
+
+  Future<void> _verifyCurrentPermissions() async {
+    try {
+      final perms = await ref.read(autoImportServiceProvider).checkPermissions();
+      if (mounted) {
+        setState(() {
+          _smsPermissionMissing = !perms.isSmsListenerEnabled;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _checkAndAskStartupPermissions() async {
+    if (_checkedStartupPermissions) return;
+    _checkedStartupPermissions = true;
+
+    final settings = ref.read(settingsProvider);
+    final autoImport = ref.read(autoImportServiceProvider);
+
+    // 1. Check & Request Notification Permission (Android 13+)
+    try {
+      await NotificationService().requestPermissions();
+    } catch (_) {}
+
+    // 2. Check & Request SMS Permissions if missing and auto-read is enabled
+    try {
+      final perms = await autoImport.checkPermissions();
+      if (!perms.isSmsListenerEnabled && settings.autoReadSmsEnabled) {
+        final granted = await autoImport.requestSmsPermission();
+        if (mounted) {
+          setState(() {
+            _smsPermissionMissing = !granted;
+          });
+        }
+        if (granted) {
+          ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _smsPermissionMissing = !perms.isSmsListenerEnabled && settings.autoReadSmsEnabled;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -125,6 +204,10 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Missing Permission Banner (Prompt on startup / dismissed)
+                    if (_smsPermissionMissing && !_dismissedPermissionBanner)
+                      _buildMissingPermissionBanner(isDark),
+
                     // Balance Summary Card (with Integrated Accounts Carousel)
                     const BalanceCard(),
                     const SizedBox(height: 14),
@@ -506,5 +589,161 @@ class HomeScreen extends ConsumerWidget {
       return DateFormat('EEE, d MMM').format(dt);
     }
     return DateFormat('d MMM yyyy').format(dt);
+  }
+
+  Widget _buildMissingPermissionBanner(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF26190B) : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.accentOrange.withValues(alpha: isDark ? 0.35 : 0.45),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentOrange.withValues(alpha: isDark ? 0.08 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accentOrange.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sms_failed_rounded,
+                  color: AppColors.accentOrange,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SMS Permission Missing',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Auto-track bank spending',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentOrange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                ),
+                tooltip: 'Dismiss',
+                onPressed: () {
+                  setState(() {
+                    _dismissedPermissionBanner = true;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pocket parses incoming bank SMS on your device to log expenses automatically. Grant permission to activate live tracking.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.35,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final autoImport = ref.read(autoImportServiceProvider);
+                  final granted = await autoImport.requestSmsPermission();
+                  if (granted) {
+                    setState(() {
+                      _smsPermissionMissing = false;
+                    });
+                    if (mounted) {
+                      TopCapsuleToast.show(
+                        context,
+                        message: 'SMS Auto-Read Activated ✓',
+                        isSuccess: true,
+                      );
+                    }
+                    ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
+                  } else {
+                    if (mounted) {
+                      TopCapsuleToast.show(
+                        context,
+                        message: 'Opening App Settings to grant SMS permission...',
+                        isSuccess: false,
+                      );
+                    }
+                    await autoImport.openAppSettings();
+                  }
+                },
+                icon: const Icon(Icons.security_update_good_rounded, size: 16),
+                label: const Text('Grant Permission'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentOrange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _dismissedPermissionBanner = true;
+                  });
+                },
+                child: Text(
+                  'Not Now',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.darkTextTertiary
+                        : AppColors.lightTextTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -79,6 +79,16 @@ class AutoImportService {
     }
   }
 
+  /// Opens App Details Settings in Android System Settings.
+  Future<bool> openAppSettings() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('openAppSettings');
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Enables or disables the native MediaStore screenshot observer.
   Future<bool> setScreenshotWatcherEnabled(bool enabled) async {
     try {

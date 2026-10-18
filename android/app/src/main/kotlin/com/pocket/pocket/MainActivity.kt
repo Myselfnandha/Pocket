@@ -191,6 +191,17 @@ class MainActivity : FlutterActivity() {
                         setScreenshotWatcher(enabled)
                         result.success(screenshotObserver != null)
                     }
+                    "openAppSettings" -> {
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", packageName, null)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("FAILED", e.localizedMessage, null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
