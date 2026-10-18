@@ -126,7 +126,10 @@ class _TransactionsListScreenState
       ..sort((a, b) => a.date.compareTo(b.date));
 
     final Map<String, double> walletBalances = {
-      for (final w in wallets) w.id: w.initialBalance,
+      for (final w in wallets)
+        w.id: ((w.initialBalance * 100).round() / 100.0).abs() < 0.0001
+            ? 0.0
+            : ((w.initialBalance * 100).round() / 100.0),
     };
 
     final Map<String, (double, double)> txWalletBalanceShifts = {};
@@ -134,11 +137,13 @@ class _TransactionsListScreenState
     final Map<String, double> txTotalBalanceAfter = {};
 
     double runningTotal = wallets.fold(0.0, (sum, w) => sum + w.initialBalance);
+    runningTotal = (runningTotal * 100).round() / 100.0;
+    if (runningTotal.abs() < 0.0001) runningTotal = 0.0;
 
     for (final tx in chronologicalTxs) {
       final curWalletBal = walletBalances[tx.walletId] ?? 0.0;
-      final double nextWalletBal;
-      final double nextTotal;
+      double nextWalletBal;
+      double nextTotal;
 
       if (tx.type == TransactionType.income) {
         nextWalletBal = curWalletBal + tx.amount;
@@ -147,6 +152,12 @@ class _TransactionsListScreenState
         nextWalletBal = curWalletBal - tx.amount;
         nextTotal = runningTotal - tx.amount;
       }
+
+      nextWalletBal = (nextWalletBal * 100).round() / 100.0;
+      if (nextWalletBal.abs() < 0.0001) nextWalletBal = 0.0;
+
+      nextTotal = (nextTotal * 100).round() / 100.0;
+      if (nextTotal.abs() < 0.0001) nextTotal = 0.0;
 
       walletBalances[tx.walletId] = nextWalletBal;
       txWalletBalanceShifts[tx.id] = (curWalletBal, nextWalletBal);
@@ -541,6 +552,8 @@ class _TransactionsListScreenState
                           dayNet -= item.amount;
                         }
                       }
+                      dayNet = (dayNet * 100).round() / 100.0;
+                      if (dayNet.abs() < 0.0001) dayNet = 0.0;
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -580,15 +593,21 @@ class _TransactionsListScreenState
                                   ],
                                 ),
                                 Text(
-                                  dayNet >= 0
+                                  dayNet > 0
                                       ? '+${settings.formatCurrency(dayNet)}'
-                                      : '-${settings.formatCurrency(dayNet.abs())}',
+                                      : (dayNet < 0
+                                          ? '-${settings.formatCurrency(dayNet.abs())}'
+                                          : settings.formatCurrency(0.0)),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: dayNet >= 0
+                                    color: dayNet > 0
                                         ? AppColors.incomeGreen
-                                        : AppColors.expenseRed,
+                                        : (dayNet < 0
+                                            ? AppColors.expenseRed
+                                            : (isDark
+                                                ? AppColors.darkTextSecondary
+                                                : AppColors.lightTextSecondary)),
                                   ),
                                 ),
                               ],

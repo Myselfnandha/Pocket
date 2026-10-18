@@ -151,21 +151,21 @@ class DebtModel {
       };
 
   factory DebtModel.fromJson(Map<String, dynamic> json) => DebtModel(
-        id: json['id'] as String,
-        personName: json['personName'] as String,
+        id: json['id'] as String? ?? 'debt_${DateTime.now().microsecondsSinceEpoch}',
+        personName: json['personName'] as String? ?? 'Contact',
         phoneNumber: json['phoneNumber'] as String?,
-        totalAmount: (json['totalAmount'] as num).toDouble(),
-        remainingAmount: (json['remainingAmount'] as num).toDouble(),
-        type: DebtType.values.byName(
-          json['type'] as String? ?? 'lent',
-        ),
+        totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+        remainingAmount: (json['remainingAmount'] as num?)?.toDouble() ?? 0.0,
+        type: DebtType.values.asNameMap()[json['type']] ?? DebtType.lent,
         dueDate: json['dueDate'] != null
-            ? DateTime.parse(json['dueDate'] as String)
+            ? DateTime.tryParse(json['dueDate'] as String)
             : null,
         walletId: json['walletId'] as String?,
         isSettled: json['isSettled'] as bool? ?? false,
         notes: json['notes'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: json['createdAt'] != null
+            ? (DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now())
+            : DateTime.now(),
         payments: (json['payments'] as List<dynamic>? ?? [])
             .map((e) => DebtPaymentModel.fromJson(e as Map<String, dynamic>))
             .toList(),

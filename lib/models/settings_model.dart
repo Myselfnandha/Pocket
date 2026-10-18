@@ -256,18 +256,12 @@ class UserSettingsModel {
         currencyCode: json['currencyCode'] as String? ?? 'INR',
         selectedAvatarId: json['selectedAvatarId'] as String? ?? 'solar_wealth',
         customAvatarPath: json['customAvatarPath'] as String?,
-        themeMode: AppThemeMode.values.byName(
-          json['themeMode'] as String? ?? 'autoTime',
-        ),
-        manualThemeStyle: ManualThemeStyle.values.byName(
-          json['manualThemeStyle'] as String? ?? 'pureBlack',
-        ),
+        themeMode: AppThemeMode.values.asNameMap()[json['themeMode']] ?? AppThemeMode.autoTime,
+        manualThemeStyle: ManualThemeStyle.values.asNameMap()[json['manualThemeStyle']] ?? ManualThemeStyle.pureBlack,
         isPureBlackEnabled: json['isPureBlackEnabled'] as bool? ?? true,
         showCategoryTags: json['showCategoryTags'] as bool? ?? true,
         isOnboarded: json['isOnboarded'] as bool? ?? false,
-        themePreset: AppThemePreset.values.byName(
-          json['themePreset'] as String? ?? 'emerald',
-        ),
+        themePreset: AppThemePreset.values.asNameMap()[json['themePreset']] ?? AppThemePreset.emerald,
         customAccentColorValue: json['customAccentColorValue'] as int? ?? 0xFF4CAF50,
         notifyBudgetNearLimit: json['notifyBudgetNearLimit'] as bool? ?? true,
         notifyBudgetExceeded: json['notifyBudgetExceeded'] as bool? ?? true,
@@ -276,9 +270,8 @@ class UserSettingsModel {
         dailyReminderHour: json['dailyReminderHour'] as int? ?? 20,
         dailyReminderMinute: json['dailyReminderMinute'] as int? ?? 0,
         monthlySummaryEnabled: json['monthlySummaryEnabled'] as bool? ?? true,
-        homeScreenWidgetStat: HomeScreenWidgetStat.values.byName(
-          json['homeScreenWidgetStat'] as String? ?? 'balanceAndTodaySpend',
-        ),
+        homeScreenWidgetStat: HomeScreenWidgetStat.values.asNameMap()[json['homeScreenWidgetStat']] ??
+            HomeScreenWidgetStat.balanceAndTodaySpend,
         defaultWalletId: json['defaultWalletId'] as String?,
         autoSaveScreenshots: json['autoSaveScreenshots'] as bool? ?? true,
         duplicateDetectionWindowSeconds: json['duplicateDetectionWindowSeconds'] as int? ?? 90,

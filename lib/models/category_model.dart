@@ -49,11 +49,14 @@ class CategoryModel {
       };
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) => CategoryModel(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        icon: json['icon'] as String,
-        colorValue: json['colorValue'] as int,
-        type: TransactionType.values.byName(json['type'] as String? ?? 'expense'),
+        id: json['id'] as String? ?? 'cat_${DateTime.now().microsecondsSinceEpoch}',
+        name: json['name'] as String? ?? 'Category',
+        icon: json['icon'] as String? ?? '📦',
+        colorValue: (json['colorValue'] as num?)?.toInt() ?? 0xFF8D6E63,
+        type: TransactionType.values.asNameMap()[json['type']] ??
+            (json['type']?.toString().toLowerCase().contains('income') == true
+                ? TransactionType.income
+                : TransactionType.expense),
         isDefault: json['isDefault'] as bool? ?? true,
       );
 }

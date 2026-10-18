@@ -13,6 +13,7 @@ import '../models/recurring_model.dart';
 import '../models/notification_model.dart';
 import '../models/debt_model.dart';
 import '../models/budget_model.dart';
+import '../models/goal_model.dart';
 import 'storage_service.dart';
 
 class BackupService {
@@ -31,6 +32,7 @@ class BackupService {
     final notifications = _storage.getNotifications();
     final debts = _storage.getDebts();
     final budgets = _storage.getCategoryBudgets();
+    final goals = _storage.getGoals();
 
     final Map<String, dynamic> backupData = {
       'schemaVersion': 2,
@@ -44,6 +46,7 @@ class BackupService {
       'notifications': notifications.map((e) => e.toJson()).toList(),
       'debts': debts.map((e) => e.toJson()).toList(),
       'categoryBudgets': budgets.map((e) => e.toJson()).toList(),
+      'goals': goals.map((e) => e.toJson()).toList(),
     };
 
     return const JsonEncoder.withIndent('  ').convert(backupData);
@@ -168,6 +171,12 @@ class BackupService {
           .map((e) => CategoryBudgetModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
+      // Parse goals
+      final List<dynamic> rawGoals = decoded['goals'] as List<dynamic>? ?? [];
+      final List<GoalModel> goals = rawGoals
+          .map((e) => GoalModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
       // Save to storage
       await _storage.saveTransactions(txs);
       await _storage.saveCategories(cats);
@@ -177,6 +186,7 @@ class BackupService {
       await _storage.saveNotifications(notifs);
       await _storage.saveDebts(debts);
       await _storage.saveCategoryBudgets(budgets);
+      await _storage.saveGoals(goals);
 
       return true;
     } catch (_) {

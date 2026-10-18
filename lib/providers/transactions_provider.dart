@@ -33,10 +33,12 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
       if (receiptImagePath != null && !attachments.contains(receiptImagePath)) receiptImagePath,
     ];
 
+    final cleanAmount = (amount.abs() * 100).round() / 100.0;
+
     final newTx = TransactionModel(
       id: const Uuid().v4(),
       title: title.trim().isEmpty ? 'Untitled' : title.trim(),
-      amount: amount,
+      amount: cleanAmount,
       type: type,
       categoryId: categoryId,
       walletId: walletId,
@@ -60,9 +62,11 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
   }
 
   Future<void> updateTransaction(TransactionModel tx) async {
+    final cleanAmount = (tx.amount.abs() * 100).round() / 100.0;
+    final cleanTx = tx.amount != cleanAmount ? tx.copyWith(amount: cleanAmount) : tx;
     state = [
       for (final item in state)
-        if (item.id == tx.id) tx else item,
+        if (item.id == cleanTx.id) cleanTx else item,
     ];
     await _storage.saveTransactions(state);
   }

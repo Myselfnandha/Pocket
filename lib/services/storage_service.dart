@@ -522,8 +522,9 @@ class StorageService {
           .toList();
       await saveCategories(list);
     }
-    if (data['recurring_rules'] != null) {
-      final list = (data['recurring_rules'] as List)
+    final recurringData = data['recurringRules'] ?? data['recurring_rules'];
+    if (recurringData != null) {
+      final list = (recurringData as List)
           .map((e) => RecurringRuleModel.fromJson(e))
           .toList();
       await saveRecurringRules(list);
@@ -533,8 +534,9 @@ class StorageService {
           (data['debts'] as List).map((e) => DebtModel.fromJson(e)).toList();
       await saveDebts(list);
     }
-    if (data['budgets'] != null) {
-      final list = (data['budgets'] as List)
+    final budgetsData = data['categoryBudgets'] ?? data['budgets'];
+    if (budgetsData != null) {
+      final list = (budgetsData as List)
           .map((e) => CategoryBudgetModel.fromJson(e))
           .toList();
       await saveCategoryBudgets(list);

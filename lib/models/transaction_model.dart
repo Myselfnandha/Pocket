@@ -104,32 +104,64 @@ class TransactionModel {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  factory TransactionModel.fromJson(Map<String, dynamic> json) =>
-      TransactionModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        amount: (json['amount'] as num).toDouble(),
-        type: TransactionType.values
-            .byName(json['type'] as String? ?? 'expense'),
-        categoryId: json['categoryId'] as String,
-        walletId: json['walletId'] as String,
-        date: DateTime.parse(json['date'] as String),
-        note: json['note'] as String?,
-        receiptImagePath: json['receiptImagePath'] as String?,
-        senderName: json['senderName'] as String?,
-        receiverName: json['receiverName'] as String?,
-        refId: json['refId'] as String?,
-        counterpartyLast4: json['counterpartyLast4'] as String?,
-        appSource: json['appSource'] as String?,
-        rawPayload: json['rawPayload'] as String?,
-        tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-            const [],
-        attachments: (json['attachments'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            (json['receiptImagePath'] != null ? [json['receiptImagePath'] as String] : const []),
-        createdAt: DateTime.parse(
-          json['createdAt'] as String? ?? json['date'] as String,
-        ),
-      );
+  factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    final rawAmt = json['amount'];
+    double parsedAmount = 0.0;
+    if (rawAmt is num) {
+      parsedAmount = rawAmt.toDouble();
+    } else if (rawAmt is String) {
+      parsedAmount = double.tryParse(rawAmt.replaceAll(',', '').trim()) ?? 0.0;
+    }
+    final cleanAmount = ((parsedAmount.abs() * 100).round() / 100.0);
+
+    final rawDate = json['date'];
+    final DateTime parsedDate;
+    if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+    } else if (rawDate is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate);
+    } else {
+      parsedDate = DateTime.now();
+    }
+
+    final rawCreated = json['createdAt'];
+    final DateTime parsedCreated;
+    if (rawCreated is String) {
+      parsedCreated = DateTime.tryParse(rawCreated) ?? parsedDate;
+    } else if (rawCreated is int) {
+      parsedCreated = DateTime.fromMillisecondsSinceEpoch(rawCreated);
+    } else {
+      parsedCreated = parsedDate;
+    }
+
+    return TransactionModel(
+      id: json['id'] as String? ?? 'tx_${DateTime.now().microsecondsSinceEpoch}',
+      title: (json['title'] as String?)?.trim().isNotEmpty == true
+          ? json['title'] as String
+          : 'Untitled',
+      amount: cleanAmount,
+      type: TransactionType.values.asNameMap()[json['type']] ??
+          (json['type']?.toString().toLowerCase().contains('income') == true
+              ? TransactionType.income
+              : TransactionType.expense),
+      categoryId: json['categoryId'] as String? ?? 'other_exp',
+      walletId: json['walletId'] as String? ?? 'cash',
+      date: parsedDate,
+      note: json['note'] as String?,
+      receiptImagePath: json['receiptImagePath'] as String?,
+      senderName: json['senderName'] as String?,
+      receiverName: json['receiverName'] as String?,
+      refId: json['refId'] as String?,
+      counterpartyLast4: json['counterpartyLast4'] as String?,
+      appSource: json['appSource'] as String?,
+      rawPayload: json['rawPayload'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          const [],
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          (json['receiptImagePath'] != null ? [json['receiptImagePath'] as String] : const []),
+      createdAt: parsedCreated,
+    );
+  }
 }

@@ -170,29 +170,30 @@ class RecurringRuleModel {
 
   factory RecurringRuleModel.fromJson(Map<String, dynamic> json) =>
       RecurringRuleModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        amount: (json['amount'] as num).toDouble(),
-        type: TransactionType.values.byName(
-          json['type'] as String? ?? 'expense',
-        ),
-        categoryId: json['categoryId'] as String,
-        walletId: json['walletId'] as String,
-        frequency: RecurringFrequency.values.byName(
-          json['frequency'] as String? ?? 'monthly',
-        ),
+        id: json['id'] as String? ?? 'rule_${DateTime.now().microsecondsSinceEpoch}',
+        title: json['title'] as String? ?? 'Recurring Rule',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+        type: TransactionType.values.asNameMap()[json['type']] ??
+            (json['type']?.toString().toLowerCase().contains('income') == true
+                ? TransactionType.income
+                : TransactionType.expense),
+        categoryId: json['categoryId'] as String? ?? 'other_exp',
+        walletId: json['walletId'] as String? ?? 'cash',
+        frequency: RecurringFrequency.values.asNameMap()[json['frequency']] ?? RecurringFrequency.monthly,
         dueDay: json['dueDay'] as int? ?? 1,
         lastCreatedDate: json['lastCreatedDate'] != null
-            ? DateTime.parse(json['lastCreatedDate'] as String)
+            ? DateTime.tryParse(json['lastCreatedDate'] as String)
             : null,
-        nextDueDate: DateTime.parse(json['nextDueDate'] as String),
+        nextDueDate: json['nextDueDate'] != null
+            ? (DateTime.tryParse(json['nextDueDate'] as String) ?? DateTime.now())
+            : DateTime.now(),
         isActive: json['isActive'] as bool? ?? true,
         isPaused: json['isPaused'] as bool? ?? false,
-        templatePreset: RecurringTemplatePreset.values.byName(
-          json['templatePreset'] as String? ?? 'custom',
-        ),
+        templatePreset: RecurringTemplatePreset.values.asNameMap()[json['templatePreset']] ?? RecurringTemplatePreset.custom,
         note: json['note'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: json['createdAt'] != null
+            ? (DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now())
+            : DateTime.now(),
       );
 
   DateTime calculateNextDueDateAfter(DateTime fromDate) {

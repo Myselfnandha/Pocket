@@ -88,15 +88,13 @@ class WalletModel {
       };
 
   factory WalletModel.fromJson(Map<String, dynamic> json) => WalletModel(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        icon: json['icon'] as String,
-        colorValue: json['colorValue'] as int,
+        id: json['id'] as String? ?? 'w_${DateTime.now().microsecondsSinceEpoch}',
+        name: json['name'] as String? ?? 'Wallet',
+        icon: json['icon'] as String? ?? '💳',
+        colorValue: (json['colorValue'] as num?)?.toInt() ?? 0xFF2196F3,
         initialBalance: (json['initialBalance'] as num?)?.toDouble() ?? 0.0,
         currentBalance: (json['currentBalance'] as num?)?.toDouble() ?? 0.0,
-        walletType: WalletType.values.byName(
-          json['walletType'] as String? ?? 'bank',
-        ),
+        walletType: WalletType.values.asNameMap()[json['walletType']] ?? WalletType.bank,
         spendingLimit: (json['spendingLimit'] as num?)?.toDouble(),
         isDefault: json['isDefault'] as bool? ?? false,
         accountNumber: json['accountNumber'] as String?,

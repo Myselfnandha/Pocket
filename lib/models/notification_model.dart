@@ -120,13 +120,13 @@ class AppNotificationModel {
 
   factory AppNotificationModel.fromJson(Map<String, dynamic> json) =>
       AppNotificationModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        message: json['message'] as String,
-        type: NotificationType.values.byName(
-          json['type'] as String? ?? 'system',
-        ),
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        id: json['id'] as String? ?? 'notif_${DateTime.now().microsecondsSinceEpoch}',
+        title: json['title'] as String? ?? 'Notification',
+        message: json['message'] as String? ?? '',
+        type: NotificationType.values.asNameMap()[json['type']] ?? NotificationType.system,
+        createdAt: json['createdAt'] != null
+            ? (DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now())
+            : DateTime.now(),
         isRead: json['isRead'] as bool? ?? false,
         actionData: json['actionData'] as Map<String, dynamic>?,
       );
