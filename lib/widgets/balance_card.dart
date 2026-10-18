@@ -70,7 +70,7 @@ class BalanceCard extends ConsumerWidget {
         break;
       case HomeScreenWidgetStat.debtsSummary:
         thirdChipLabel = 'Debts Due';
-        final owedByMe = ref.watch(totalOwedByMeProvider);
+        final owedByMe = ref.watch(totalBorrowedProvider);
         thirdChipAmount = settings.formatCompact(owedByMe);
         thirdChipIcon = Icons.handshake_rounded;
         thirdChipColor = Colors.purpleAccent;
@@ -79,7 +79,7 @@ class BalanceCard extends ConsumerWidget {
       case HomeScreenWidgetStat.forecastTrajectory:
         thirdChipLabel = 'Forecast';
         final forecast = ref.watch(monthSpendForecastProvider);
-        thirdChipAmount = settings.formatCompact(forecast.predictedMonthSpend);
+        thirdChipAmount = settings.formatCompact(forecast.projectedMonthEndExpense);
         thirdChipIcon = Icons.trending_up_rounded;
         thirdChipColor = Colors.orangeAccent;
         thirdChipTap = () => context.push('/analytics');

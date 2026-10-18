@@ -161,8 +161,8 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
           ? widget.initialAmount!.toInt().toString()
           : widget.initialAmount!.toStringAsFixed(2);
     }
-    if (widget.initialType != oldWidget.initialType) {
-      _type = widget.initialType;
+    if (widget.initialType != null && widget.initialType != oldWidget.initialType) {
+      _type = widget.initialType!;
     }
     if (widget.initialCategoryId != null && widget.initialCategoryId != oldWidget.initialCategoryId) {
       _selectedCategoryId = widget.initialCategoryId;

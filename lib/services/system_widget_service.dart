@@ -120,7 +120,7 @@ class SystemWidgetService {
           break;
         case HomeScreenWidgetStat.forecastTrajectory:
           featuredStatLabel = "Forecast";
-          final projected = forecast?.predictedMonthSpend ?? 0.0;
+          final projected = forecast?.projectedMonthEndExpense ?? 0.0;
           featuredStatValue = privacyMode ? '••••••' : '$currencySymbol${currencyFormat.format(projected)}';
           break;
       }
