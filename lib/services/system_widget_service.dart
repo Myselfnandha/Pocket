@@ -92,11 +92,46 @@ class SystemWidgetService {
         sparklineData = forecast.sparklineValues.map((v) => v.toStringAsFixed(0)).join(',');
       }
 
-      // 4. Save to Android SharedPreferences via HomeWidget
+      // 4. Resolve Featured Stat based on statType
+      String featuredStatLabel = "Today's Spend";
+      String featuredStatValue = formattedToday;
+      switch (statType) {
+        case HomeScreenWidgetStat.balanceAndTodaySpend:
+          featuredStatLabel = "Today's Spend";
+          featuredStatValue = formattedToday;
+          break;
+        case HomeScreenWidgetStat.netWorth:
+          featuredStatLabel = "Net Worth";
+          featuredStatValue = privacyMode ? '••••••' : '$currencySymbol${currencyFormat.format(netWorth ?? totalBalance)}';
+          break;
+        case HomeScreenWidgetStat.monthlySavings:
+          featuredStatLabel = "Monthly Savings";
+          final savings = monthlySavings ?? 0.0;
+          final sign = savings >= 0 ? '+' : '';
+          featuredStatValue = privacyMode ? '••••••' : '$sign$currencySymbol${currencyFormat.format(savings)}';
+          break;
+        case HomeScreenWidgetStat.budgetRemaining:
+          featuredStatLabel = "Budget Left";
+          featuredStatValue = privacyMode ? '••••••' : '$currencySymbol${currencyFormat.format(budgetRemaining ?? 0.0)}';
+          break;
+        case HomeScreenWidgetStat.debtsSummary:
+          featuredStatLabel = "Debts";
+          featuredStatValue = privacyMode ? '••••••' : 'Active Debts';
+          break;
+        case HomeScreenWidgetStat.forecastTrajectory:
+          featuredStatLabel = "Forecast";
+          final projected = forecast?.predictedMonthSpend ?? 0.0;
+          featuredStatValue = privacyMode ? '••••••' : '$currencySymbol${currencyFormat.format(projected)}';
+          break;
+      }
+
+      // 5. Save to Android SharedPreferences via HomeWidget
       await HomeWidget.saveWidgetData<String>('total_balance', formattedTotal);
       await HomeWidget.saveWidgetData<String>('card_balance', formattedCard);
       await HomeWidget.saveWidgetData<String>('card_wallet_name', walletLabel);
       await HomeWidget.saveWidgetData<String>('today_expense', formattedToday);
+      await HomeWidget.saveWidgetData<String>('featured_stat_label', featuredStatLabel);
+      await HomeWidget.saveWidgetData<String>('featured_stat_value', featuredStatValue);
       await HomeWidget.saveWidgetData<String>('budget_status_tag', budgetTag);
       await HomeWidget.saveWidgetData<String>('secondary_action_type', secondaryAction);
       await HomeWidget.saveWidgetData<String>('runway_safe_daily', runwaySafeFormatted);

@@ -100,6 +100,10 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(widgetSecondaryAction: action));
   }
 
+  Future<void> setHomeScreenWidgetStat(HomeScreenWidgetStat stat) async {
+    await updateSettings(state.copyWith(homeScreenWidgetStat: stat));
+  }
+
   Future<void> setAutoSaveSms(bool value) async {
     await updateSettings(state.copyWith(autoSaveSms: value));
   }

@@ -341,7 +341,7 @@ class AutoImportService {
   }
 
   /// Public helper to check if a pending transaction has already been saved into the database
-  bool isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved) {
+  bool isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved, [int? windowSeconds]) {
     // 1. Exact refId match
     if (item.refId != null && item.refId!.isNotEmpty) {
       for (final tx in saved) {
@@ -355,6 +355,7 @@ class AutoImportService {
     }
 
     // 2. Fuzzy match fallback when refId is missing
+    final window = windowSeconds ?? _storage.getSettings().duplicateDetectionWindowSeconds;
     final itemMerchant = item.merchant.toLowerCase().trim();
     for (final tx in saved) {
       if ((tx.amount - item.amount).abs() < 0.01) {
@@ -364,7 +365,7 @@ class AutoImportService {
             itemMerchant.contains(txTitle);
 
         final timeDiff = tx.date.difference(item.date).inSeconds.abs();
-        if (isTitleMatch && timeDiff <= 120) {
+        if (isTitleMatch && timeDiff <= window) {
           return true;
         }
       }
@@ -386,12 +387,13 @@ class AutoImportService {
     }
 
     // 2. Composite match fallback when refId is missing
+    final window = _storage.getSettings().duplicateDetectionWindowSeconds;
     if ((a.amount - b.amount).abs() < 0.01) {
       final aMerch = a.merchant.toLowerCase().trim();
       final bMerch = b.merchant.toLowerCase().trim();
       if (aMerch == bMerch || aMerch.contains(bMerch) || bMerch.contains(aMerch)) {
         final timeDiff = a.date.difference(b.date).inSeconds.abs();
-        if (timeDiff <= 60) {
+        if (timeDiff <= window) {
           return true;
         }
       }

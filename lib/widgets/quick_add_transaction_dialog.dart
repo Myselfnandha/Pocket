@@ -13,7 +13,7 @@ import 'blurred_dialog_utils.dart';
 import 'top_capsule_toast.dart';
 
 class QuickAddTransactionDialog extends ConsumerStatefulWidget {
-  final TransactionType initialType;
+  final TransactionType? initialType;
   final double? initialAmount;
   final String? initialTitle;
   final String? initialCategoryId;
@@ -30,7 +30,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
 
   const QuickAddTransactionDialog({
     super.key,
-    this.initialType = TransactionType.expense,
+    this.initialType,
     this.initialAmount,
     this.initialTitle,
     this.initialCategoryId,
@@ -50,7 +50,7 @@ class QuickAddTransactionDialog extends ConsumerStatefulWidget {
 
   static Future<void> show(
     BuildContext context, {
-    TransactionType initialType = TransactionType.expense,
+    TransactionType? initialType,
     double? initialAmount,
     String? initialTitle,
     String? initialCategoryId,
@@ -118,7 +118,9 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   @override
   void initState() {
     super.initState();
-    _type = widget.initialType;
+    final settings = ref.read(settingsProvider);
+    _type = widget.initialType ??
+        (settings.defaultQuickAddType == 'income' ? TransactionType.income : TransactionType.expense);
     if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
       _titleController.text = widget.initialTitle!;
     }
@@ -360,7 +362,12 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
     final categories = allCategories.where((c) => c.type == _type).toList();
 
     if (_selectedWalletId == null && wallets.isNotEmpty) {
-      _selectedWalletId = wallets.first.id;
+      final defaultId = settings.defaultWalletId;
+      if (defaultId != null && wallets.any((w) => w.id == defaultId)) {
+        _selectedWalletId = defaultId;
+      } else {
+        _selectedWalletId = wallets.first.id;
+      }
     }
     if (_selectedCategoryId == null && categories.isNotEmpty) {
       _selectedCategoryId = categories.first.id;

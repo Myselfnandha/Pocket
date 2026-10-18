@@ -8,6 +8,8 @@ import 'goals_provider.dart';
 import 'debts_provider.dart';
 import 'budgets_provider.dart';
 import 'recurring_rules_provider.dart';
+import 'settings_provider.dart';
+import '../utils/cycle_utils.dart';
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
@@ -34,7 +36,9 @@ class MonthlyStats {
 
 final monthlyStatsProvider = Provider<MonthlyStats>((ref) {
   final txs = ref.watch(transactionsProvider);
+  final settings = ref.watch(settingsProvider);
   final now = DateTime.now();
+  final cycleRange = CycleUtils.getBillingCycleRange(now, settings.monthStartDay);
 
   double income = 0;
   double expense = 0;
@@ -42,15 +46,18 @@ final monthlyStatsProvider = Provider<MonthlyStats>((ref) {
 
   for (final tx in txs) {
     if (tx.categoryId == 'cat_transfer') continue;
-    if (tx.date.year == now.year && tx.date.month == now.month) {
+    if (CycleUtils.isInRange(tx.date, cycleRange)) {
       if (tx.type == TransactionType.income) {
         income += tx.amount;
       } else {
         expense += tx.amount;
-        if (tx.date.day == now.day) {
-          todayExp += tx.amount;
-        }
       }
+    }
+    if (tx.type == TransactionType.expense &&
+        tx.date.year == now.year &&
+        tx.date.month == now.month &&
+        tx.date.day == now.day) {
+      todayExp += tx.amount;
     }
   }
 

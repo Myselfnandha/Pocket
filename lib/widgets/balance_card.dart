@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../models/settings_model.dart';
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
 
@@ -27,6 +28,63 @@ class BalanceCard extends ConsumerWidget {
             ? primaryWallet.accountNumber!.substring(primaryWallet.accountNumber!.length - 4)
             : primaryWallet.accountNumber!)
         : '2026';
+
+    final stat = settings.homeScreenWidgetStat;
+    String thirdChipLabel = 'Today';
+    String thirdChipAmount = settings.formatCompact(monthlyStats.todayExpense);
+    IconData thirdChipIcon = Icons.access_time_rounded;
+    Color thirdChipColor = AppColors.accentOrange;
+    VoidCallback? thirdChipTap = () => context.push('/analytics');
+
+    switch (stat) {
+      case HomeScreenWidgetStat.balanceAndTodaySpend:
+        thirdChipLabel = 'Today';
+        thirdChipAmount = settings.formatCompact(monthlyStats.todayExpense);
+        thirdChipIcon = Icons.access_time_rounded;
+        thirdChipColor = AppColors.accentOrange;
+        thirdChipTap = () => context.push('/analytics');
+        break;
+      case HomeScreenWidgetStat.netWorth:
+        thirdChipLabel = 'Net Worth';
+        final netWorth = ref.watch(netWorthSummaryProvider).totalNetWorth;
+        thirdChipAmount = settings.formatCompact(netWorth);
+        thirdChipIcon = Icons.account_balance_rounded;
+        thirdChipColor = AppColors.primaryGreenLight;
+        thirdChipTap = () => context.push('/wallets');
+        break;
+      case HomeScreenWidgetStat.monthlySavings:
+        thirdChipLabel = 'Savings';
+        final savings = monthlyStats.netSavings;
+        thirdChipAmount = '${savings >= 0 ? '+' : ''}${settings.formatCompact(savings)}';
+        thirdChipIcon = Icons.savings_rounded;
+        thirdChipColor = AppColors.infoBlue;
+        thirdChipTap = () => context.push('/analytics');
+        break;
+      case HomeScreenWidgetStat.budgetRemaining:
+        thirdChipLabel = 'Budget Left';
+        final budgetLeft = ref.watch(totalBudgetRemainingProvider);
+        thirdChipAmount = settings.formatCompact(budgetLeft);
+        thirdChipIcon = Icons.pie_chart_rounded;
+        thirdChipColor = Colors.amber;
+        thirdChipTap = () => context.push('/budgets');
+        break;
+      case HomeScreenWidgetStat.debtsSummary:
+        thirdChipLabel = 'Debts Due';
+        final owedByMe = ref.watch(totalOwedByMeProvider);
+        thirdChipAmount = settings.formatCompact(owedByMe);
+        thirdChipIcon = Icons.handshake_rounded;
+        thirdChipColor = Colors.purpleAccent;
+        thirdChipTap = () => context.push('/debts');
+        break;
+      case HomeScreenWidgetStat.forecastTrajectory:
+        thirdChipLabel = 'Forecast';
+        final forecast = ref.watch(monthSpendForecastProvider);
+        thirdChipAmount = settings.formatCompact(forecast.predictedMonthSpend);
+        thirdChipIcon = Icons.trending_up_rounded;
+        thirdChipColor = Colors.orangeAccent;
+        thirdChipTap = () => context.push('/analytics');
+        break;
+    }
 
     return Container(
       width: double.infinity,
@@ -291,11 +349,12 @@ class BalanceCard extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _CompactMetricChip(
-                    label: 'Today',
-                    amount: settings.formatCompact(monthlyStats.todayExpense),
-                    icon: Icons.access_time_rounded,
-                    accentColor: AppColors.accentOrange,
+                    label: thirdChipLabel,
+                    amount: thirdChipAmount,
+                    icon: thirdChipIcon,
+                    accentColor: thirdChipColor,
                     isDark: isDark,
+                    onTap: thirdChipTap,
                   ),
                 ),
               ],
@@ -443,6 +502,7 @@ class _CompactMetricChip extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
   final bool isDark;
+  final VoidCallback? onTap;
 
   const _CompactMetricChip({
     required this.label,
@@ -450,11 +510,17 @@ class _CompactMetricChip extends StatelessWidget {
     required this.icon,
     required this.accentColor,
     required this.isDark,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1B1E26) : const Color(0xFFF6F8FA),
@@ -501,6 +567,8 @@ class _CompactMetricChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

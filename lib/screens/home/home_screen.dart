@@ -212,7 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     const BalanceCard(),
                     const SizedBox(height: 14),
 
-                    // Quick Hub Row: Recurring & Debts
+                    // Quick Hub Row: Recurring, Goals, & Debts
                     Consumer(
                       builder: (context, ref, _) {
                         final recurringRules = ref.watch(recurringRulesProvider);
@@ -220,126 +220,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         final totalLent = ref.watch(totalLentProvider);
                         final totalBorrowed = ref.watch(totalBorrowedProvider);
                         final netDebt = totalLent - totalBorrowed;
+                        final goals = ref.watch(goalsProvider);
+                        final totalSavedInGoals = ref.watch(totalSavedInGoalsProvider);
 
-                        return Row(
-                          children: [
-                            // Recurring Dues Card Button
-                            Expanded(
-                              child: InkWell(
+                        return SizedBox(
+                          height: 62,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            children: [
+                              _buildQuickHubCard(
+                                title: 'Recurring Dues',
+                                subtitle: '$activeRulesCount active',
+                                subtitleColor: AppColors.primaryGreenLight,
+                                icon: Icons.autorenew_rounded,
+                                iconColor: AppColors.primaryGreenLight,
+                                bgColor: isDark ? const Color(0xFF18221B) : const Color(0xFFEDF7F1),
+                                borderColor: AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.3 : 0.4),
                                 onTap: () => context.push('/recurring-rules'),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF18221B) : const Color(0xFFEDF7F1),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.3 : 0.4),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryGreenLight.withValues(alpha: 0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.autorenew_rounded, size: 18, color: AppColors.primaryGreenLight),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Recurring Dues',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '$activeRulesCount active',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primaryGreenLight,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
-                                    ],
-                                  ),
-                                ),
+                                isDark: isDark,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Debts & Loans Card Button
-                            Expanded(
-                              child: InkWell(
+                              const SizedBox(width: 8),
+                              _buildQuickHubCard(
+                                title: 'Savings Goals',
+                                subtitle: '${goals.length} goals (${settings.formatCompact(totalSavedInGoals)})',
+                                subtitleColor: Colors.amber,
+                                icon: Icons.savings_rounded,
+                                iconColor: Colors.amber,
+                                bgColor: isDark ? const Color(0xFF231E14) : const Color(0xFFFEF8E8),
+                                borderColor: Colors.amber.withValues(alpha: isDark ? 0.3 : 0.4),
+                                onTap: () => context.push('/wallets'),
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildQuickHubCard(
+                                title: 'Debts & Loans',
+                                subtitle: netDebt >= 0
+                                    ? '+${settings.formatCompact(netDebt)}'
+                                    : '-${settings.formatCompact(netDebt.abs())}',
+                                subtitleColor: netDebt >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                                icon: Icons.handshake_outlined,
+                                iconColor: AppColors.infoBlue,
+                                bgColor: isDark ? const Color(0xFF141E28) : const Color(0xFFEEF5FB),
+                                borderColor: AppColors.infoBlue.withValues(alpha: isDark ? 0.3 : 0.4),
                                 onTap: () => context.push('/debts'),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF141E28) : const Color(0xFFEEF5FB),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.infoBlue.withValues(alpha: isDark ? 0.3 : 0.4),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.infoBlue.withValues(alpha: 0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.handshake_outlined, size: 18, color: AppColors.infoBlue),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Debts & Loans',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              netDebt >= 0
-                                                  ? '+${settings.formatCurrency(netDebt)}'
-                                                  : '-${settings.formatCurrency(netDebt.abs())}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: netDebt >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
-                                    ],
-                                  ),
-                                ),
+                                isDark: isDark,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -743,6 +671,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickHubCard({
+    required String title,
+    required String subtitle,
+    required Color subtitleColor,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 155),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: 1.2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 16, color: iconColor),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 1.5),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: subtitleColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, size: 16, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+          ],
+        ),
       ),
     );
   }

@@ -71,8 +71,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
+    final settings = ref.read(settingsProvider);
     if (widget.initialType != null) {
       _type = widget.initialType!;
+    } else {
+      _type = settings.defaultQuickAddType == 'income' ? TransactionType.income : TransactionType.expense;
     }
     if (widget.initialAmount != null && widget.initialAmount! > 0) {
       _amountStr = widget.initialAmount! % 1 == 0
@@ -343,7 +346,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _selectedCategoryId = filteredCategories.first.id;
     }
     if (_selectedWalletId == null && wallets.isNotEmpty) {
-      _selectedWalletId = wallets.first.id;
+      final defaultId = settings.defaultWalletId;
+      if (defaultId != null && wallets.any((w) => w.id == defaultId)) {
+        _selectedWalletId = defaultId;
+      } else {
+        _selectedWalletId = wallets.first.id;
+      }
     }
 
     final isIncome = _type == TransactionType.income;

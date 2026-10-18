@@ -12,6 +12,7 @@ import 'services/storage_service.dart';
 import 'services/cloud_sync_service.dart';
 import 'services/system_widget_service.dart';
 import 'services/upi_screenshot_parser_service.dart';
+import 'widgets/app_lock_gate.dart';
 import 'widgets/nlp_quick_add_modal.dart';
 import 'widgets/quick_add_transaction_dialog.dart';
 
@@ -230,6 +231,7 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: _router,
+      builder: (context, child) => AppLockGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

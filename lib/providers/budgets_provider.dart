@@ -4,7 +4,9 @@ import '../models/budget_model.dart';
 import '../models/category_model.dart';
 import '../services/storage_service.dart';
 import 'core_providers.dart';
+import 'settings_provider.dart';
 import 'transactions_provider.dart';
+import '../utils/cycle_utils.dart';
 
 class CategoryBudgetsNotifier extends StateNotifier<List<CategoryBudgetModel>> {
   final StorageService _storage;
@@ -61,17 +63,17 @@ final categoryBudgetsProvider =
   return CategoryBudgetsNotifier(storage);
 });
 
-/// Map of categoryId -> total expense for current month
+/// Map of categoryId -> total expense for current salary cycle
 final currentMonthCategorySpendingProvider = Provider<Map<String, double>>((ref) {
   final txs = ref.watch(transactionsProvider);
+  final settings = ref.watch(settingsProvider);
   final now = DateTime.now();
+  final cycleRange = CycleUtils.getBillingCycleRange(now, settings.monthStartDay);
   final Map<String, double> spending = {};
 
   for (final tx in txs) {
     if (tx.categoryId == 'cat_transfer') continue;
-    if (tx.type == TransactionType.expense &&
-        tx.date.year == now.year &&
-        tx.date.month == now.month) {
+    if (tx.type == TransactionType.expense && CycleUtils.isInRange(tx.date, cycleRange)) {
       final current = spending[tx.categoryId] ?? 0.0;
       spending[tx.categoryId] = ((current + tx.amount) * 100).round() / 100.0;
     }
@@ -80,18 +82,17 @@ final currentMonthCategorySpendingProvider = Provider<Map<String, double>>((ref)
   return spending;
 });
 
-/// Map of categoryId -> total expense for previous month
+/// Map of categoryId -> total expense for previous salary cycle
 final lastMonthCategorySpendingProvider = Provider<Map<String, double>>((ref) {
   final txs = ref.watch(transactionsProvider);
+  final settings = ref.watch(settingsProvider);
   final now = DateTime.now();
-  final lastMonth = DateTime(now.year, now.month - 1, 1);
+  final lastCycleRange = CycleUtils.getBillingCycleRange(now, settings.monthStartDay, -1);
   final Map<String, double> spending = {};
 
   for (final tx in txs) {
     if (tx.categoryId == 'cat_transfer') continue;
-    if (tx.type == TransactionType.expense &&
-        tx.date.year == lastMonth.year &&
-        tx.date.month == lastMonth.month) {
+    if (tx.type == TransactionType.expense && CycleUtils.isInRange(tx.date, lastCycleRange)) {
       final current = spending[tx.categoryId] ?? 0.0;
       spending[tx.categoryId] = ((current + tx.amount) * 100).round() / 100.0;
     }

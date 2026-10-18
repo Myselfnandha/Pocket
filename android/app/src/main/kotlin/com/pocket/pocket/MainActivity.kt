@@ -21,11 +21,14 @@ class MainActivity : FlutterActivity() {
     private val SHARED_TX_CHANNEL = "com.pocket.pocket/shared_transaction"
     private val WIDGET_CHANNEL = "com.pocket.pocket/widget_events"
     private val AUTO_IMPORT_CHANNEL = "com.pocket.pocket/auto_import"
+    private val SECURITY_CHANNEL = "com.pocket.pocket/security"
     private val REQUEST_CODE_PICK_CONTACT = 1001
     private val REQUEST_CODE_SMS_PERMISSION = 1002
+    private val REQUEST_CODE_DEVICE_UNLOCK = 1003
 
     private var pendingResult: MethodChannel.Result? = null
     private var pendingSmsResult: MethodChannel.Result? = null
+    private var pendingSecurityResult: MethodChannel.Result? = null
     private var sharedTxChannel: MethodChannel? = null
     private var widgetChannel: MethodChannel? = null
     private var autoImportChannel: MethodChannel? = null
@@ -207,6 +210,35 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // 5. Native Biometric & Device Security Channel
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "authenticate" -> {
+                    val keyguardManager = getSystemService(android.content.Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+                    if (keyguardManager != null && keyguardManager.isDeviceSecure) {
+                        if (pendingSecurityResult != null) {
+                            result.error("ALREADY_PENDING", "Authentication already in progress", null)
+                            return@setMethodCallHandler
+                        }
+                        pendingSecurityResult = result
+                        val intent = keyguardManager.createConfirmDeviceCredentialIntent("Pocket Unlock", "Confirm your identity to access Pocket")
+                        if (intent != null) {
+                            startActivityForResult(intent, REQUEST_CODE_DEVICE_UNLOCK)
+                        } else {
+                            result.success(true)
+                        }
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "isDeviceSecure" -> {
+                    val keyguardManager = getSystemService(android.content.Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+                    result.success(keyguardManager?.isDeviceSecure == true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         // Auto-enable screenshot watcher by default
         setScreenshotWatcher(true)
 
@@ -275,6 +307,13 @@ class MainActivity : FlutterActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_CODE_DEVICE_UNLOCK) {
+            val result = pendingSecurityResult ?: return
+            pendingSecurityResult = null
+            result.success(resultCode == Activity.RESULT_OK)
+            return
+        }
 
         if (requestCode == REQUEST_CODE_PICK_CONTACT) {
             val result = pendingResult ?: return

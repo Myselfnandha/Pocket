@@ -8,6 +8,7 @@ import '../../models/category_model.dart';
 import '../../models/settings_model.dart';
 import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/security_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/blurred_dialog_utils.dart';
 import '../../widgets/user_avatar_widget.dart';
@@ -296,8 +297,30 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: const Text('Require fingerprint or device unlock on app open'),
                 value: settings.biometricLockEnabled,
                 activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setBiometricLock(val);
+                onChanged: (val) async {
+                  if (val) {
+                    final isSecure = await SecurityService.isDeviceSecure();
+                    if (!isSecure) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enable a device screen lock (PIN, pattern, or fingerprint) in Android Settings first.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    final authenticated = await SecurityService.authenticate();
+                    if (authenticated) {
+                      ref.read(settingsProvider.notifier).setBiometricLock(true);
+                    }
+                  } else {
+                    final authenticated = await SecurityService.authenticate();
+                    if (authenticated) {
+                      ref.read(settingsProvider.notifier).setBiometricLock(false);
+                    }
+                  }
                 },
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
@@ -339,7 +362,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.4.0 • AI & Material 3 Wealth Matrix'),
+                subtitle: Text('v1.5.16 • AI & Material 3 Wealth Matrix'),
               ),
             ],
           ),

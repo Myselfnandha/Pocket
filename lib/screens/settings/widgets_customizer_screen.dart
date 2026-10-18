@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/settings_model.dart';
 import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/system_widget_service.dart';
@@ -329,6 +330,31 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _showSecondaryActionPicker(context, ref, settings.widgetSecondaryAction),
+                ),
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                // Featured Stat Metric
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.analytics_rounded, size: 20),
+                  ),
+                  title: const Text(
+                    'Featured Metric Stat',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    _getStatTitle(settings.homeScreenWidgetStat),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showStatPicker(context, ref, settings.homeScreenWidgetStat),
                 ),
               ],
             ),
@@ -937,6 +963,84 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                   Navigator.pop(ctx);
                 },
               ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getStatTitle(HomeScreenWidgetStat stat) {
+    switch (stat) {
+      case HomeScreenWidgetStat.balanceAndTodaySpend:
+        return "Today's Spend";
+      case HomeScreenWidgetStat.netWorth:
+        return "Total Net Worth";
+      case HomeScreenWidgetStat.monthlySavings:
+        return "Monthly Net Savings";
+      case HomeScreenWidgetStat.budgetRemaining:
+        return "Budget Runway";
+      case HomeScreenWidgetStat.debtsSummary:
+        return "Debts & Loans";
+      case HomeScreenWidgetStat.forecastTrajectory:
+        return "Month Forecast";
+    }
+  }
+
+  void _showStatPicker(
+    BuildContext context,
+    WidgetRef ref,
+    HomeScreenWidgetStat currentStat,
+  ) {
+    final options = [
+      (HomeScreenWidgetStat.balanceAndTodaySpend, Icons.today_rounded, "Today's Spend", "Tracks daily expenditure alongside total balance", AppColors.expenseRed),
+      (HomeScreenWidgetStat.netWorth, Icons.account_balance_rounded, "Total Net Worth", "Combines wallet balances minus active debts", AppColors.primaryGreenLight),
+      (HomeScreenWidgetStat.monthlySavings, Icons.savings_rounded, "Monthly Net Savings", "Income minus expenses for current salary cycle", AppColors.infoBlue),
+      (HomeScreenWidgetStat.budgetRemaining, Icons.pie_chart_rounded, "Budget Runway", "Total remaining unspent monthly budget", Colors.amber),
+      (HomeScreenWidgetStat.debtsSummary, Icons.handshake_rounded, "Debts & Loans", "Outstanding borrowed and lent amounts", Colors.purpleAccent),
+      (HomeScreenWidgetStat.forecastTrajectory, Icons.trending_up_rounded, "Month Forecast", "Predictive end-of-month spend trajectory", Colors.orangeAccent),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Featured Widget Metric',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...options.map((opt) {
+                final isSelected = opt.$1 == currentStat;
+                return ListTile(
+                  leading: Icon(opt.$2, color: opt.$5),
+                  title: Text(opt.$3, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(opt.$4),
+                  trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryGreenLight) : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).setHomeScreenWidgetStat(opt.$1);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
             ],
           ),
