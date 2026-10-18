@@ -143,11 +143,45 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         } else {
           _amountStr = key;
         }
-      } else {
-        if (key == '.' && _amountStr.contains('.')) return;
-        if (_amountStr.length >= 10) return;
-        _amountStr += key;
+        return;
       }
+
+      final lastOpIndex = _amountStr.lastIndexOf(RegExp(r'[+-]'));
+      final activeSegment = lastOpIndex != -1 ? _amountStr.substring(lastOpIndex + 1) : _amountStr;
+
+      if (key == '+' || key == '-') {
+        if (_amountStr.endsWith('+') || _amountStr.endsWith('-') || _amountStr.endsWith('.')) {
+          return;
+        }
+        _amountStr += key;
+        return;
+      }
+
+      if (key == '.') {
+        if (activeSegment.contains('.') || activeSegment.isEmpty) return;
+        _amountStr += '.';
+        return;
+      }
+
+      if (key == '00') {
+        if (activeSegment.isEmpty || activeSegment == '0') return;
+        if (activeSegment.contains('.')) {
+          final decPart = activeSegment.split('.')[1];
+          if (decPart.isNotEmpty) return;
+        }
+        if (_amountStr.length + 2 > 12) return;
+        _amountStr += '00';
+        return;
+      }
+
+      // Numeric digit
+      if (activeSegment.contains('.')) {
+        final decPart = activeSegment.split('.')[1];
+        if (decPart.length >= 2) return;
+      }
+
+      if (_amountStr.length >= 12) return;
+      _amountStr += key;
     });
   }
 
@@ -163,19 +197,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   double _parseAmount() {
     try {
+      double result = 0.0;
       if (_amountStr.contains('+')) {
         final parts = _amountStr.split('+');
-        return parts.fold(0.0, (sum, p) => sum + (double.tryParse(p.trim()) ?? 0));
-      }
-      if (_amountStr.contains('-')) {
+        result = parts.fold(0.0, (sum, p) => sum + (double.tryParse(p.trim()) ?? 0));
+      } else if (_amountStr.contains('-')) {
         final parts = _amountStr.split('-');
         if (parts.length >= 2) {
           final first = double.tryParse(parts[0].trim()) ?? 0;
           final rest = parts.sublist(1).fold(0.0, (sum, p) => sum + (double.tryParse(p.trim()) ?? 0));
-          return first - rest;
+          result = first - rest;
         }
+      } else {
+        result = double.tryParse(_amountStr) ?? 0.0;
       }
-      return double.tryParse(_amountStr) ?? 0.0;
+      final rounded = (result * 100).round() / 100.0;
+      return rounded < 0.0 ? 0.0 : rounded;
     } catch (_) {
       return 0.0;
     }

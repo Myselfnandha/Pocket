@@ -47,7 +47,7 @@ object SmsParser {
     )
 
     private val ACCOUNT_LAST4_PATTERN = Pattern.compile(
-        "(?:a/c|ac|account|card)\\s*(?:no\\.?)?\\s*(?:ending)?\\s*[*xX-]*([0-9]{3,4})\\b",
+        "(?:a/c|ac|account|card)\\s*(?:no\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[*xX.-]*([0-9]{3,4})\\b",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -112,29 +112,30 @@ object SmsParser {
         val hasDebitKeyword = lower.contains("debited") ||
                 lower.contains("spent") ||
                 lower.contains("paid") ||
-                lower.contains("sent rs") ||
-                lower.contains("sent inr") ||
+                Regex("""\bsent\b""").containsMatchIn(lower) ||
                 lower.contains("withdrawn") ||
                 lower.contains("purchase") ||
                 lower.contains("payment of") ||
                 lower.contains("transferred to")
-        val hasCurrency = lower.contains("₹") || lower.contains("rs.") || lower.contains("rs ") || lower.contains("inr") || lower.contains("$")
-        return hasDebitKeyword && hasCurrency && !lower.contains("request") && !lower.contains("failed")
+        val hasCurrency = Regex("""(?i)(?:₹|rs\.?|inr|usd|\$)""").containsMatchIn(lower)
+        val isOtp = lower.contains("otp") || lower.contains("verification code") || lower.contains("one time password")
+        val isFailed = lower.contains("request") || lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
+        return hasDebitKeyword && hasCurrency && !isOtp && !isFailed
     }
 
     private fun isCreditText(lower: String): Boolean {
         val hasCreditKeyword = lower.contains("credited") ||
-                lower.contains("received rs") ||
-                lower.contains("received inr") ||
-                lower.contains("received ₹") ||
+                Regex("""\breceived\b""").containsMatchIn(lower) ||
                 lower.contains("deposited") ||
                 lower.contains("salary") ||
                 lower.contains("refund") ||
                 lower.contains("cashback") ||
                 lower.contains("added to your account") ||
                 lower.contains("payment received")
-        val hasCurrency = lower.contains("₹") || lower.contains("rs.") || lower.contains("rs ") || lower.contains("inr") || lower.contains("$")
-        return hasCreditKeyword && hasCurrency && !lower.contains("debited") && !lower.contains("request")
+        val hasCurrency = Regex("""(?i)(?:₹|rs\.?|inr|usd|\$)""").containsMatchIn(lower)
+        val isOtp = lower.contains("otp") || lower.contains("verification code") || lower.contains("one time password")
+        val isFailed = lower.contains("request") || lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
+        return hasCreditKeyword && hasCurrency && !lower.contains("debited") && !isOtp && !isFailed
     }
 
     fun extractAmount(text: String): Double? {

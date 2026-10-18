@@ -68,10 +68,12 @@ final currentMonthCategorySpendingProvider = Provider<Map<String, double>>((ref)
   final Map<String, double> spending = {};
 
   for (final tx in txs) {
+    if (tx.categoryId == 'cat_transfer') continue;
     if (tx.type == TransactionType.expense &&
         tx.date.year == now.year &&
         tx.date.month == now.month) {
-      spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) + tx.amount;
+      final current = spending[tx.categoryId] ?? 0.0;
+      spending[tx.categoryId] = ((current + tx.amount) * 100).round() / 100.0;
     }
   }
 
@@ -86,10 +88,12 @@ final lastMonthCategorySpendingProvider = Provider<Map<String, double>>((ref) {
   final Map<String, double> spending = {};
 
   for (final tx in txs) {
+    if (tx.categoryId == 'cat_transfer') continue;
     if (tx.type == TransactionType.expense &&
         tx.date.year == lastMonth.year &&
         tx.date.month == lastMonth.month) {
-      spending[tx.categoryId] = (spending[tx.categoryId] ?? 0.0) + tx.amount;
+      final current = spending[tx.categoryId] ?? 0.0;
+      spending[tx.categoryId] = ((current + tx.amount) * 100).round() / 100.0;
     }
   }
 

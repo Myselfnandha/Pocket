@@ -11,7 +11,9 @@ import 'recurring_rules_provider.dart';
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
-  return wallets.fold(0.0, (sum, w) => sum + w.currentBalance);
+  final total = wallets.fold(0.0, (sum, w) => sum + w.currentBalance);
+  final rounded = (total * 100).round() / 100.0;
+  return rounded.abs() < 0.0001 ? 0.0 : rounded;
 });
 
 class MonthlyStats {
@@ -39,6 +41,7 @@ final monthlyStatsProvider = Provider<MonthlyStats>((ref) {
   double todayExp = 0;
 
   for (final tx in txs) {
+    if (tx.categoryId == 'cat_transfer') continue;
     if (tx.date.year == now.year && tx.date.month == now.month) {
       if (tx.type == TransactionType.income) {
         income += tx.amount;
@@ -51,14 +54,18 @@ final monthlyStatsProvider = Provider<MonthlyStats>((ref) {
     }
   }
 
-  final net = income - expense;
+  income = (income * 100).round() / 100.0;
+  expense = (expense * 100).round() / 100.0;
+  todayExp = (todayExp * 100).round() / 100.0;
+
+  final net = ((income - expense) * 100).round() / 100.0;
   final rate = income > 0 ? (net / income * 100).clamp(0.0, 100.0) : 0.0;
 
   return MonthlyStats(
     totalIncome: income,
     totalExpense: expense,
-    netSavings: net,
-    savingsRate: rate,
+    netSavings: net.abs() < 0.0001 ? 0.0 : net,
+    savingsRate: (rate * 10).round() / 10.0,
     todayExpense: todayExp,
   );
 });
@@ -149,6 +156,7 @@ final spendingComparisonProvider = Provider<MonthOverMonthSpendingComparison>((r
   final Map<String, double> lastMonthCats = {};
 
   for (final tx in txs) {
+    if (tx.categoryId == 'cat_transfer') continue;
     if (tx.type == TransactionType.expense) {
       if (tx.date.year == now.year && tx.date.month == now.month) {
         thisMonthTotal += tx.amount;

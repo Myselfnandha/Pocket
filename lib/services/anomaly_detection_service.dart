@@ -41,7 +41,7 @@ class AnomalyDetectionService {
     required List<CategoryModel> categories,
     String currencySymbol = '₹',
   }) {
-    if (amount <= 0) return AnomalyResult.normal();
+    if (amount <= 0 || categoryId == 'cat_transfer') return AnomalyResult.normal();
 
     // Filter past expenses for this category
     final categoryTxs = pastTransactions

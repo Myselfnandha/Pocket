@@ -90,9 +90,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final canGoBack = _currentMonth.isAfter(DateTime(minDate.year, minDate.month));
     final canGoForward = _currentMonth.isBefore(DateTime(maxDate.year, maxDate.month));
 
-    // Filter transactions for this month
+    // Filter transactions for this month (excluding inter-wallet transfers)
     final monthTxs = allTxs.where((tx) {
-      return tx.date.year == _currentMonth.year &&
+      return tx.categoryId != 'cat_transfer' &&
+          tx.date.year == _currentMonth.year &&
           tx.date.month == _currentMonth.month;
     }).toList();
 
@@ -106,7 +107,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
       }
     }
 
-    final netSavings = totalIncome - totalExpense;
+    totalIncome = (totalIncome * 100).round() / 100.0;
+    totalExpense = (totalExpense * 100).round() / 100.0;
+    final netSavings = ((totalIncome - totalExpense) * 100).round() / 100.0;
     final savingsRate = totalIncome > 0 ? (netSavings / totalIncome * 100).clamp(0.0, 100.0) : 0.0;
     final monthExpenses = monthTxs.where((tx) => tx.type == TransactionType.expense).toList();
     final currencyFormat = NumberFormat('#,##0.00');

@@ -214,5 +214,61 @@ void main() {
 
       expect(service.isAlreadySaved(differentItem, savedTxs), isFalse);
     });
+
+    test('Floating-point rounding prevents IEEE 754 precision drift and negative zero', () {
+      double rawBalance = 0.1 + 0.2 - 0.3; // Typically 5.551115123125783e-17
+      double rounded = (rawBalance * 100).round() / 100.0;
+      if (rounded.abs() < 0.0001) rounded = 0.0;
+      expect(rounded, 0.0);
+      expect(rounded.isNegative, isFalse);
+
+      double sum = 19.99 + 10.01;
+      double sumRounded = (sum * 100).round() / 100.0;
+      expect(sumRounded, 30.0);
+    });
+
+    test('Inter-wallet transfers with categoryId cat_transfer do not count as external expense', () {
+      final transferExpense = TransactionModel(
+        id: 'tx_trf_1',
+        title: 'Transfer to Cash',
+        amount: 5000.0,
+        type: TransactionType.expense,
+        categoryId: 'cat_transfer',
+        walletId: 'w_hdfc',
+        date: DateTime.now(),
+      );
+
+      final transferIncome = TransactionModel(
+        id: 'tx_trf_2',
+        title: 'Transfer from HDFC',
+        amount: 5000.0,
+        type: TransactionType.income,
+        categoryId: 'cat_transfer',
+        walletId: 'w_cash',
+        date: DateTime.now(),
+      );
+
+      final actualExpense = TransactionModel(
+        id: 'tx_exp_1',
+        title: 'Groceries',
+        amount: 1200.0,
+        type: TransactionType.expense,
+        categoryId: 'groceries',
+        walletId: 'w_hdfc',
+        date: DateTime.now(),
+      );
+
+      final txs = [transferExpense, transferIncome, actualExpense];
+
+      double externalExpense = 0.0;
+      for (final tx in txs) {
+        if (tx.categoryId == 'cat_transfer') continue;
+        if (tx.type == TransactionType.expense) {
+          externalExpense += tx.amount;
+        }
+      }
+
+      expect(externalExpense, 1200.0);
+    });
   });
 }

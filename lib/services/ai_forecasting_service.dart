@@ -71,6 +71,7 @@ class AiForecastingService {
     double totalSpentThisMonth = 0.0;
 
     for (final tx in transactions) {
+      if (tx.categoryId == 'cat_transfer') continue;
       if (tx.date.year == year &&
           tx.date.month == month &&
           tx.type == TransactionType.expense) {

@@ -63,6 +63,8 @@ final walletsWithBalancesProvider = Provider<List<WalletModel>>((ref) {
         }
       }
     }
-    return wallet.copyWith(currentBalance: balance);
+    double rounded = (balance * 100).round() / 100.0;
+    if (rounded.abs() < 0.0001) rounded = 0.0;
+    return wallet.copyWith(currentBalance: rounded);
   }).toList();
 });

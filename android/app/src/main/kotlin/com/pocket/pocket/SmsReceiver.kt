@@ -17,11 +17,19 @@ class SmsReceiver : BroadcastReceiver() {
                 messagesList.add(Pair(sender, body))
             } else {
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-                for (sms in messages) {
-                    val sender = sms.displayOriginatingAddress ?: ""
-                    val body = sms.displayMessageBody ?: ""
-                    messagesList.add(Pair(sender, body))
-                    timestamp = sms.timestampMillis
+                if (!messages.isNullOrEmpty()) {
+                    val senderMap = mutableMapOf<String, StringBuilder>()
+                    var lastTimestamp = System.currentTimeMillis()
+                    for (sms in messages) {
+                        val sender = sms.displayOriginatingAddress ?: ""
+                        val body = sms.displayMessageBody ?: ""
+                        senderMap.getOrPut(sender) { StringBuilder() }.append(body)
+                        lastTimestamp = sms.timestampMillis
+                    }
+                    timestamp = lastTimestamp
+                    for ((sender, bodyBuilder) in senderMap) {
+                        messagesList.add(Pair(sender, bodyBuilder.toString()))
+                    }
                 }
             }
 
