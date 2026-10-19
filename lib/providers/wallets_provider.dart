@@ -28,6 +28,14 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
     await _storage.saveWallets(state);
   }
 
+  Future<void> setDefaultWallet(String id) async {
+    state = [
+      for (final w in state)
+        w.copyWith(isDefault: w.id == id),
+    ];
+    await _storage.saveWallets(state);
+  }
+
   Future<void> refreshFromDisk() async {
     await _storage.reload();
     state = _storage.getWallets();

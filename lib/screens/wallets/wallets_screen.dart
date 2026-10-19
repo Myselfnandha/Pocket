@@ -3453,17 +3453,15 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                           return;
                         }
                         final note = noteCtrl.text.trim();
-                        final tx = TransactionModel(
-                          id: const Uuid().v4(),
+                        await ref.read(transactionsProvider.notifier).addTransaction(
                           title: note.isNotEmpty ? note : 'Top Up ${wallet.displayName}',
                           amount: val,
-                          date: DateTime.now(),
                           type: TransactionType.income,
                           categoryId: 'cat_income_salary',
                           walletId: wallet.id,
+                          date: DateTime.now(),
                           note: note.isNotEmpty ? note : 'Direct account top up',
                         );
-                        await ref.read(transactionsProvider.notifier).addTransaction(tx);
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           TopCapsuleToast.show(
