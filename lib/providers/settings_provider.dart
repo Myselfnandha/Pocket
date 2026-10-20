@@ -104,6 +104,26 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(homeScreenWidgetStat: stat));
   }
 
+  Future<void> setWidgetTheme(String theme) async {
+    await updateSettings(state.copyWith(widgetTheme: theme));
+  }
+
+  Future<void> setWidgetPeekDurationSeconds(int seconds) async {
+    await updateSettings(state.copyWith(widgetPeekDurationSeconds: seconds));
+  }
+
+  Future<void> setWidgetActionButtons({
+    bool? showExpense,
+    bool? showIncome,
+    bool? showRefresh,
+  }) async {
+    await updateSettings(state.copyWith(
+      widgetShowExpenseBtn: showExpense ?? state.widgetShowExpenseBtn,
+      widgetShowIncomeBtn: showIncome ?? state.widgetShowIncomeBtn,
+      widgetShowRefreshBtn: showRefresh ?? state.widgetShowRefreshBtn,
+    ));
+  }
+
   Future<void> setAutoSaveSms(bool value) async {
     await updateSettings(state.copyWith(autoSaveSms: value));
   }

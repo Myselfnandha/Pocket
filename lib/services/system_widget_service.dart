@@ -25,6 +25,11 @@ class SystemWidgetService {
     bool privacyMode = false,
     String? selectedWalletId,
     String secondaryAction = 'scan',
+    String widgetTheme = 'glassFrost',
+    int peekDurationSeconds = 2,
+    bool showExpenseBtn = true,
+    bool showIncomeBtn = true,
+    bool showRefreshBtn = true,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
@@ -128,6 +133,14 @@ class SystemWidgetService {
       // 5. Save to Android SharedPreferences via HomeWidget
       await HomeWidget.saveWidgetData<String>('total_balance', formattedTotal);
       await HomeWidget.saveWidgetData<String>('card_balance', formattedCard);
+      await HomeWidget.saveWidgetData<String>('raw_total_balance', formattedTotalRaw);
+      await HomeWidget.saveWidgetData<String>('raw_card_balance', formattedCardRaw);
+      await HomeWidget.saveWidgetData<bool>('widget_privacy_mode', privacyMode);
+      await HomeWidget.saveWidgetData<int>('widget_peek_duration_seconds', peekDurationSeconds);
+      await HomeWidget.saveWidgetData<String>('widget_theme', widgetTheme);
+      await HomeWidget.saveWidgetData<bool>('widget_show_expense_btn', showExpenseBtn);
+      await HomeWidget.saveWidgetData<bool>('widget_show_income_btn', showIncomeBtn);
+      await HomeWidget.saveWidgetData<bool>('widget_show_refresh_btn', showRefreshBtn);
       await HomeWidget.saveWidgetData<String>('card_wallet_name', walletLabel);
       await HomeWidget.saveWidgetData<String>('today_expense', formattedToday);
       await HomeWidget.saveWidgetData<String>('featured_stat_label', featuredStatLabel);
@@ -135,6 +148,7 @@ class SystemWidgetService {
       await HomeWidget.saveWidgetData<String>('budget_status_tag', budgetTag);
       await HomeWidget.saveWidgetData<String>('secondary_action_type', secondaryAction);
       await HomeWidget.saveWidgetData<String>('runway_safe_daily', runwaySafeFormatted);
+      await HomeWidget.saveWidgetData<String>('raw_runway_safe_daily', '$currencySymbol${currencyFormat.format(safeDaily)}');
       await HomeWidget.saveWidgetData<String>('runway_days_left', '${daysLeft}d left');
       await HomeWidget.saveWidgetData<String>('runway_status', statusTag);
       await HomeWidget.saveWidgetData<String>('runway_budget_left', budgetLeftDesc);

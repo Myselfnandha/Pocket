@@ -45,21 +45,36 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
 
       // Auto-commit shared screenshots and auto-save items directly to database
       final settings = _ref.read(settingsProvider);
-      final autoCommitItems = merged.where((item) {
-        return (item.detectionSource == 'screenshot' && settings.autoSaveScreenshots) ||
-            (item.detectionSource == 'sms' && settings.autoSaveSms) ||
-            (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true'));
-      }).toList();
+      final List<MapEntry<PendingTransactionModel, String?>> autoCommitItems = [];
 
-      for (final item in autoCommitItems) {
-        await approve(item.id);
+      for (final item in merged) {
+        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
+        if (isSms && (settings.autoSaveSms || (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')))) {
+          // Strict user constraint: Only auto-log if explicit matching account digits or bank name found;
+          // otherwise keep safely in Pending Review queue.
+          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          if (matchedWalletId != null) {
+            autoCommitItems.add(MapEntry(item, matchedWalletId));
+          }
+        } else if (item.detectionSource == 'screenshot' && settings.autoSaveScreenshots) {
+          autoCommitItems.add(MapEntry(item, item.suggestedWalletId));
+        }
+      }
+
+      for (final entry in autoCommitItems) {
+        final item = entry.key;
+        final targetWalletId = entry.value;
+        await approve(item.id, walletId: targetWalletId);
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
         final title = isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged';
+        final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
+        final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
+
         await _ref.read(notificationsProvider.notifier).addNotification(
           AppNotificationModel(
             id: const Uuid().v4(),
             title: title,
-            message: '${item.merchant}: ₹${item.amount.toStringAsFixed(2)} was automatically logged.',
+            message: '${item.merchant}: ${settings.currencySymbol}${item.amount.toStringAsFixed(2)} was automatically logged$walletLabel.',
             type: NotificationType.system,
             createdAt: DateTime.now(),
             actionData: {
@@ -67,12 +82,12 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
               'merchant': item.merchant,
               'refId': item.refId,
               'imagePath': item.imagePath,
+              'walletId': targetWalletId,
             },
           ),
         );
 
         // Heads-up instant Android notification
-        final matchedWallet = wallets.where((w) => w.id == item.suggestedWalletId).firstOrNull;
         NotificationService().showTransactionLoggedNotification(
           title: item.merchant,
           amount: item.amount,

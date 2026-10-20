@@ -203,6 +203,11 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       privacyMode: settings.widgetPrivacyMode,
       selectedWalletId: settings.widgetSelectedWalletId,
       secondaryAction: settings.widgetSecondaryAction,
+      widgetTheme: settings.widgetTheme,
+      peekDurationSeconds: settings.widgetPeekDurationSeconds,
+      showExpenseBtn: settings.widgetShowExpenseBtn,
+      showIncomeBtn: settings.widgetShowIncomeBtn,
+      showRefreshBtn: settings.widgetShowRefreshBtn,
     );
   }
 

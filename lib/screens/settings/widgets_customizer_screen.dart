@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/settings_model.dart';
 import '../../models/wallet_model.dart';
@@ -16,6 +18,34 @@ class WidgetsCustomizerScreen extends ConsumerStatefulWidget {
 
 class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScreen> {
   int _selectedPreviewTab = 0; // 0: Card (4x2), 1: Safe-to-Spend (2x2), 2: Quick Bar (4x1)
+  bool _isPeeking = false;
+  Timer? _peekTimer;
+
+  void _triggerPreviewPeek() {
+    final settings = ref.read(settingsProvider);
+    if (!settings.widgetPrivacyMode) return;
+    _peekTimer?.cancel();
+    HapticFeedback.mediumImpact();
+    setState(() => _isPeeking = true);
+    final durationSec = settings.widgetPeekDurationSeconds;
+    TopCapsuleToast.show(
+      context,
+      message: '👁️ Balance revealed for ${durationSec}s',
+      accentColor: AppColors.primaryGreenLight,
+      icon: const Icon(Icons.visibility_rounded, color: Colors.black, size: 18),
+    );
+    _peekTimer = Timer(Duration(milliseconds: (durationSec * 1000).toInt()), () {
+      if (mounted) {
+        setState(() => _isPeeking = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _peekTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _pinWidget(String widgetType, String widgetName) async {
     final success = await SystemWidgetService.requestPinWidget(widgetType);
@@ -58,17 +88,18 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
       }
     }
 
-    final displayBalanceStr = settings.widgetPrivacyMode
+    final showHidden = settings.widgetPrivacyMode && !_isPeeking;
+    final displayBalanceStr = showHidden
         ? '••••••'
         : settings.formatCurrency(activeCardBalance);
-    final displayTotalStr = settings.widgetPrivacyMode
+    final displayTotalStr = showHidden
         ? '••••••'
         : settings.formatCurrency(totalBalance);
 
     // Calculate safe daily spend
     final daysRemaining = forecast.daysRemainingInMonth > 0 ? forecast.daysRemainingInMonth : 1;
     final safeDailySpend = (budgetRemaining > 0 ? budgetRemaining : 0.0) / daysRemaining;
-    final displaySafeDailyStr = settings.widgetPrivacyMode
+    final displaySafeDailyStr = showHidden
         ? '••••••'
         : settings.formatCurrency(safeDailySpend);
 
@@ -163,6 +194,10 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                     todaySpentStr: settings.formatCurrency(monthlyStats.todayExpense),
                     secondaryAction: settings.widgetSecondaryAction,
                     isOverBudget: budgetRemaining <= 0,
+                    widgetTheme: settings.widgetTheme,
+                    isPrivacyActive: settings.widgetPrivacyMode,
+                    isPeeking: _isPeeking,
+                    onBalanceTap: _triggerPreviewPeek,
                   )
                 else if (_selectedPreviewTab == 1)
                   _buildRunwayWidgetPreview(
@@ -171,12 +206,60 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                     daysLeft: daysRemaining,
                     budgetRemainingStr: settings.formatCurrency(budgetRemaining),
                     isOverBudget: budgetRemaining <= 0,
+                    isPrivacyActive: settings.widgetPrivacyMode,
+                    isPeeking: _isPeeking,
+                    onBalanceTap: _triggerPreviewPeek,
                   )
                 else
                   _buildBarWidgetPreview(
                     isDark: isDark,
                     totalBalanceStr: displayTotalStr,
+                    isPrivacyActive: settings.widgetPrivacyMode,
+                    isPeeking: _isPeeking,
+                    onBalanceTap: _triggerPreviewPeek,
                   ),
+
+                if (settings.widgetPrivacyMode) ...[
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: _triggerPreviewPeek,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _isPeeking
+                            ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                            : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isPeeking
+                              ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isPeeking ? Icons.visibility_rounded : Icons.touch_app_rounded,
+                            size: 14,
+                            color: _isPeeking ? AppColors.primaryGreenLight : (isDark ? Colors.white60 : Colors.black54),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isPeeking
+                                ? 'Peeking real balance (${settings.widgetPeekDurationSeconds}s timer)'
+                                : 'Tap masked dots (••••••) above to test peek reveal',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: _isPeeking ? FontWeight.w700 : FontWeight.w500,
+                              color: _isPeeking ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 
@@ -356,6 +439,87 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _showStatPicker(context, ref, settings.homeScreenWidgetStat),
                 ),
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                // Widget Theme Selector
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.palette_rounded, size: 20),
+                  ),
+                  title: const Text(
+                    'Widget Visual Theme',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    _getThemeTitle(settings.widgetTheme),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showWidgetThemePicker(context, ref, settings.widgetTheme),
+                ),
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                // Balance Peek Duration
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.timer_outlined, size: 20),
+                  ),
+                  title: const Text(
+                    'Balance Peek Reveal Duration',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${settings.widgetPeekDurationSeconds}.0 Seconds timer before auto-masking',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showPeekDurationPicker(context, ref, settings.widgetPeekDurationSeconds),
+                ),
+                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                // Action Buttons Customizer
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.tune_rounded, size: 20),
+                  ),
+                  title: const Text(
+                    'Widget Action Buttons',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${settings.widgetShowExpenseBtn ? "Expense • " : ""}${settings.widgetShowIncomeBtn ? "Income • " : ""}${settings.widgetShowRefreshBtn ? "Refresh" : ""}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _showActionButtonsCustomizer(
+                    context,
+                    ref,
+                    settings.widgetShowExpenseBtn,
+                    settings.widgetShowIncomeBtn,
+                    settings.widgetShowRefreshBtn,
+                  ),
+                ),
               ],
             ),
           ),
@@ -468,14 +632,25 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
     required String todaySpentStr,
     required String secondaryAction,
     required bool isOverBudget,
+    String widgetTheme = 'glassFrost',
+    bool isPrivacyActive = false,
+    bool isPeeking = false,
+    VoidCallback? onBalanceTap,
   }) {
+    final bgColor = widgetTheme == 'oledBlack'
+        ? Colors.black
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF0F172A) : const Color(0xFF141417));
+    final borderColor = widgetTheme == 'oledBlack'
+        ? const Color(0xFF383838)
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF1E293B) : const Color(0xFF2A2A30));
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141417),
+        color: bgColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF2A2A30), width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,9 +711,9 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1E),
+              color: widgetTheme == 'oledBlack' ? const Color(0xFF111113) : const Color(0xFF1A1A1E),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF262626)),
+              border: Border.all(color: widgetTheme == 'oledBlack' ? Colors.white12 : const Color(0xFF262626)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,12 +727,28 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                   ),
                 ),
                 const SizedBox(height: 1),
-                Text(
-                  balanceStr,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                GestureDetector(
+                  onTap: onBalanceTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        balanceStr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (isPrivacyActive) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                          size: 15,
+                          color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -646,6 +837,9 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
     required int daysLeft,
     required String budgetRemainingStr,
     required bool isOverBudget,
+    bool isPrivacyActive = false,
+    bool isPeeking = false,
+    VoidCallback? onBalanceTap,
   }) {
     return Container(
       width: 220,
@@ -680,28 +874,39 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
             ],
           ),
           const SizedBox(height: 6),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                safeDailyStr,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
+          GestureDetector(
+            onTap: onBalanceTap,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  safeDailyStr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                '/ day',
-                style: TextStyle(
-                  color: Color(0xFF7A7A88),
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(width: 4),
+                const Text(
+                  '/ day',
+                  style: TextStyle(
+                    color: Color(0xFF7A7A88),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+                if (isPrivacyActive) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                    size: 15,
+                    color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -767,6 +972,9 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
   Widget _buildBarWidgetPreview({
     required bool isDark,
     required String totalBalanceStr,
+    bool isPrivacyActive = false,
+    bool isPeeking = false,
+    VoidCallback? onBalanceTap,
   }) {
     return Container(
       width: double.infinity,
@@ -797,27 +1005,43 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
             ),
           ),
           const SizedBox(width: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                totalBalanceStr,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+          GestureDetector(
+            onTap: onBalanceTap,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      totalBalanceStr,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (isPrivacyActive) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                        size: 13,
+                        color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              const Text(
-                'Pocket Balance',
-                style: TextStyle(
-                  color: Color(0xFF7A7A85),
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w600,
+                const Text(
+                  'Pocket Balance',
+                  style: TextStyle(
+                    color: Color(0xFF7A7A85),
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const Spacer(),
 
@@ -1044,6 +1268,198 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
               const SizedBox(height: 16),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  String _getThemeTitle(String theme) {
+    switch (theme) {
+      case 'oledBlack':
+        return 'OLED Pure Black';
+      case 'midnightNavy':
+        return 'Midnight Navy';
+      case 'glassFrost':
+      default:
+        return 'Glass Frost (Translucent)';
+    }
+  }
+
+  void _showWidgetThemePicker(
+    BuildContext context,
+    WidgetRef ref,
+    String currentTheme,
+  ) {
+    final themes = [
+      ('glassFrost', 'Glass Frost (Translucent)', 'Modern frosted dark glass with subtle border', Icons.blur_on_rounded, AppColors.primaryGreenLight),
+      ('oledBlack', 'OLED Pure Black', 'Deep pitch-black (#000000) for OLED battery efficiency', Icons.dark_mode_rounded, Colors.white70),
+      ('midnightNavy', 'Midnight Navy', 'Deep oceanic navy-slate palette with soft blue glow', Icons.nightlight_round, AppColors.infoBlue),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Widget Visual Theme',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...themes.map((t) {
+                final isSelected = t.$1 == currentTheme;
+                return ListTile(
+                  leading: Icon(t.$4, color: t.$5),
+                  title: Text(t.$2, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(t.$3),
+                  trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryGreenLight) : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).setWidgetTheme(t.$1);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPeekDurationPicker(
+    BuildContext context,
+    WidgetRef ref,
+    int currentDuration,
+  ) {
+    final durations = [
+      (1, '1.0 Second Quick Glance', 'Instant snappy reveal, rapid privacy re-masking'),
+      (2, '2.0 Seconds Standard', 'Recommended balanced reading window'),
+      (3, '3.0 Seconds Extended', 'Generous reading time for multi-digit balances'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Balance Peek Reveal Duration',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...durations.map((d) {
+                final isSelected = d.$1 == currentDuration;
+                return ListTile(
+                  leading: const Icon(Icons.timer_rounded, color: AppColors.primaryGreenLight),
+                  title: Text(d.$2, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(d.$3),
+                  trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryGreenLight) : null,
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).setWidgetPeekDurationSeconds(d.$1);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showActionButtonsCustomizer(
+    BuildContext context,
+    WidgetRef ref,
+    bool showExpense,
+    bool showIncome,
+    bool showRefresh,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final s = ref.watch(settingsProvider);
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Widget Action Buttons',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SwitchListTile(
+                    title: const Text('⚡ Quick Add (Primary Action)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Always available 1-tap instant floating HUD'),
+                    value: s.widgetShowExpenseBtn,
+                    activeThumbColor: AppColors.primaryGreenLight,
+                    onChanged: (val) {
+                      ref.read(settingsProvider.notifier).setWidgetActionButtons(showExpense: val);
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('🔄 Live Refresh Balance Button', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('1-tap desktop refresh of widget balances'),
+                    value: s.widgetShowRefreshBtn,
+                    activeThumbColor: AppColors.primaryGreenLight,
+                    onChanged: (val) {
+                      ref.read(settingsProvider.notifier).setWidgetActionButtons(showRefresh: val);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
         );
       },
     );

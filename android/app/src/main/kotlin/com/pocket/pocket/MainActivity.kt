@@ -367,6 +367,10 @@ class MainActivity : FlutterActivity() {
             pendingSmsResult = null
             
             val granted = grantResults.isNotEmpty() && grantResults.all { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
+            if (granted) {
+                val prefs = applicationContext.getSharedPreferences(PocketNotificationListener.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+                prefs.edit().putBoolean("auto_save_sms", true).apply()
+            }
             result.success(granted)
         }
     }

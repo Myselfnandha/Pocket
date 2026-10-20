@@ -67,6 +67,11 @@ class UserSettingsModel {
   final bool widgetPrivacyMode;
   final String? widgetSelectedWalletId;
   final String widgetSecondaryAction; // 'scan' or 'voice'
+  final String widgetTheme; // 'glassFrost', 'oledBlack', 'midnightNavy'
+  final int widgetPeekDurationSeconds; // 1, 2, 3
+  final bool widgetShowExpenseBtn;
+  final bool widgetShowIncomeBtn;
+  final bool widgetShowRefreshBtn;
 
   // SMS Auto-Read & Auto-Log Settings
   final bool autoSaveSms;
@@ -106,6 +111,11 @@ class UserSettingsModel {
     this.widgetPrivacyMode = false,
     this.widgetSelectedWalletId,
     this.widgetSecondaryAction = 'scan',
+    this.widgetTheme = 'glassFrost',
+    this.widgetPeekDurationSeconds = 2,
+    this.widgetShowExpenseBtn = true,
+    this.widgetShowIncomeBtn = true,
+    this.widgetShowRefreshBtn = true,
     this.autoSaveSms = false,
     this.autoReadSmsEnabled = true,
   });
@@ -166,6 +176,11 @@ class UserSettingsModel {
     String? widgetSelectedWalletId,
     bool clearWidgetSelectedWalletId = false,
     String? widgetSecondaryAction,
+    String? widgetTheme,
+    int? widgetPeekDurationSeconds,
+    bool? widgetShowExpenseBtn,
+    bool? widgetShowIncomeBtn,
+    bool? widgetShowRefreshBtn,
     bool? autoSaveSms,
     bool? autoReadSmsEnabled,
   }) {
@@ -205,6 +220,11 @@ class UserSettingsModel {
           ? null
           : (widgetSelectedWalletId ?? this.widgetSelectedWalletId),
       widgetSecondaryAction: widgetSecondaryAction ?? this.widgetSecondaryAction,
+      widgetTheme: widgetTheme ?? this.widgetTheme,
+      widgetPeekDurationSeconds: widgetPeekDurationSeconds ?? this.widgetPeekDurationSeconds,
+      widgetShowExpenseBtn: widgetShowExpenseBtn ?? this.widgetShowExpenseBtn,
+      widgetShowIncomeBtn: widgetShowIncomeBtn ?? this.widgetShowIncomeBtn,
+      widgetShowRefreshBtn: widgetShowRefreshBtn ?? this.widgetShowRefreshBtn,
       autoSaveSms: autoSaveSms ?? this.autoSaveSms,
       autoReadSmsEnabled: autoReadSmsEnabled ?? this.autoReadSmsEnabled,
     );
@@ -244,6 +264,11 @@ class UserSettingsModel {
         'widgetPrivacyMode': widgetPrivacyMode,
         'widgetSelectedWalletId': widgetSelectedWalletId,
         'widgetSecondaryAction': widgetSecondaryAction,
+        'widgetTheme': widgetTheme,
+        'widgetPeekDurationSeconds': widgetPeekDurationSeconds,
+        'widgetShowExpenseBtn': widgetShowExpenseBtn,
+        'widgetShowIncomeBtn': widgetShowIncomeBtn,
+        'widgetShowRefreshBtn': widgetShowRefreshBtn,
         'autoSaveSms': autoSaveSms,
         'autoReadSmsEnabled': autoReadSmsEnabled,
       };
@@ -284,6 +309,11 @@ class UserSettingsModel {
         widgetPrivacyMode: json['widgetPrivacyMode'] as bool? ?? false,
         widgetSelectedWalletId: json['widgetSelectedWalletId'] as String?,
         widgetSecondaryAction: json['widgetSecondaryAction'] as String? ?? 'scan',
+        widgetTheme: json['widgetTheme'] as String? ?? 'glassFrost',
+        widgetPeekDurationSeconds: json['widgetPeekDurationSeconds'] as int? ?? 2,
+        widgetShowExpenseBtn: json['widgetShowExpenseBtn'] as bool? ?? true,
+        widgetShowIncomeBtn: json['widgetShowIncomeBtn'] as bool? ?? true,
+        widgetShowRefreshBtn: json['widgetShowRefreshBtn'] as bool? ?? true,
         autoSaveSms: json['autoSaveSms'] as bool? ?? false,
         autoReadSmsEnabled: json['autoReadSmsEnabled'] as bool? ?? true,
       );

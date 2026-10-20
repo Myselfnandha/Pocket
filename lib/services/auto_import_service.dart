@@ -49,11 +49,20 @@ class AutoImportService {
     return const AutoImportPermissions();
   }
 
-  /// Requests runtime SMS permissions
+  /// Requests runtime SMS permissions and automatically enables zero-confirmation auto-save for future transactions.
   Future<bool> requestSmsPermission() async {
     try {
       final res = await _channel.invokeMethod<bool>('requestSmsPermission');
-      return res ?? false;
+      final granted = res ?? false;
+      if (granted) {
+        // Automatically enable future SMS auto-saving without manual confirmation prompt
+        await setAutoSaveSmsPreference(true);
+        final currentSettings = _storage.getSettings();
+        if (!currentSettings.autoSaveSms) {
+          await _storage.saveSettings(currentSettings.copyWith(autoSaveSms: true));
+        }
+      }
+      return granted;
     } catch (_) {
       return false;
     }
@@ -441,5 +450,47 @@ class AutoImportService {
     );
 
     return nonCash.id;
+  }
+
+  /// Explicitly matches an incoming transaction against user accounts by last-4 account digits or bank name.
+  /// Returns null if no explicit matching account can be safely identified.
+  String? findExplicitMatchingWallet(PendingTransactionModel item, List<WalletModel> wallets) {
+    if (wallets.isEmpty) return null;
+
+    // 1. Direct match by counterparty account last 4 digits
+    if (item.counterpartyLast4 != null && item.counterpartyLast4!.isNotEmpty) {
+      for (final w in wallets) {
+        if (w.accountNumber != null && w.accountNumber!.contains(item.counterpartyLast4!)) {
+          return w.id;
+        }
+      }
+    }
+
+    final text = '${item.appSource} ${item.rawPayload ?? ''} ${item.senderName ?? ''}'.toLowerCase();
+
+    // 2. Match by account number last 4 digits in raw message text
+    for (final w in wallets) {
+      if (w.accountNumber != null && w.accountNumber!.trim().isNotEmpty) {
+        final cleanAcct = w.accountNumber!.replaceAll(RegExp(r'\D'), '');
+        if (cleanAcct.length >= 4) {
+          final last4 = cleanAcct.substring(cleanAcct.length - 4);
+          if (text.contains(last4)) {
+            return w.id;
+          }
+        }
+      }
+    }
+
+    // 3. Match by bank name keywords (e.g. HDFC, SBI, ICICI, Axis, Kotak, Chase, Amex)
+    for (final w in wallets) {
+      final name = w.name.toLowerCase().trim();
+      if (name.isNotEmpty && name != 'cash' && name != 'wallet' && name != 'main account') {
+        if (text.contains(name)) {
+          return w.id;
+        }
+      }
+    }
+
+    return null;
   }
 }
