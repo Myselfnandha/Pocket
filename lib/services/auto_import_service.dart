@@ -466,7 +466,7 @@ class AutoImportService {
       }
     }
 
-    final text = '${item.appSource} ${item.rawPayload ?? ''} ${item.senderName ?? ''}'.toLowerCase();
+    final text = '${item.appSource} ${item.rawPayload ?? ''} ${item.merchant}'.toLowerCase();
 
     // 2. Match by account number last 4 digits in raw message text
     for (final w in wallets) {
