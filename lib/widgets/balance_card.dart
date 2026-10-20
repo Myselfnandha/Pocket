@@ -330,7 +330,9 @@ class BalanceCard extends ConsumerWidget {
                 Expanded(
                   child: _CompactMetricChip(
                     label: 'Income',
-                    amount: '+${settings.formatCompact(monthlyStats.totalIncome)}',
+                    amount: monthlyStats.totalIncome <= 0
+                        ? settings.formatCompact(0.0)
+                        : '+${settings.formatCompact(monthlyStats.totalIncome)}',
                     icon: Icons.arrow_downward_rounded,
                     accentColor: AppColors.incomeGreen,
                     isDark: isDark,
@@ -340,7 +342,9 @@ class BalanceCard extends ConsumerWidget {
                 Expanded(
                   child: _CompactMetricChip(
                     label: 'Expense',
-                    amount: '-${settings.formatCompact(monthlyStats.totalExpense)}',
+                    amount: monthlyStats.totalExpense <= 0
+                        ? settings.formatCompact(0.0)
+                        : '-${settings.formatCompact(monthlyStats.totalExpense)}',
                     icon: Icons.arrow_upward_rounded,
                     accentColor: AppColors.expenseRed,
                     isDark: isDark,

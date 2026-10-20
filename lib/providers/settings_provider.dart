@@ -131,6 +131,33 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
   Future<void> setAutoReadSmsEnabled(bool value) async {
     await updateSettings(state.copyWith(autoReadSmsEnabled: value));
   }
+
+  Future<void> setHfSpaceConfig({
+    String? spaceUrl,
+    bool clearSpaceUrl = false,
+    String? apiKey,
+    bool clearApiKey = false,
+    bool? autoSyncEnabled,
+    int? lastSyncTimestamp,
+  }) async {
+    await updateSettings(state.copyWith(
+      hfSpaceUrl: clearSpaceUrl ? null : (spaceUrl ?? state.hfSpaceUrl),
+      clearHfSpaceUrl: clearSpaceUrl,
+      hfApiKey: clearApiKey ? null : (apiKey ?? state.hfApiKey),
+      clearHfApiKey: clearApiKey,
+      hfAutoSyncEnabled: autoSyncEnabled ?? state.hfAutoSyncEnabled,
+      hfLastSyncTimestamp: lastSyncTimestamp ?? state.hfLastSyncTimestamp,
+    ));
+  }
+
+  Future<void> dismissSubscriptionCandidate(String title) async {
+    final updated = List<String>.from(state.dismissedSubscriptionCandidates);
+    final clean = title.trim();
+    if (!updated.contains(clean)) {
+      updated.add(clean);
+      await updateSettings(state.copyWith(dismissedSubscriptionCandidates: updated));
+    }
+  }
 }
 
 final settingsProvider =

@@ -8,9 +8,11 @@ import 'package:uuid/uuid.dart';
 import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
 import '../../models/recurring_model.dart';
+import '../../models/debt_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
 import '../../services/receipt_service.dart';
+import '../../services/system_contact_service.dart';
 import '../../services/anomaly_detection_service.dart';
 import '../../services/learning_suggest_service.dart';
 import '../../theme/app_theme.dart';
@@ -59,6 +61,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   // Recurring options
   bool _isRecurring = false;
   RecurringFrequency _recurringFrequency = RecurringFrequency.monthly;
+
+  // Peer Debt options
+  bool _trackInDebtLedger = false;
+  String? _debtContactName;
+  String? _debtContactPhone;
 
   // Tags and Multi-Attachments
   final List<String> _tags = [];
@@ -309,6 +316,26 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       );
 
       await ref.read(recurringRulesProvider.notifier).addRule(newRule);
+    }
+
+    // 2.5 Save as Debt if toggled
+    if (_trackInDebtLedger) {
+      final debtType = _type == TransactionType.expense ? DebtType.lent : DebtType.borrowed;
+      final person = _debtContactName?.trim().isNotEmpty == true
+          ? _debtContactName!.trim()
+          : (title.isNotEmpty ? title : 'Contact');
+      final newDebt = DebtModel(
+        id: const Uuid().v4(),
+        personName: person,
+        phoneNumber: _debtContactPhone,
+        totalAmount: amount,
+        remainingAmount: amount,
+        type: debtType,
+        walletId: wId,
+        createdAt: _selectedDate,
+        notes: 'Linked to transaction: $title',
+      );
+      await ref.read(debtsProvider.notifier).addDebt(newDebt);
     }
 
     // 3. Trigger Budget threshold checks
@@ -1155,6 +1182,132 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                   }).toList(),
                                   onChanged: (f) {
                                     if (f != null) setState(() => _recurringFrequency = f);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 8. Track in Debt Ledger Toggle Box
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _trackInDebtLedger
+                              ? (_type == TransactionType.expense ? AppColors.incomeGreen : AppColors.infoBlue)
+                              : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                          width: _trackInDebtLedger ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.handshake_outlined,
+                                    size: 20,
+                                    color: _trackInDebtLedger
+                                        ? (_type == TransactionType.expense ? AppColors.incomeGreen : AppColors.infoBlue)
+                                        : AppColors.primaryGreenLight,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Track in Debt Ledger',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white : Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        _type == TransactionType.expense
+                                            ? 'Record as "You are owed" (Lent)'
+                                            : 'Record as "You owe" (Borrowed)',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: _trackInDebtLedger,
+                                activeThumbColor: _type == TransactionType.expense ? AppColors.incomeGreen : AppColors.infoBlue,
+                                onChanged: (val) {
+                                  _titleFocus.unfocus();
+                                  setState(() => _trackInDebtLedger = val);
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_trackInDebtLedger) ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF242424) : const Color(0xFFF2F2F2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline_rounded,
+                                          size: 16,
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            _debtContactName?.isNotEmpty == true
+                                                ? _debtContactName!
+                                                : (_titleController.text.trim().isNotEmpty
+                                                    ? _titleController.text.trim()
+                                                    : 'Contact Name'),
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFE4E4E4),
+                                    foregroundColor: isDark ? Colors.white : Colors.black87,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  icon: const Icon(Icons.contacts_rounded, size: 16),
+                                  label: const Text('Pick Contact', style: TextStyle(fontSize: 11)),
+                                  onPressed: () async {
+                                    final contact = await SystemContactService.pickContact();
+                                    if (contact != null) {
+                                      setState(() {
+                                        _debtContactName = contact.name;
+                                        _debtContactPhone = contact.phone;
+                                      });
+                                    }
                                   },
                                 ),
                               ],

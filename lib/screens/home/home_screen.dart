@@ -11,6 +11,7 @@ import '../../widgets/nlp_quick_add_modal.dart';
 import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
 import '../../widgets/pending_transactions_capsule.dart';
+import '../../widgets/subscription_candidate_card.dart';
 import '../../widgets/sms_inbox_scanner_sheet.dart';
 import '../../widgets/top_capsule_toast.dart';
 import '../../services/notification_service.dart';
@@ -274,6 +275,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
                     // Detected Payments Capsule
                     const PendingTransactionsCapsule(),
+
+                    // Subscription Auto-Detector Confirmation Banner
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final candidates = ref.watch(subscriptionCandidatesProvider);
+                        if (candidates.isEmpty) return const SizedBox.shrink();
+                        return SubscriptionCandidateCard(candidate: candidates.first);
+                      },
+                    ),
                     const SizedBox(height: 14),
 
                     // Section Header: Recent Transactions

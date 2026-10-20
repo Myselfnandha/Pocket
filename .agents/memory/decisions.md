@@ -36,3 +36,11 @@ This document records durable architectural decisions, system invariants, and in
 ### 8. Strict Financial Precision & Negative Zero Elimination
 - **Decision**: All transaction amounts and running balance accumulations must round via `(value * 100).round() / 100.0` with `.abs() < 0.0001 ? 0.0 : rounded` guards.
 - **Rationale**: Eliminates IEEE 754 floating-point drift and `-₹0.00` display artifacts.
+
+### 9. Explicit Account Matching Guard for Zero-Confirmation Auto-Save
+- **Decision**: SMS permissions grant automatically enables zero-confirmation direct auto-saving only when an incoming transaction matches an explicit account (by last 4 digits or recognized bank keyword). Unmatched transactions are retained in the Pending Transactions review queue.
+- **Rationale**: Prevents phantom transactions from being attributed to incorrect accounts while providing a frictionless experience for verified banking alerts.
+
+### 10. Home Screen Widget Privacy Peek & Live Customization Suite
+- **Decision**: Home screen widgets support tap-to-peek privacy reveals with haptic feedback, an auto-masking timer (`widgetPeekDurationSeconds`), customizable visual themes (`glassFrost`, `oledBlack`, `midnightNavy`), and configurable action buttons.
+- **Rationale**: Balances glanceable desktop convenience with public privacy protection without requiring the app to be opened.

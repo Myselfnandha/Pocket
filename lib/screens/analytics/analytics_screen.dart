@@ -837,7 +837,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '+${settings.formatCurrency(totalIncome)}',
+                    totalIncome <= 0
+                        ? settings.formatCurrency(0.0)
+                        : '+${settings.formatCurrency(totalIncome)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -900,7 +902,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '-${settings.formatCurrency(totalExpense)}',
+                    totalExpense <= 0
+                        ? settings.formatCurrency(0.0)
+                        : '-${settings.formatCurrency(totalExpense)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,

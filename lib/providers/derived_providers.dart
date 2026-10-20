@@ -10,6 +10,19 @@ import 'budgets_provider.dart';
 import 'recurring_rules_provider.dart';
 import 'settings_provider.dart';
 import '../utils/cycle_utils.dart';
+import '../services/subscription_detector_service.dart';
+
+final subscriptionCandidatesProvider = Provider<List<SubscriptionCandidate>>((ref) {
+  final txs = ref.watch(transactionsProvider);
+  final rules = ref.watch(recurringRulesProvider);
+  final settings = ref.watch(settingsProvider);
+
+  return SubscriptionDetectorService.detectCandidates(
+    transactions: txs,
+    existingRules: rules,
+    settings: settings,
+  );
+});
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);

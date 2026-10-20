@@ -77,6 +77,15 @@ class UserSettingsModel {
   final bool autoSaveSms;
   final bool autoReadSmsEnabled;
 
+  // Hugging Face Space Free Cloud Storage Hub
+  final String? hfSpaceUrl;
+  final String? hfApiKey;
+  final bool hfAutoSyncEnabled;
+  final int? hfLastSyncTimestamp;
+
+  // Subscription Detection Dismissals
+  final List<String> dismissedSubscriptionCandidates;
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
@@ -118,6 +127,11 @@ class UserSettingsModel {
     this.widgetShowRefreshBtn = true,
     this.autoSaveSms = false,
     this.autoReadSmsEnabled = true,
+    this.hfSpaceUrl,
+    this.hfApiKey,
+    this.hfAutoSyncEnabled = false,
+    this.hfLastSyncTimestamp,
+    this.dismissedSubscriptionCandidates = const [],
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -183,6 +197,13 @@ class UserSettingsModel {
     bool? widgetShowRefreshBtn,
     bool? autoSaveSms,
     bool? autoReadSmsEnabled,
+    String? hfSpaceUrl,
+    bool clearHfSpaceUrl = false,
+    String? hfApiKey,
+    bool clearHfApiKey = false,
+    bool? hfAutoSyncEnabled,
+    int? hfLastSyncTimestamp,
+    List<String>? dismissedSubscriptionCandidates,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -227,6 +248,11 @@ class UserSettingsModel {
       widgetShowRefreshBtn: widgetShowRefreshBtn ?? this.widgetShowRefreshBtn,
       autoSaveSms: autoSaveSms ?? this.autoSaveSms,
       autoReadSmsEnabled: autoReadSmsEnabled ?? this.autoReadSmsEnabled,
+      hfSpaceUrl: clearHfSpaceUrl ? null : (hfSpaceUrl ?? this.hfSpaceUrl),
+      hfApiKey: clearHfApiKey ? null : (hfApiKey ?? this.hfApiKey),
+      hfAutoSyncEnabled: hfAutoSyncEnabled ?? this.hfAutoSyncEnabled,
+      hfLastSyncTimestamp: hfLastSyncTimestamp ?? this.hfLastSyncTimestamp,
+      dismissedSubscriptionCandidates: dismissedSubscriptionCandidates ?? this.dismissedSubscriptionCandidates,
     );
   }
 
@@ -271,6 +297,11 @@ class UserSettingsModel {
         'widgetShowRefreshBtn': widgetShowRefreshBtn,
         'autoSaveSms': autoSaveSms,
         'autoReadSmsEnabled': autoReadSmsEnabled,
+        'hfSpaceUrl': hfSpaceUrl,
+        'hfApiKey': hfApiKey,
+        'hfAutoSyncEnabled': hfAutoSyncEnabled,
+        'hfLastSyncTimestamp': hfLastSyncTimestamp,
+        'dismissedSubscriptionCandidates': dismissedSubscriptionCandidates,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -316,5 +347,13 @@ class UserSettingsModel {
         widgetShowRefreshBtn: json['widgetShowRefreshBtn'] as bool? ?? true,
         autoSaveSms: json['autoSaveSms'] as bool? ?? false,
         autoReadSmsEnabled: json['autoReadSmsEnabled'] as bool? ?? true,
+        hfSpaceUrl: json['hfSpaceUrl'] as String?,
+        hfApiKey: json['hfApiKey'] as String?,
+        hfAutoSyncEnabled: json['hfAutoSyncEnabled'] as bool? ?? false,
+        hfLastSyncTimestamp: json['hfLastSyncTimestamp'] as int?,
+        dismissedSubscriptionCandidates: (json['dismissedSubscriptionCandidates'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
       );
 }

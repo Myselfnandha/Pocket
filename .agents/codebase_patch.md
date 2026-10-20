@@ -1,0 +1,316 @@
+# Codebase Patches: Pocket
+
+## 2026-10-17 22:36:53 (238 files changed)
+- `.github/workflows/build_apk.yml` — GitHub Actions workflow
+- `.gitignore` — Miscellaneous .class (42 lines)
+- `.metadata` — This file tracks properties of this Flutter project. Used by Flutter tool to assess cap... (40 lines)
+- `LICENSE` — Text file: 17 lines
+- `README.md` — 💳 Pocket — Next-Gen Personal Finance & Wealth Matrix (209 lines)
+- `analysis_options.yaml` — YAML config: include, analyzer, linter
+- `android/.gitignore` — Remember to never publicly share your keystore. (13 lines)
+- `android/app/build.gradle.kts` — KTS file: 66 lines
+- `android/app/src/debug/AndroidManifest.xml` — > (7 lines)
+- `android/app/src/main/AndroidManifest.xml` — XML file: 185 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/MainActivity.kt` — KT file: 297 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/NotificationDismissReceiver.kt` — KT file: 11 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketAccessibilityService.kt` — KT file: 127 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketBarWidgetProvider.kt` — KT file: 56 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketCardWidgetProvider.kt` — KT file: 62 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketNotificationListener.kt` — KT file: 181 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketRunwayWidgetProvider.kt` — KT file: 47 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketScreenshotObserver.kt` — KT file: 71 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketWidgetProvider.kt` — KT file: 61 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/QuickAddActivity.kt` — KT file: 88 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/ShareReceiverActivity.kt` — KT file: 447 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsInboxScanner.kt` — KT file: 54 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsParser.kt` — KT file: 191 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsReceiver.kt` — KT file: 38 lines
+- `android/app/src/main/res/drawable-v21/launch_background.xml` — XML file: 11 lines
+- `android/app/src/main/res/drawable/launch_background.xml` — XML file: 4 lines
+- `android/app/src/main/res/drawable/widget_action_btn.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_background.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_bar_bg.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_button_expense.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_button_income.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_button_quick_add.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_card_bg.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_card_inset.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_chip_emv.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_circle_btn.xml` — XML file: 8 lines
+- `android/app/src/main/res/drawable/widget_primary_btn.xml` — XML file: 6 lines
+- `android/app/src/main/res/drawable/widget_runway_bg.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_status_pill.xml` — XML file: 9 lines
+- `android/app/src/main/res/layout/pocket_bar_widget_layout.xml` — XML file: 106 lines
+- `android/app/src/main/res/layout/pocket_card_widget_layout.xml` — XML file: 182 lines
+- `android/app/src/main/res/layout/pocket_runway_widget_layout.xml` — XML file: 114 lines
+- `android/app/src/main/res/layout/pocket_widget_layout.xml` — XML file: 182 lines
+- `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` — XML file: 9 lines
+- `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` — XML file: 9 lines
+- `android/app/src/main/res/mipmap-anydpi-v26/launcher_icon.xml` — XML file: 9 lines
+- `android/app/src/main/res/values-night/styles.xml` — XML file: 17 lines
+- `android/app/src/main/res/values/colors.xml` — XML file: 5 lines
+- `android/app/src/main/res/values/strings.xml` — XML file: 12 lines
+- `android/app/src/main/res/values/styles.xml` — XML file: 20 lines
+- `android/app/src/main/res/xml/accessibility_service_config.xml` — XML file: 9 lines
+- `android/app/src/main/res/xml/pocket_bar_widget_info.xml` — XML file: 17 lines
+- `android/app/src/main/res/xml/pocket_card_widget_info.xml` — XML file: 17 lines
+- `android/app/src/main/res/xml/pocket_runway_widget_info.xml` — XML file: 17 lines
+- `android/app/src/main/res/xml/pocket_widget_info.xml` — XML file: 18 lines
+- `android/app/src/profile/AndroidManifest.xml` — > (7 lines)
+- `android/build.gradle.kts` — KTS file: 21 lines
+- `android/gradle.properties` — PROPERTIES file: 9 lines
+- `android/gradle/wrapper/gradle-wrapper.properties` — PROPERTIES file: 5 lines
+- `android/settings.gradle.kts` — KTS file: 22 lines
+- `assets/avatars/cosmic_vault.svg` — SVG file: 84 lines
+- `assets/avatars/emerald_growth.svg` — SVG file: 81 lines
+- `assets/avatars/quantum_flow.svg` — SVG file: 85 lines
+- `assets/avatars/solar_wealth.svg` — SVG file: 80 lines
+- `assets/icons/pocket_app_icon.svg` — SVG file: 37 lines
+- `assets/icons/pocket_logo.svg` — SVG file: 14 lines
+- `c2c_runner.py` — HTTP client; functions: log, run_cmd, check_url_exists, wait_and_download_apk +8 more
+- `implementation_plan.md` — Pocket — Transaction Tracking App (326 lines)
+- `integration_test/sms_auto_import_test.dart` — 1 functions
+- `ios/.gitignore` — /dgph .mode1v3 (33 lines)
+- `ios/Flutter/AppFrameworkInfo.plist` — PLIST file: 24 lines
+- `ios/Flutter/Debug.xcconfig` — include "Generated.xcconfig" (1 lines)
+- `ios/Flutter/Release.xcconfig` — include "Generated.xcconfig" (1 lines)
+- `ios/Runner.xcodeproj/project.pbxproj` — Begin PBXBuildFile section (605 lines)
+- `ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata` — XCWORKSPACEDATA file: 7 lines
+- `ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` — PLIST file: 8 lines
+- `ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` — XCSETTINGS file: 8 lines
+- `ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme` — XCSCHEME file: 101 lines
+- `ios/Runner.xcworkspace/contents.xcworkspacedata` — XCWORKSPACEDATA file: 7 lines
+- `ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` — PLIST file: 8 lines
+- `ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` — XCSETTINGS file: 8 lines
+- `ios/Runner/AppDelegate.swift` — SWIFT file: 14 lines
+- `ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json` — JSON data
+- `ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json` — JSON data
+- `ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md` — Launch Screen Assets (3 lines)
+- `ios/Runner/Base.lproj/LaunchScreen.storyboard` — STORYBOARD file: 37 lines
+- `ios/Runner/Base.lproj/Main.storyboard` — STORYBOARD file: 26 lines
+- `ios/Runner/Info.plist` — PLIST file: 70 lines
+- `ios/Runner/Runner-Bridging-Header.h` — import "GeneratedPluginRegistrant.h" (1 lines)
+- `ios/Runner/SceneDelegate.swift` — SWIFT file: 4 lines
+- `ios/RunnerTests/RunnerTests.swift` — If you add code to the Runner application, consider adding tests here. See https://deve... (9 lines)
+- `lib/main.dart` — Dart classes: PocketApp, _PocketAppState; 12 functions
+- `lib/models/budget_model.dart` — Dart classes: CategoryBudgetModel; 7 functions
+- `lib/models/category_model.dart` — Dart classes: CategoryModel; 20 functions
+- `lib/models/debt_model.dart` — Dart classes: DebtPaymentModel, DebtModel; 8 functions
+- `lib/models/goal_model.dart` — Dart classes: GoalModel; 4 functions
+- `lib/models/notification_model.dart` — Dart classes: AppNotificationModel; 4 functions
+- `lib/models/pending_transaction_model.dart` — Dart classes: PendingTransactionModel, UniqueKey; 6 functions
+- `lib/models/recurring_model.dart` — Dart classes: RecurringRuleModel; 7 functions
+- `lib/models/settings_model.dart` — Dart classes: UserSettingsModel; 6 functions
+- `lib/models/transaction_model.dart` — Dart classes: TransactionModel; 4 functions
+- `lib/models/wallet_model.dart` — Dart classes: WalletModel; 7 functions
+- `lib/navigation/app_router.dart` — 6 functions
+- `lib/navigation/app_scaffold.dart` — Dart classes: AppScaffold, _AppScaffoldState; 14 functions
+- `lib/providers/app_providers.dart` — Central Barrel Export for Domain-Specific Providers (13 lines)
+- `lib/providers/budgets_provider.dart` — Dart classes: CategoryBudgetsNotifier; 4 functions
+- `lib/providers/categories_provider.dart` — Dart classes: CategoriesNotifier; 5 functions
+- `lib/providers/core_providers.dart` — 3 functions
+- `lib/providers/debts_provider.dart` — Dart classes: DebtsNotifier; 9 functions
+- `lib/providers/derived_providers.dart` — Dart classes: MonthlyStats, NetWorthSummary, CategoryComparison; 7 functions
+- `lib/providers/goals_provider.dart` — Dart classes: GoalsNotifier; 7 functions
+- `lib/providers/notifications_provider.dart` — Dart classes: NotificationsNotifier; 6 functions
+- `lib/providers/pending_transactions_provider.dart` — Dart classes: PendingTransactionsNotifier; 8 functions
+- `lib/providers/recurring_rules_provider.dart` — Dart classes: RecurringRulesNotifier; 8 functions
+- `lib/providers/settings_provider.dart` — Dart classes: SettingsNotifier; 43 functions
+- `lib/providers/transactions_provider.dart` — Dart classes: TransactionsNotifier; 6 functions
+- `lib/providers/wallets_provider.dart` — Dart classes: WalletsNotifier; 5 functions
+- `lib/screens/analytics/analytics_screen.dart` — Flutter widgets: _ExportActionCard (Stateless); 135 functions
+- `lib/screens/debts/debts_screen.dart` — Dart classes: DebtsScreen, _DebtsScreenState; 55 functions
+- `lib/screens/home/home_screen.dart` — Dart classes: HomeScreen; 28 functions
+- `lib/screens/notifications/notification_center_screen.dart` — Dart classes: NotificationCenterScreen; 9 functions
+- `lib/screens/onboarding/onboarding_screen.dart` — Dart classes: OnboardingScreen, _OnboardingScreenState; 164 functions
+- `lib/screens/settings/auto_import_studio_screen.dart` — Dart classes: AutoImportStudioScreen, _AutoImportStudioScreenState; 41 functions
+- `lib/screens/settings/data_management_screen.dart` — Dart classes: DataManagementScreen, _DataManagementScreenState; 59 functions
+- `lib/screens/settings/recurring_rules_screen.dart` — Dart classes: RecurringRulesScreen, _RecurringRulesScreenState; 47 functions
+- `lib/screens/settings/settings_screen.dart` — Dart classes: SettingsScreen; 121 functions
+- `lib/screens/settings/widgets_customizer_screen.dart` — Dart classes: WidgetsCustomizerScreen, _WidgetsCustomizerScreenState; 71 functions
+- `lib/screens/splash/splash_screen.dart` — Dart classes: SplashScreen, _SplashScreenState; 8 functions
+- `lib/screens/transactions/add_transaction_screen.dart` — Dart classes: AddTransactionScreen, _AddTransactionScreenState; 75 functions
+- `lib/screens/transactions/edit_transaction_screen.dart` — Dart classes: EditTransactionScreen, _EditTransactionScreenState; 32 functions
+- `lib/screens/transactions/quick_add_dialog_screen.dart` — Flutter widgets: QuickAddDialogScreen (Stateful); 6 functions
+- `lib/screens/transactions/transaction_detail_screen.dart` — Dart classes: TransactionDetailScreen; 31 functions
+- `lib/screens/transactions/transactions_list_screen.dart` — Dart classes: TransactionsListScreen, _TransactionsListScreenState; 37 functions
+- `lib/screens/wallets/wallets_screen.dart` — Dart classes: WalletsScreen; 152 functions
+- `lib/services/ai_forecasting_service.dart` — Dart classes: DailySpendPoint, MonthSpendForecast, AiForecastingService; 4 functions
+- `lib/services/anomaly_detection_service.dart` — Dart classes: AnomalyResult, AnomalyDetectionService; 3 functions
+- `lib/services/auto_import_service.dart` — Dart classes: AutoImportPermissions, AutoImportService; 16 functions
+- `lib/services/backup_service.dart` — Dart classes: BackupService; 8 functions
+- `lib/services/cloud_sync_service.dart` — Dart classes: GoogleAuthException, CloudSyncService; 15 functions
+- `lib/services/financial_health_service.dart` — Dart classes: HealthPillarScore, FinancialHealthReport, FinancialHealthService; 4 functions
+- `lib/services/inflation_service.dart` — Dart classes: InflationComparisonResult, InflationService; 4 functions
+- `lib/services/learning_suggest_service.dart` — Dart classes: LearningSuggestService; 4 functions
+- `lib/services/nlp_parser_service.dart` — Dart classes: ParsedNlpTransaction, NlpTransactionParser; 5 functions
+- `lib/services/notification_service.dart` — Dart classes: NotificationService; 15 functions
+- `lib/services/receipt_service.dart` — Dart classes: ReceiptService; 4 functions
+- `lib/services/shared_transaction_handler.dart` — Dart classes: SharedTransactionHandler; 4 functions
+- `lib/services/storage_service.dart` — Dart classes: StorageService; 45 functions
+- `lib/services/system_contact_service.dart` — Dart classes: SelectedContact, SystemContactService; 4 functions
+- `lib/services/system_widget_service.dart` — Dart classes: SystemWidgetService; 5 functions
+- `lib/services/upi_screenshot_parser_service.dart` — Dart classes: UpiParsedTransaction, UpiScreenshotParserService; 8 functions
+- `lib/theme/app_theme.dart` — Dart classes: AppThemePalette, AppColors, AppTheme; 7 functions
+- `lib/utils/currency_formatter.dart` — Dart classes: CurrencyFormatter; 6 functions
+- `lib/widgets/auto_import_guide_modal.dart` — Dart classes: AutoImportGuideModal, _AutoImportGuideModalState; 14 functions
+- `lib/widgets/balance_card.dart` — Flutter widgets: _CompactMetricChip (Stateless); 24 functions
+- `lib/widgets/blurred_dialog_utils.dart` — 3 functions
+- `lib/widgets/financial_health_gauge.dart` — Dart classes: FinancialHealthGauge, _HealthGaugePainter; 19 functions
+- `lib/widgets/inflation_calculator_card.dart` — Dart classes: InflationCalculatorCard, _InflationCalculatorCardState; 15 functions
+- `lib/widgets/nlp_quick_add_modal.dart` — Dart classes: NlpQuickAddModal, _NlpQuickAddModalState; 25 functions
+- `lib/widgets/numpad.dart` — Flutter widgets: CalculatorNumpad (Stateless); 13 functions
+- `lib/widgets/pending_transactions_capsule.dart` — Dart classes: PendingTransactionsCapsule; 7 functions
+- `lib/widgets/pending_transactions_sheet.dart` — Dart classes: PendingTransactionsSheet, _PendingTransactionsSheetState; 33 functions
+- `lib/widgets/quick_add_transaction_dialog.dart` — Dart classes: QuickAddTransactionDialog, _QuickAddTransactionDialogState; 37 functions
+- `lib/widgets/sankey_flow_diagram.dart` — Dart classes: SankeyNode, SankeyFlowDiagram, _SankeyFlowDiagramState; 21 functions
+- `lib/widgets/sms_inbox_scanner_sheet.dart` — Dart classes: SmsInboxScannerSheet, _SmsInboxScannerSheetState; 24 functions
+- `lib/widgets/spend_forecast_card.dart` — Dart classes: SpendForecastCard, _ForecastTrajectoryPainter; 23 functions
+- `lib/widgets/top_capsule_toast.dart` — Flutter widgets: _TopCapsuleToastWidget (Stateful); 10 functions
+- `lib/widgets/transaction_tile.dart` — Dart classes: TransactionTile; 6 functions
+- `lib/widgets/user_avatar_widget.dart` — Flutter widgets: UserAvatarWidget (Stateless); 6 functions
+- `lib/widgets/waving_hand_emoji.dart` — Flutter widgets: WavingHandEmoji (Stateful); 7 functions
+- `linux/.gitignore` — Text file: 1 lines
+- `linux/CMakeLists.txt` — Project-level configuration. (104 lines)
+- `linux/flutter/CMakeLists.txt` — This file controls Flutter-level build steps. It should not be edited. (79 lines)
+- `linux/flutter/generated_plugin_registrant.cc` — Generated file. Do not edit. (23 lines)
+- `linux/flutter/generated_plugin_registrant.h` — 1 functions
+- `linux/flutter/generated_plugins.cmake` — Generated file, do not edit. (23 lines)
+- `linux/runner/CMakeLists.txt` — Define the application target. To change its name, change BINARY_NAME in the top-level ... (21 lines)
+- `linux/runner/main.cc` — include "my_application.h" (5 lines)
+- `linux/runner/my_application.cc` — include "my_application.h" (120 lines)
+- `linux/runner/my_application.h` — 1 functions
+- `live_c2c_device_test.py` — Tests: 10 test functions/methods
+- `macos/.gitignore` — Flutter-related /Flutter/ephemeral/ (6 lines)
+- `macos/Flutter/Flutter-Debug.xcconfig` — include "ephemeral/Flutter-Generated.xcconfig" (1 lines)
+- `macos/Flutter/Flutter-Release.xcconfig` — include "ephemeral/Flutter-Generated.xcconfig" (1 lines)
+- `macos/Flutter/GeneratedPluginRegistrant.swift` — Generated file. Do not edit. (23 lines)
+- `macos/Runner.xcodeproj/project.pbxproj` — Begin PBXAggregateTarget section (689 lines)
+- `macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` — PLIST file: 8 lines
+- `macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme` — XCSCHEME file: 99 lines
+- `macos/Runner.xcworkspace/contents.xcworkspacedata` — XCWORKSPACEDATA file: 7 lines
+- `macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` — PLIST file: 8 lines
+- `macos/Runner/AppDelegate.swift` — SWIFT file: 11 lines
+- `macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json` — JSON data
+- `macos/Runner/Base.lproj/MainMenu.xib` — XIB file: 343 lines
+- `macos/Runner/Configs/AppInfo.xcconfig` — Application-level settings for the Runner target. This may be replaced with something a... (11 lines)
+- `macos/Runner/Configs/Debug.xcconfig` — include "../../Flutter/Flutter-Debug.xcconfig" include "Warnings.xcconfig" (2 lines)
+- `macos/Runner/Configs/Release.xcconfig` — include "../../Flutter/Flutter-Release.xcconfig" include "Warnings.xcconfig" (2 lines)
+- `macos/Runner/Configs/Warnings.xcconfig` — XCCONFIG file: 13 lines
+- `macos/Runner/DebugProfile.entitlements` — ENTITLEMENTS file: 12 lines
+- `macos/Runner/Info.plist` — PLIST file: 32 lines
+- `macos/Runner/MainFlutterWindow.swift` — SWIFT file: 12 lines
+- `macos/Runner/Release.entitlements` — ENTITLEMENTS file: 8 lines
+- `macos/RunnerTests/RunnerTests.swift` — If you add code to the Runner application, consider adding tests here. See https://deve... (9 lines)
+- `pocket_ui_prompts.md` — Pocket App — UI Generation Prompts (732 lines)
+- `pubspec.lock` — Lockfile manifest: 140 resolved dependencies
+- `pubspec.yaml` — YAML config: name, description, publish_to, version, environment
+- `run_calibrated_c2c.py` — functions: log, run_cmd, tap_xy, key_back +5 more
+- `scripts/run_e2e_sms_test.py` — Tests: 1 test functions/methods
+- `supabase/migrations/20260830134500_create_pocket_backups.sql` — creates tables: public; alters: public; 1 indexes
+- `test/ai_intelligence_test.dart` — 3 functions
+- `test/app_test.dart` — 1 functions
+- `test/auto_import_service_test.dart` — 1 functions
+- `test/avatar_test.dart` — 2 functions
+- `test/balance_and_wallet_edit_test.dart` — 1 functions
+- `test/e2e_flow_test.dart` — 1 functions
+- `test/home_screen_widget_suite_test.dart` — 1 functions
+- `test/pending_transactions_widget_test.dart` — 1 functions
+- `test/sms_auto_read_test.dart` — Dart classes: FakeStorageService; 4 functions
+- `test/upi_screenshot_parser_test.dart` — 1 functions
+- `test/widget_test.dart` — 1 functions
+- `test_all_components_c2c.py` — Tests: 13 test functions/methods
+- `web/index.html` — HTML file: 38 lines
+- `web/manifest.json` — package.json
+- `windows/.gitignore` — Visual Studio user-specific files. .suo (14 lines)
+- `windows/CMakeLists.txt` — Project-level configuration. (89 lines)
+- `windows/flutter/CMakeLists.txt` — This file controls Flutter-level build steps. It should not be edited. (98 lines)
+- `windows/flutter/generated_plugin_registrant.cc` — Generated file. Do not edit. (22 lines)
+- `windows/flutter/generated_plugin_registrant.h` — 1 functions
+- `windows/flutter/generated_plugins.cmake` — Generated file, do not edit. (24 lines)
+- `windows/runner/CMakeLists.txt` — Define the application target. To change its name, change BINARY_NAME in the top-level ... (34 lines)
+- `windows/runner/Runner.rc` — Microsoft Visual C++ generated resource script. pragma code_page(65001) (98 lines)
+- `windows/runner/flutter_window.cpp` — include "flutter_window.h" (56 lines)
+- `windows/runner/flutter_window.h` — classes: FlutterWindow
+- `windows/runner/main.cpp` — 1 functions
+- `windows/runner/resource.h` — {{NO_DEPENDENCIES}} Microsoft Visual C++ generated include file. (15 lines)
+- `windows/runner/runner.exe.manifest` — MANIFEST file: 14 lines
+- `windows/runner/utils.cpp` — 1 functions
+- `windows/runner/utils.h` — 1 functions
+- `windows/runner/win32_window.cpp` — classes: WindowClassRegistrar; 2 functions
+- `windows/runner/win32_window.h` — classes: Win32Window
+
+## 2026-10-17 19:52:35 (6 files changed)
+- `.npmignore` — Development files & scripts (27 lines)
+- `CONTRIBUTING.md` — Contributing to Antigravity Supercoder OS (59 lines)
+- `Makefile` — ============================================================================== 🌌 ZeroGr... (55 lines)
+- `README.md` — 🌌 ZeroGravity OS ## *Autonomous Supercoder OS • Zero-Default MCPs • 28 Workflows* (152 lines)
+- `bin/cli.js` — functions: printBanner, downloadFile, askQuestion, resolveSourcePayload
+- `package.json` — package.json
+
+## 2026-10-15 19:51:08 (5 files changed)
+- `AGENTS.md` — ZeroGravity OS (AGENTS.md) (7 lines)
+- `CONTRIBUTING.md` — Contributing to Antigravity Supercoder OS (60 lines)
+- `openhands_config.toml` — TOML config: core, agent, llm
+- `package.json` — package.json
+- `tests/test_all.py` — Tests for ScriptImportability, CLIHelpExits, JSONDataSchemas: 14 test functions/methods
+
+## 2026-10-14 13:25:47 (57 files changed)
+- `.github/ISSUE_TEMPLATE/knowledge_submission.yml` — YAML config: name, description, title, labels, body
+- `.github/skills/brandkit/SKILL.md` — - (30 lines)
+- `.github/skills/design-system/SKILL.md` — - (79 lines)
+- `.github/skills/design-system/data/chart-types.md` — Chart and data-viz database (52 lines)
+- `.github/skills/design-system/data/layouts.md` — Layout archetypes (28 lines)
+- `.github/skills/design-system/data/motion-presets.md` — Motion preset database (46 lines)
+- `.github/skills/design-system/data/palettes.md` — Palette database (143 lines)
+- `.github/skills/design-system/data/styles.md` — Style database (71 lines)
+- `.github/skills/design-system/data/tech-stacks.md` — Tech-stack database (102 lines)
+- `.github/skills/design-system/data/type-pairings.md` — Type-pairing database (80 lines)
+- `.github/skills/design-system/reference/color.md` — Building a committed palette and the light/dark map (22 lines)
+- `.github/skills/design-system/reference/dna.md` — House design DNA (32 lines)
+- `.github/skills/design-system/reference/glass.md` — Liquid glass and surface recipes (78 lines)
+- `.github/skills/design-system/reference/icons.md` — Icons: a 3-tier system, never emoji (43 lines)
+- `.github/skills/design-system/reference/rules.md` — Hard rules: locks and bans (31 lines)
+- `.github/skills/design-system/reference/typography.md` — Choosing a distinctive type pairing (24 lines)
+- `.github/skills/design-system/templates/CLAUDE.md` — Design System: {{BRAND}} · Brand rules for generating UI (36 lines)
+- `.github/skills/design-system/templates/storybook.html` — HTML file: 65 lines
+- `.github/skills/design-system/templates/tailwind.config.js` — JavaScript module: 1 exports, 0 functions, 50 lines
+- `.github/skills/design-system/templates/tokens.css` — ========================================================================== (157 lines)
+- `.github/skills/fluid/SKILL.md` — - (72 lines)
+- `.github/skills/fluid/components/AmbientField.tsx` — React component: DEFAULT_BLOBS, AmbientField; hooks: useRef, useEffect
+- `.github/skills/fluid/components/Marquee.tsx` — React component: Marquee
+- `.github/skills/fluid/components/Odometer.tsx` — Test suite: 1 test blocks, test
+- `.github/skills/fluid/components/Reveal.tsx` — React component: Reveal
+- `.github/skills/fluid/components/ScrollContext.tsx` — React component: ScrollProvider; hooks: useContext
+- `.github/skills/fluid/components/ScrollProgress.tsx` — React component: ScrollProgress
+- `.github/skills/fluid/components/SmoothScroll.tsx` — React component: SmoothScroll; hooks: useState, useEffect
+- `.github/skills/fluid/components/marquee.css` — CSS file: 28 lines
+- `.github/skills/fluid/detector/README.md` — fluid detector (24 lines)
+- `.github/skills/fluid/detector/core.mjs` — fluid detector core: the importable scan engine behind detect.mjs and the fluid-skills ... (116 lines)
+- `.github/skills/fluid/detector/deep.mjs` — fluid detector, Tier 3 (--deep): DOM-aware checks that the regex core cannot see. Runs ... (195 lines)
+- `.github/skills/fluid/detector/detect.mjs` — fluid detector: a deterministic scanner for motion and generic-look anti-patterns. Run ... (32 lines)
+- `.github/skills/fluid/detector/rules.mjs` — Deterministic anti-pattern rules for the `fluid` detector. No API calls. Each rule: { i... (204 lines)
+- `.github/skills/fluid/reference/anti-patterns.md` — Anti-patterns checklist (56 lines)
+- `.github/skills/fluid/reference/easings-and-durations.md` — Easings and durations (42 lines)
+- `.github/skills/fluid/reference/principles.md` — Principles, condensed to rules (33 lines)
+- `.github/skills/output/SKILL.md` — - (21 lines)
+- `.github/skills/redesign/SKILL.md` — - (23 lines)
+- `.github/skills/refine/SKILL.md` — - (57 lines)
+- `.github/skills/refine/reference/commands.md` — Refine commands (121 lines)
+- `.github/workflows/ci.yml` — GitHub Actions workflow
+- `.github/workflows/ingest_knowledge.yml` — GitHub Actions workflow
+- `.gitignore` — ============================================================================== Git Igno... (42 lines)
+- `.npmignore` — Development files & scripts (22 lines)
+- `AGENTS.md` — ZeroGravity OS (AGENTS.md) (7 lines)
+- `CONTRIBUTING.md` — Contributing to Antigravity Supercoder OS (60 lines)
+- `LICENSE` — Text file: 17 lines
+- `Makefile` — ============================================================================== 🌌 ZeroGr... (64 lines)
+- `README.md` — 🌌 ZeroGravity OS ## *Autonomous Supercoder OS • Zero-Default MCPs • 28 Workflows* (155 lines)
+- `bin/cli.js` — functions: main, printBanner, parseArgs, copyDirSync
+- `install_agy_staff.py` — Python module (0 functions, 0 classes)
+- `openhands_config.toml` — TOML config: core, agent, llm
+- `pack.sh` — Shell script (env); functions: print_banner, usage, check_cmd
+- `package.json` — package.json
+- `tests/test_all.py` — Tests for ScriptImportability, CLIHelpExits, JSONDataSchemas: 13 test functions/methods
+- `unpack-plugins.sh` — Shell script (env)
+
