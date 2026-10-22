@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/category_model.dart';
+import '../models/wallet_model.dart';
 import '../providers/app_providers.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
