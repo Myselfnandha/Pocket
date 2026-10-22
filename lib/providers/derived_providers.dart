@@ -26,9 +26,17 @@ final subscriptionCandidatesProvider = Provider<List<SubscriptionCandidate>>((re
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
-  final total = wallets.fold(0.0, (sum, w) => sum + w.currentBalance);
+  final liquidWallets = wallets.where((w) => w.type != WalletType.loan);
+  final total = liquidWallets.fold(0.0, (sum, w) => sum + w.currentBalance);
   final rounded = (total * 100).round() / 100.0;
   return rounded.abs() < 0.0001 ? 0.0 : rounded;
+});
+
+final totalLoanDebtProvider = Provider<double>((ref) {
+  final wallets = ref.watch(walletsWithBalancesProvider);
+  final loanWallets = wallets.where((w) => w.type == WalletType.loan);
+  final total = loanWallets.fold(0.0, (sum, w) => sum + w.currentBalance);
+  return (total * 100).round() / 100.0;
 });
 
 class MonthlyStats {
@@ -115,16 +123,18 @@ final netWorthSummaryProvider = Provider<NetWorthSummary>((ref) {
   final goals = ref.watch(totalSavedInGoalsProvider);
   final lent = ref.watch(totalLentProvider);
   final borrowed = ref.watch(totalBorrowedProvider);
+  final loanDebt = ref.watch(totalLoanDebtProvider);
 
+  final totalLiabilities = borrowed + loanDebt;
   final totalAssets = liquid + goals + lent;
-  final netWorth = totalAssets - borrowed;
+  final netWorth = totalAssets - totalLiabilities;
 
   return NetWorthSummary(
     totalNetWorth: netWorth,
     liquidAssets: liquid,
     goalReserves: goals,
     lentReceivables: lent,
-    borrowedLiabilities: borrowed,
+    borrowedLiabilities: totalLiabilities,
     totalAssets: totalAssets,
   );
 });

@@ -9,6 +9,7 @@ import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/top_capsule_toast.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
@@ -575,11 +576,13 @@ class TransactionDetailScreen extends ConsumerWidget {
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 16),
+          Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -619,24 +622,15 @@ class TransactionDetailScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(transactionsProvider.notifier).deleteTransaction(tx.id);
               Navigator.pop(ctx);
-              context.pop();
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: const Color(0xFF1E1E1E),
-                  content: Text('Deleted "${tx.title}"'),
-                  duration: const Duration(seconds: 4),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: AppColors.primaryGreenLight,
-                    onPressed: () {
-                      ref.read(transactionsProvider.notifier).insertTransactionAt(0, tx);
-                    },
-                  ),
-                ),
+              TopCapsuleToast.showBottom(
+                context,
+                message: 'Deleted "${tx.title}"',
+                actionLabel: 'Undo',
+                onAction: () {
+                  ref.read(transactionsProvider.notifier).insertTransactionAt(0, tx);
+                },
               );
+              context.pop();
             },
             child: const Text('Delete'),
           ),

@@ -255,6 +255,45 @@ class StorageService {
     await _prefs.setString(_kSettings, _encryptString(raw));
   }
 
+  bool isTransactionDeleted(String signature) {
+    if (signature.trim().isEmpty) return false;
+    return getSettings().deletedTransactionSignatures.contains(signature);
+  }
+
+  Future<void> addDeletedTransactionSignature(String signature) async {
+    if (signature.trim().isEmpty) return;
+    final current = getSettings();
+    if (current.deletedTransactionSignatures.contains(signature)) return;
+    final updated = List<String>.from(current.deletedTransactionSignatures)..add(signature);
+    await saveSettings(current.copyWith(deletedTransactionSignatures: updated));
+  }
+
+  Future<void> removeDeletedTransactionSignature(String signature) async {
+    if (signature.trim().isEmpty) return;
+    final current = getSettings();
+    if (!current.deletedTransactionSignatures.contains(signature)) return;
+    final updated = current.deletedTransactionSignatures.where((s) => s != signature).toList();
+    await saveSettings(current.copyWith(deletedTransactionSignatures: updated));
+  }
+
+  bool isMessageProcessed(String messageId) {
+    if (messageId.trim().isEmpty) return false;
+    return getSettings().processedMessageIds.contains(messageId);
+  }
+
+  Future<void> addProcessedMessageId(String messageId) async {
+    if (messageId.trim().isEmpty) return;
+    final current = getSettings();
+    if (current.processedMessageIds.contains(messageId)) return;
+    final updated = List<String>.from(current.processedMessageIds)..add(messageId);
+    await saveSettings(current.copyWith(processedMessageIds: updated));
+  }
+
+  Future<void> setLastSmsScanTimestamp(int timestamp) async {
+    final current = getSettings();
+    await saveSettings(current.copyWith(lastSmsScanTimestamp: timestamp));
+  }
+
   // --- Recurring Rules ---
 
   List<RecurringRuleModel> getRecurringRules() {

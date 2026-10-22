@@ -49,8 +49,12 @@ class PocketRunwayWidgetProvider : HomeWidgetProvider() {
             val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
             // Read preferences
-            @Suppress("DEPRECATION")
-            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val prefs = try {
+                es.antonborri.home_widget.HomeWidgetPlugin.getData(context)
+            } catch (_: Exception) {
+                @Suppress("DEPRECATION")
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            }
             val rawBalance = prefs.getString("raw_runway_safe_daily", prefs.getString("raw_card_balance", "₹0.00")) ?: "₹0.00"
             val durationSec = prefs.getInt("widget_peek_duration_seconds", 2)
             val durationMs = durationSec * 1000L

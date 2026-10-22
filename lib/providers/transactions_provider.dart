@@ -80,11 +80,16 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
     final safeIndex = index.clamp(0, list.length);
     list.insert(safeIndex, tx);
     state = list;
+    await _storage.removeDeletedTransactionSignature(tx.signature);
     await _storage.saveTransactions(state);
     unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> deleteTransaction(String id) async {
+    final existing = state.where((tx) => tx.id == id).firstOrNull;
+    if (existing != null) {
+      await _storage.addDeletedTransactionSignature(existing.signature);
+    }
     state = state.where((tx) => tx.id != id).toList();
     await _storage.saveTransactions(state);
     unawaited(SystemWidgetService.syncFromStorage(_storage));

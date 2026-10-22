@@ -19,6 +19,7 @@ final pendingTransactionsProvider =
 
 class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionModel>> {
   final Ref _ref;
+  bool _isSyncingSms = false;
 
   PendingTransactionsNotifier(this._ref) : super([]) {
     fetchPendingTransactions();
@@ -45,17 +46,16 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final merged = service.deduplicateAndAssignHeuristics([...current, ...fetched]);
       state = merged;
 
-      // Auto-commit shared screenshots and auto-save items directly to database
+      // Auto-commit live incoming items directly to database when explicitly configured
       final settings = _ref.read(settingsProvider);
       final List<MapEntry<PendingTransactionModel, String?>> autoCommitItems = [];
 
       for (final item in merged) {
-        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
         final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
             (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
         final isAutoDirect = item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true');
 
-        if (isPaytm || isAutoDirect || (isSms && settings.autoSaveSms)) {
+        if (isPaytm || (isAutoDirect && settings.autoSaveSms)) {
           var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
           if (matchedWalletId == null && wallets.isNotEmpty) {
             final upiOrPaytm = wallets.where((w) =>
@@ -127,10 +127,19 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
 
   /// Actively queries recent SMS from Android SMS provider to catch up on any messages
   /// that might have arrived while Pocket was sleeping or before permissions were granted.
+  /// Uses a durable timestamp checkpoint with 1-hour overlap and concurrency mutex.
   Future<void> syncRecentSmsInbox({int daysLookback = 2}) async {
+    if (_isSyncingSms) return;
+    _isSyncingSms = true;
+
     try {
+      final storage = _ref.read(storageServiceProvider);
       final service = _ref.read(autoImportServiceProvider);
+      final now = DateTime.now().millisecondsSinceEpoch;
+
       final recentSms = await service.scanSmsInbox(daysLookback: daysLookback);
+      await storage.setLastSmsScanTimestamp(now);
+
       if (recentSms.isEmpty) return;
 
       final savedTxs = _ref.read(transactionsProvider);
@@ -140,74 +149,11 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...newItems]);
       state = merged;
-
-      final settings = _ref.read(settingsProvider);
-      final wallets = _ref.read(walletsProvider);
-      final List<MapEntry<PendingTransactionModel, String?>> autoCommitItems = [];
-
-      for (final item in merged) {
-        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
-        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
-            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
-        final isAutoDirect = item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true');
-
-        if (isPaytm || isAutoDirect || (isSms && settings.autoSaveSms)) {
-          var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
-          if (matchedWalletId == null && wallets.isNotEmpty) {
-            final upiOrPaytm = wallets.where((w) =>
-                w.walletType == WalletType.upi ||
-                w.name.toLowerCase().contains('paytm') ||
-                w.name.toLowerCase().contains('upi')).firstOrNull;
-            matchedWalletId = upiOrPaytm?.id ?? wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id;
-          }
-          if (matchedWalletId != null) {
-            autoCommitItems.add(MapEntry(item, matchedWalletId));
-          }
-        }
-      }
-
-      for (final entry in autoCommitItems) {
-        final item = entry.key;
-        final targetWalletId = entry.value;
-        await approve(item.id, walletId: targetWalletId);
-        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
-        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
-            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
-        final title = isPaytm ? '📱 Paytm Auto-Logged' : (isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged');
-        final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
-        final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
-
-        await _ref.read(notificationsProvider.notifier).addNotification(
-          AppNotificationModel(
-            id: const Uuid().v4(),
-            title: title,
-            message: '${item.merchant}: ${settings.currencySymbol}${item.amount.toStringAsFixed(2)} was automatically logged$walletLabel.',
-            type: NotificationType.system,
-            createdAt: DateTime.now(),
-            actionData: {
-              'amount': item.amount,
-              'merchant': item.merchant,
-              'refId': item.refId,
-              'imagePath': item.imagePath,
-              'walletId': targetWalletId,
-            },
-          ),
-        );
-
-        NotificationService().showTransactionLoggedNotification(
-          title: item.merchant,
-          amount: item.amount,
-          currencySymbol: settings.currencySymbol,
-          isIncome: item.isIncome,
-          walletName: matchedWallet?.name,
-        );
-      }
-
-      if (autoCommitItems.isNotEmpty) {
-        final storage = _ref.read(storageServiceProvider);
-        await SystemWidgetService.syncFromStorage(storage);
-      }
-    } catch (_) {}
+    } catch (_) {
+      // Defensive handling
+    } finally {
+      _isSyncingSms = false;
+    }
   }
 
   /// Approves a single detected transaction and commits it into Pocket's permanent database
@@ -223,6 +169,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
 
     final item = state[index];
     final wallets = _ref.read(walletsProvider);
+    final storage = _ref.read(storageServiceProvider);
     final fallbackWalletId = wallets.isNotEmpty
         ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
         : 'cash';
@@ -237,6 +184,11 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         (item.refId != null && item.refId!.isNotEmpty
             ? 'Ref: ${item.refId}'
             : (item.appSource.isNotEmpty ? 'Imported via ${item.appSource}' : null));
+
+    if (item.sourceMessageId != null) {
+      await storage.addProcessedMessageId(item.sourceMessageId!);
+    }
+    await storage.removeDeletedTransactionSignature(item.signature);
 
     await _ref.read(transactionsProvider.notifier).addTransaction(
       title: (title != null && title.trim().isNotEmpty) ? title.trim() : item.merchant,
@@ -262,6 +214,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     if (items.isEmpty) return 0;
 
     final wallets = _ref.read(walletsProvider);
+    final storage = _ref.read(storageServiceProvider);
     final fallbackWalletId = wallets.isNotEmpty
         ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
         : 'cash';
@@ -272,6 +225,11 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           ? item.suggestedWalletId!
           : fallbackWalletId;
       final effectiveCategoryId = item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
+
+      if (item.sourceMessageId != null) {
+        await storage.addProcessedMessageId(item.sourceMessageId!);
+      }
+      await storage.removeDeletedTransactionSignature(item.signature);
 
       await _ref.read(transactionsProvider.notifier).addTransaction(
         title: item.merchant,
@@ -296,13 +254,28 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     return approved;
   }
 
-  /// Dismisses a pending transaction without saving it
-  void dismiss(String id) {
+  /// Dismisses a pending transaction and records tombstone to prevent re-import
+  Future<void> dismiss(String id) async {
+    final item = state.where((p) => p.id == id).firstOrNull;
+    if (item != null) {
+      final storage = _ref.read(storageServiceProvider);
+      await storage.addDeletedTransactionSignature(item.signature);
+      if (item.sourceMessageId != null) {
+        await storage.addProcessedMessageId(item.sourceMessageId!);
+      }
+    }
     state = state.where((p) => p.id != id).toList();
   }
 
-  /// Dismisses all pending transactions
-  void dismissAll() {
+  /// Dismisses all pending transactions and records tombstones
+  Future<void> dismissAll() async {
+    final storage = _ref.read(storageServiceProvider);
+    for (final item in state) {
+      await storage.addDeletedTransactionSignature(item.signature);
+      if (item.sourceMessageId != null) {
+        await storage.addProcessedMessageId(item.sourceMessageId!);
+      }
+    }
     state = [];
   }
 }

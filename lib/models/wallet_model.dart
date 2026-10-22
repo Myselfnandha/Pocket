@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum WalletType { cash, bank, upi, creditCard, savings }
+enum WalletType { cash, bank, upi, creditCard, savings, loan }
 
 class WalletModel {
   final String id;
@@ -39,11 +39,15 @@ class WalletModel {
   String get displayName {
     final trimmed = name.trim();
     if (trimmed.isEmpty) {
-      return walletType == WalletType.cash ? 'Cash Wallet' : '${walletType.name.toUpperCase()} Account';
+      if (walletType == WalletType.cash) return 'Cash Wallet';
+      if (walletType == WalletType.loan) return 'Loan Account';
+      return '${walletType.name.toUpperCase()} Account';
     }
     final numericPattern = RegExp(r'^[0-9.,₹$€£\s]+$');
     if (numericPattern.hasMatch(trimmed)) {
-      return walletType == WalletType.cash ? 'Cash Wallet' : '${walletType.name.toUpperCase()} Account';
+      if (walletType == WalletType.cash) return 'Cash Wallet';
+      if (walletType == WalletType.loan) return 'Loan Account';
+      return '${walletType.name.toUpperCase()} Account';
     }
     return trimmed;
   }

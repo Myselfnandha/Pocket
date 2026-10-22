@@ -395,12 +395,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
     final features = [
-      {'icon': Icons.lock_rounded, 'label': '100% Offline Privacy • Your financial data stays only on this device'},
-      {'icon': Icons.bolt_rounded, 'label': 'Instant Smart Logging • Log expenses in seconds with smart auto-suggestions'},
-      {'icon': Icons.auto_awesome_rounded, 'label': 'Smart Bank Tracking • Automatically detects SMS transaction alerts'},
-      {'icon': Icons.insights_rounded, 'label': 'Clear Visual Insights • Monthly spending trends, cashflow & health score'},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Instant Receipt Scan • Snap or share bill screenshots with OCR'},
-      {'icon': Icons.savings_rounded, 'label': 'Savings Goals & Budgets • Stay on track with rollover category limits'},
+      {'icon': Icons.lock_rounded, 'label': '100% Offline & Private'},
+      {'icon': Icons.bolt_rounded, 'label': 'Smart Expense Logging'},
+      {'icon': Icons.auto_awesome_rounded, 'label': 'Auto SMS Bank Alerts'},
+      {'icon': Icons.insights_rounded, 'label': 'Visual Trends & Insights'},
+      {'icon': Icons.receipt_long_rounded, 'label': 'Instant Receipt Scan & OCR'},
+      {'icon': Icons.savings_rounded, 'label': 'Smart Budgets & Goals'},
     ];
 
     return SingleChildScrollView(
@@ -561,6 +561,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             decoration: InputDecoration(
               hintText: 'Enter your name',
               prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primaryGreenLight),
+              filled: true,
+              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text('Mobile Number (Optional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              hintText: '98765 43210',
+              prefixIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.phone_outlined, color: AppColors.primaryGreenLight, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      '+91',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(width: 1, height: 18, color: Colors.grey.withValues(alpha: 0.3)),
+                  ],
+                ),
+              ),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
@@ -1130,314 +1162,171 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Read SMS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                    child: const Text('Read SMS', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
             )
-          // 3. Discovered Bank Accounts Quick Add Hub
+          // 3. Discovered Bank Accounts & Loan Accounts Hub
           else if (_discoveredBankAccounts.isNotEmpty) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
-                  width: 1.3,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
+            () {
+              final regularDiscovered = _discoveredBankAccounts.where((acc) => acc.type != WalletType.loan).toList();
+              final loanDiscovered = _discoveredBankAccounts.where((acc) => acc.type == WalletType.loan).toList();
+
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Discovered Accounts (${_discoveredBankAccounts.length})',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  if (regularDiscovered.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                          width: 1.3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
                         ],
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            for (final acc in _discoveredBankAccounts) {
-                              final exists = _onboardingWallets.any(
-                                  (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName);
-                              if (!exists) {
-                                _onboardingWallets.add(acc.toWallet(
-                                  currencySymbol: symbol,
-                                  isDefault: _onboardingWallets.isEmpty,
-                                ));
-                              }
-                            }
-                          });
-                        },
-                        icon: Icon(
-                          allDiscoveredAdded ? Icons.done_all_rounded : Icons.playlist_add_check_rounded,
-                          size: 16,
-                          color: AppColors.primaryGreenLight,
-                        ),
-                        label: Text(
-                          allDiscoveredAdded ? 'All Added' : 'Add All',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
-                        ),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          foregroundColor: AppColors.primaryGreenLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ..._discoveredBankAccounts.map((acc) {
-                    final addedWalletIndex = _onboardingWallets.indexWhere(
-                      (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
-                    );
-                    final isAdded = addedWalletIndex != -1;
-                    final addedWallet = isAdded ? _onboardingWallets[addedWalletIndex] : null;
-                    final isDefault = addedWallet?.isDefault ?? false;
-                    final currentBal = addedWallet?.currentBalance ?? acc.currentBalance;
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? (isAdded ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.15))
-                            : (isAdded ? AppColors.primaryGreenLight.withValues(alpha: 0.06) : const Color(0xFFF7F9FC)),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDefault
-                              ? AppColors.primaryGreenLight
-                              : (isAdded
-                                  ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
-                                  : (isDark ? Colors.white12 : Colors.black12)),
-                          width: isDefault ? 1.5 : 1.0,
-                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Bank Brand Icon Badge
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: Color(acc.colorValue).withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Color(acc.colorValue).withValues(alpha: 0.35),
-                                    width: 1,
+                              Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Discovered Accounts (${regularDiscovered.length})',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                                   ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(acc.icon, style: const TextStyle(fontSize: 20)),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            acc.bankName,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 14,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            acc.maskedAccountNumber,
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 0.4,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    InkWell(
-                                      onTap: () {
-                                        if (isAdded && addedWallet != null) {
-                                          _showEditBalanceDialog(addedWallet, isDark);
-                                        } else {
-                                          setState(() {
-                                            _onboardingWallets.add(acc.toWallet(
-                                              currencySymbol: symbol,
-                                              isDefault: _onboardingWallets.isEmpty,
-                                            ));
-                                          });
-                                          final newAdded = _onboardingWallets.firstWhere(
-                                            (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
-                                          );
-                                          _showEditBalanceDialog(newAdded, isDark);
-                                        }
-                                      },
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            'Live Bal: $symbol${currentBal.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.primaryGreenLight,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          const Icon(Icons.edit_outlined, size: 12, color: AppColors.primaryGreenLight),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    for (final acc in regularDiscovered) {
+                                      final exists = _onboardingWallets.any(
+                                          (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName);
+                                      if (!exists) {
+                                        _onboardingWallets.add(acc.toWallet(
+                                          currencySymbol: symbol,
+                                          isDefault: _onboardingWallets.isEmpty,
+                                        ));
+                                      }
+                                    }
+                                  });
+                                },
+                                icon: const Icon(
+                                  Icons.playlist_add_check_rounded,
+                                  size: 16,
+                                  color: AppColors.primaryGreenLight,
+                                ),
+                                label: const Text(
+                                  'Add All',
+                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                                ),
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor: AppColors.primaryGreenLight,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-
-                              // Quick Add / Added Action
-                              if (isAdded)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _onboardingWallets.removeWhere(
-                                            (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
-                                          );
-                                          if (isDefault && _onboardingWallets.isNotEmpty) {
-                                            _onboardingWallets[0] = _onboardingWallets[0].copyWith(isDefault: true);
-                                          }
-                                        });
-                                      },
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryGreenLight.withValues(alpha: 0.16),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
-                                          ),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.check_rounded, size: 14, color: AppColors.primaryGreenLight),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Added',
-                                              style: TextStyle(
-                                                color: AppColors.primaryGreenLight,
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 11.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    if (isDefault)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withValues(alpha: 0.18),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: const Text(
-                                          '★ Primary',
-                                          style: TextStyle(
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.amber,
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            for (var i = 0; i < _onboardingWallets.length; i++) {
-                                              final isThisOne = _onboardingWallets[i].accountNumber == acc.accountLast4 &&
-                                                  _onboardingWallets[i].name == acc.bankName;
-                                              _onboardingWallets[i] = _onboardingWallets[i].copyWith(isDefault: isThisOne);
-                                            }
-                                          });
-                                        },
-                                        child: Text(
-                                          'Make Primary',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                )
-                              else
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _onboardingWallets.add(acc.toWallet(
-                                        currencySymbol: symbol,
-                                        isDefault: _onboardingWallets.isEmpty,
-                                      ));
-                                    });
-                                  },
-                                  icon: const Icon(Icons.add_rounded, size: 15, color: Colors.black),
-                                  label: const Text(
-                                    'Quick Add',
-                                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5, color: Colors.black),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primaryGreenLight,
-                                    elevation: 0,
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
                             ],
+                          ),
+                          const SizedBox(height: 10),
+                          ...regularDiscovered.map((acc) => _buildDiscoveredAccountCard(acc, symbol, isDark)),
+                        ],
+                      ),
+                    ),
+
+                  if (loanDiscovered.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.4),
+                          width: 1.3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    );
-                  }),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text('📜', style: TextStyle(fontSize: 18)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Discovered Loan Accounts (${loanDiscovered.length})',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    for (final acc in loanDiscovered) {
+                                      final exists = _onboardingWallets.any(
+                                          (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName);
+                                      if (!exists) {
+                                        _onboardingWallets.add(acc.toWallet(
+                                          currencySymbol: symbol,
+                                          isDefault: false,
+                                        ));
+                                      }
+                                    }
+                                  });
+                                },
+                                icon: const Icon(
+                                  Icons.playlist_add_check_rounded,
+                                  size: 16,
+                                  color: Colors.amber,
+                                ),
+                                label: const Text(
+                                  'Add Loans',
+                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                                ),
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor: Colors.amber,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Separated from liquid cash to track repayments, EMIs, and dues cleanly.',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
+                          ),
+                          const SizedBox(height: 10),
+                          ...loanDiscovered.map((acc) => _buildDiscoveredAccountCard(acc, symbol, isDark)),
+                        ],
+                      ),
+                    ),
                 ],
-              ),
-            ),
+              );
+            }(),
           ] else if (_hasScannedSms && _discoveredBankAccounts.isEmpty) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -1604,6 +1493,247 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscoveredAccountCard(DiscoveredBankAccount acc, String symbol, bool isDark) {
+    final isAdded = _onboardingWallets.any(
+      (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+    );
+    final isDefault = _onboardingWallets.any(
+      (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName && w.isDefault,
+    );
+    final isLoan = acc.isLoan || acc.type == WalletType.loan;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isAdded
+              ? (isLoan ? Colors.amber.withValues(alpha: 0.5) : AppColors.primaryGreenLight.withValues(alpha: 0.5))
+              : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+          width: isAdded ? 1.4 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: isLoan
+                  ? Colors.amber.withValues(alpha: 0.15)
+                  : AppColors.primaryGreenLight.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              acc.suggestedIcon,
+              style: const TextStyle(fontSize: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        acc.bankName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isLoan) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 0.8),
+                        ),
+                        child: const Text(
+                          'LOAN',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.amber,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                      '•••• ${acc.accountLast4}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (acc.balance != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '•',
+                        style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          isLoan
+                              ? 'Due: $symbol${acc.balance!.toStringAsFixed(0)}'
+                              : 'Bal: $symbol${acc.balance!.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Actions
+          if (isAdded)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _onboardingWallets.removeWhere(
+                        (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+                      );
+                      if (isDefault && _onboardingWallets.isNotEmpty) {
+                        _onboardingWallets[0] = _onboardingWallets[0].copyWith(isDefault: true);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (isLoan ? Colors.amber : AppColors.primaryGreenLight).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: (isLoan ? Colors.amber : AppColors.primaryGreenLight).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Added',
+                          style: TextStyle(
+                            color: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isLoan) ...[
+                  const SizedBox(height: 3),
+                  if (isDefault)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Text(
+                        '★ Primary',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    )
+                  else
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          for (var i = 0; i < _onboardingWallets.length; i++) {
+                            final isThisOne = _onboardingWallets[i].accountNumber == acc.accountLast4 &&
+                                _onboardingWallets[i].name == acc.bankName;
+                            _onboardingWallets[i] = _onboardingWallets[i].copyWith(isDefault: isThisOne);
+                          }
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          'Make Primary',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            )
+          else
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _onboardingWallets.add(acc.toWallet(
+                    currencySymbol: symbol,
+                    isDefault: _onboardingWallets.isEmpty && !isLoan,
+                  ));
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                foregroundColor: Colors.black,
+                elevation: 0,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                isLoan ? '+ Add Loan' : '+ Add',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5),
+              ),
+            ),
         ],
       ),
     );
@@ -2373,22 +2503,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           const SizedBox(width: 6),
                           _buildPresetBudgetChip(catId, 10000, '${symbol}10k', currentBudget == 10000, isDark),
                           const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () => _showCustomBudgetDialog(cat, isDark),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.primaryGreenLight.withValues(alpha: 0.3)),
+                          () {
+                            final isCustom = currentBudget > 0 &&
+                                currentBudget != 1000 &&
+                                currentBudget != 2000 &&
+                                currentBudget != 5000 &&
+                                currentBudget != 10000;
+                            return InkWell(
+                              onTap: () => _showCustomBudgetDialog(cat, isDark),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isCustom
+                                      ? AppColors.primaryGreenLight
+                                      : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF)),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isCustom
+                                        ? AppColors.primaryGreenLight
+                                        : AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Text(
+                                  isCustom ? '✏️ $symbol${currentBudget.toStringAsFixed(0)}' : '✏️ Custom',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isCustom ? Colors.black : AppColors.primaryGreenLight,
+                                  ),
+                                ),
                               ),
-                              child: const Text(
-                                '✏️ Custom',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryGreenLight),
-                              ),
-                            ),
-                          ),
+                            );
+                          }(),
                         ],
                       ),
                     ),
@@ -2581,6 +2731,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       final picked = await showTimePicker(
                         context: context,
                         initialTime: _dailyReminderTime,
+                        builder: (ctx, child) {
+                          return Theme(
+                            data: Theme.of(ctx).copyWith(
+                              colorScheme: isDark
+                                  ? const ColorScheme.dark(
+                                      primary: AppColors.primaryGreenLight,
+                                      onPrimary: Colors.black,
+                                      surface: Color(0xFF1E1E1E),
+                                      onSurface: Colors.white,
+                                    )
+                                  : const ColorScheme.light(
+                                      primary: AppColors.primaryGreenLight,
+                                      onPrimary: Colors.black,
+                                      surface: Colors.white,
+                                      onSurface: Colors.black,
+                                    ),
+                            ),
+                            child: child!,
+                          );
+                        },
                       );
                       if (picked != null) {
                         setState(() => _dailyReminderTime = picked);

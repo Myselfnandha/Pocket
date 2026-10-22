@@ -49,18 +49,14 @@ class AutoImportService {
     return const AutoImportPermissions();
   }
 
-  /// Requests runtime SMS permissions and automatically enables zero-confirmation auto-save for future transactions.
+  /// Requests runtime SMS permissions.
   Future<bool> requestSmsPermission() async {
     try {
       final res = await _channel.invokeMethod<bool>('requestSmsPermission');
       final granted = res ?? false;
       if (granted) {
-        // Automatically enable future SMS auto-saving without manual confirmation prompt
-        await setAutoSaveSmsPreference(true);
         final currentSettings = _storage.getSettings();
-        if (!currentSettings.autoSaveSms) {
-          await _storage.saveSettings(currentSettings.copyWith(autoSaveSms: true));
-        }
+        await setAutoSaveSmsPreference(currentSettings.autoSaveSms);
       }
       return granted;
     } catch (_) {
@@ -349,9 +345,25 @@ class AutoImportService {
     return null;
   }
 
-  /// Public helper to check if a pending transaction has already been saved into the database
+  /// Public helper to check if a pending transaction has already been saved into the database or previously deleted by user
   bool isAlreadySaved(PendingTransactionModel item, List<TransactionModel> saved, [int? windowSeconds]) {
-    // 1. Exact refId match
+    // 0. Tombstone & Processed Check (Never re-import deleted or handled items)
+    if (_storage.isTransactionDeleted(item.signature)) {
+      return true;
+    }
+    if (item.sourceMessageId != null && _storage.isMessageProcessed(item.sourceMessageId!)) {
+      return true;
+    }
+
+    // 1. Exact signature match against active transactions
+    final itemSig = item.signature;
+    for (final tx in saved) {
+      if (tx.signature == itemSig) {
+        return true;
+      }
+    }
+
+    // 2. Exact refId match
     if (item.refId != null && item.refId!.isNotEmpty) {
       for (final tx in saved) {
         if (tx.refId != null && tx.refId == item.refId) {
@@ -363,7 +375,7 @@ class AutoImportService {
       }
     }
 
-    // 2. Fuzzy match fallback when refId is missing
+    // 3. Fuzzy match fallback when refId is missing
     final window = windowSeconds ?? _storage.getSettings().duplicateDetectionWindowSeconds;
     final itemMerchant = item.merchant.toLowerCase().trim();
     for (final tx in saved) {

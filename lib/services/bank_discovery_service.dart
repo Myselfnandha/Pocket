@@ -72,17 +72,6 @@ class BankDiscoveryService {
     for (final item in smsList) {
       final payload = item.rawPayload ?? '';
       final appSource = item.appSource;
-      final fullTextLower = '$appSource $payload'.toLowerCase();
-
-      // Skip loan or overdue collection accounts from primary wallet discovery
-      final isLoan = fullTextLower.contains('gold loan') ||
-          fullTextLower.contains('loan a/c') ||
-          fullTextLower.contains('loan account') ||
-          fullTextLower.contains('penal charges') ||
-          fullTextLower.contains('margin shortfall');
-      if (isLoan) {
-        continue;
-      }
 
       // 1. Extract account last 4
       String? last4 = item.counterpartyLast4;
@@ -98,13 +87,13 @@ class BankDiscoveryService {
       }
       last4 = last4.trim();
 
-      // 2. Resolve Bank Info
+      // 2. Resolve Bank / Loan Info
       final bankInfo = _resolveBankInfo(appSource, payload);
       final key = '${bankInfo.name}_$last4';
 
       txCounts[key] = (txCounts[key] ?? 0) + 1;
 
-      // Extract available balance if present in the message
+      // Extract available or overdue balance if present in the message
       double? extractedBal;
       final balMatch = _availBalPattern.firstMatch(payload);
       if (balMatch != null) {
@@ -113,6 +102,10 @@ class BankDiscoveryService {
           extractedBal = double.tryParse(rawNum);
         }
       }
+
+      final resolvedType = bankInfo.isLoan
+          ? WalletType.loan
+          : (bankInfo.isCard ? WalletType.creditCard : WalletType.bank);
 
       if (!discoveredMap.containsKey(key)) {
         discoveredMap[key] = DiscoveredBankAccount(
@@ -123,7 +116,7 @@ class BankDiscoveryService {
           hasBalance: extractedBal != null,
           icon: bankInfo.icon,
           colorValue: bankInfo.color,
-          type: bankInfo.isCard ? WalletType.creditCard : WalletType.bank,
+          type: resolvedType,
           latestDate: item.date,
           transactionCount: 1,
         );
@@ -156,89 +149,133 @@ class BankDiscoveryService {
   static _BankMeta _resolveBankInfo(String source, String payload) {
     final text = '$source $payload'.toLowerCase();
 
+    final isLoan = text.contains('gold loan') ||
+        text.contains('loan a/c') ||
+        text.contains('loan account') ||
+        text.contains('loan no') ||
+        text.contains('hdbfs') ||
+        text.contains('muthoot') ||
+        text.contains('manappuram') ||
+        text.contains('bajaj finance') ||
+        text.contains('bajaj finserv') ||
+        text.contains('penal charges') ||
+        text.contains('margin shortfall') ||
+        text.contains('overdue');
+
+    if (isLoan) {
+      if (text.contains('indusind') || text.contains('indusb')) {
+        return const _BankMeta('IndusInd Gold Loan', '📜', 0xFF800000, isLoan: true);
+      }
+      if (text.contains('hdbfs') || text.contains('hdb financial')) {
+        return const _BankMeta('HDBFS Loan', '📜', 0xFFE65100, isLoan: true);
+      }
+      if (text.contains('muthoot')) {
+        return const _BankMeta('Muthoot Gold Loan', '📜', 0xFFD32F2F, isLoan: true);
+      }
+      if (text.contains('manappuram')) {
+        return const _BankMeta('Manappuram Gold Loan', '📜', 0xFFF57F17, isLoan: true);
+      }
+      if (text.contains('bajaj')) {
+        return const _BankMeta('Bajaj Finance Loan', '📜', 0xFF003882, isLoan: true);
+      }
+      if (text.contains('hdfc')) {
+        return const _BankMeta('HDFC Loan', '📜', 0xFF004C8F, isLoan: true);
+      }
+      if (text.contains('sbi') || text.contains('state bank')) {
+        return const _BankMeta('SBI Loan', '📜', 0xFF280071, isLoan: true);
+      }
+      if (text.contains('icici')) {
+        return const _BankMeta('ICICI Loan', '📜', 0xFFB02A30, isLoan: true);
+      }
+      if (text.contains('axis')) {
+        return const _BankMeta('Axis Bank Loan', '📜', 0xFF97144D, isLoan: true);
+      }
+      return const _BankMeta('Loan Account', '📜', 0xFFBF360C, isLoan: true);
+    }
+
     if (text.contains('indusind') || text.contains('indusb')) {
-      return _BankMeta('IndusInd Bank', '🏦', 0xFF800000);
+      return const _BankMeta('IndusInd Bank', '🏦', 0xFF800000);
     }
     if (text.contains('hdfc')) {
-      return _BankMeta('HDFC Bank', '🏦', 0xFF004C8F);
+      return const _BankMeta('HDFC Bank', '🏦', 0xFF004C8F);
     }
     if (text.contains('sbi') || text.contains('state bank')) {
-      return _BankMeta('State Bank of India', '🏦', 0xFF280071);
+      return const _BankMeta('State Bank of India', '🏦', 0xFF280071);
     }
     if (text.contains('icici')) {
-      return _BankMeta('ICICI Bank', '🏦', 0xFFB02A30);
+      return const _BankMeta('ICICI Bank', '🏦', 0xFFB02A30);
     }
     if (text.contains('axis')) {
-      return _BankMeta('Axis Bank', '🏦', 0xFF97144D);
+      return const _BankMeta('Axis Bank', '🏦', 0xFF97144D);
     }
     if (text.contains('kotak')) {
-      return _BankMeta('Kotak Mahindra Bank', '🏦', 0xFFED1C24);
+      return const _BankMeta('Kotak Mahindra Bank', '🏦', 0xFFED1C24);
     }
     if (text.contains('union bank') || text.contains('unionb') || text.contains('uboi')) {
-      return _BankMeta('Union Bank of India', '🏦', 0xFF006738);
+      return const _BankMeta('Union Bank of India', '🏦', 0xFF006738);
     }
     if (text.contains('indian bank') || text.contains('indbnk')) {
-      return _BankMeta('Indian Bank', '🏦', 0xFF003882);
+      return const _BankMeta('Indian Bank', '🏦', 0xFF003882);
     }
     if (text.contains('canara')) {
-      return _BankMeta('Canara Bank', '🏦', 0xFF0091DF);
+      return const _BankMeta('Canara Bank', '🏦', 0xFF0091DF);
     }
     if (text.contains('punjab') || text.contains('pnb')) {
-      return _BankMeta('Punjab National Bank', '🏦', 0xFFA20037);
+      return const _BankMeta('Punjab National Bank', '🏦', 0xFFA20037);
     }
     if (text.contains('baroda') || text.contains('bob')) {
-      return _BankMeta('Bank of Baroda', '🏦', 0xFFF26522);
+      return const _BankMeta('Bank of Baroda', '🏦', 0xFFF26522);
     }
     if (text.contains('rbl')) {
-      return _BankMeta('RBL Bank', '🏦', 0xFF1B365D);
+      return const _BankMeta('RBL Bank', '🏦', 0xFF1B365D);
     }
     if (text.contains('federal')) {
-      return _BankMeta('Federal Bank', '🏦', 0xFF002F6C);
+      return const _BankMeta('Federal Bank', '🏦', 0xFF002F6C);
     }
     if (text.contains('idfc')) {
-      return _BankMeta('IDFC FIRST Bank', '🏦', 0xFF9E1B32);
+      return const _BankMeta('IDFC FIRST Bank', '🏦', 0xFF9E1B32);
     }
     if (text.contains('yes bank') || text.contains('yesb')) {
-      return _BankMeta('Yes Bank', '🏦', 0xFF005A9C);
+      return const _BankMeta('Yes Bank', '🏦', 0xFF005A9C);
     }
     if (text.contains('paytm')) {
-      return _BankMeta('Paytm Payments Bank', '📱', 0xFF002E6E);
+      return const _BankMeta('Paytm Payments Bank', '📱', 0xFF002E6E);
     }
     if (text.contains('airtel')) {
-      return _BankMeta('Airtel Payments Bank', '📱', 0xFFED1C24);
+      return const _BankMeta('Airtel Payments Bank', '📱', 0xFFED1C24);
     }
     if (text.contains('jupiter')) {
-      return _BankMeta('Jupiter', '⚡', 0xFFFF5C00);
+      return const _BankMeta('Jupiter', '⚡', 0xFFFF5C00);
     }
     if (text.contains('fi money') || text.contains('epifi')) {
-      return _BankMeta('Fi Money', '⚡', 0xFF00D09C);
+      return const _BankMeta('Fi Money', '⚡', 0xFF00D09C);
     }
     if (text.contains('aubank') || text.contains('au small')) {
-      return _BankMeta('AU Small Finance Bank', '🏦', 0xFF880E4F);
+      return const _BankMeta('AU Small Finance Bank', '🏦', 0xFF880E4F);
     }
     if (text.contains('slice')) {
-      return _BankMeta('Slice Card', '💳', 0xFF5E35B1, isCard: true);
+      return const _BankMeta('Slice Card', '💳', 0xFF5E35B1, isCard: true);
     }
     if (text.contains('onecard')) {
-      return _BankMeta('OneCard', '💳', 0xFF212121, isCard: true);
+      return const _BankMeta('OneCard', '💳', 0xFF212121, isCard: true);
     }
     if (text.contains('scb') || text.contains('standard chartered')) {
-      return _BankMeta('Standard Chartered', '🏦', 0xFF0072CE);
+      return const _BankMeta('Standard Chartered', '🏦', 0xFF0072CE);
     }
     if (text.contains('citi')) {
-      return _BankMeta('Citibank', '🏦', 0xFF003B70);
+      return const _BankMeta('Citibank', '🏦', 0xFF003B70);
     }
     if (text.contains('hsbc')) {
-      return _BankMeta('HSBC Bank', '🏦', 0xFFDB0011);
+      return const _BankMeta('HSBC Bank', '🏦', 0xFFDB0011);
     }
     if (text.contains('dbs')) {
-      return _BankMeta('DBS Bank', '🏦', 0xFFFF3333);
+      return const _BankMeta('DBS Bank', '🏦', 0xFFFF3333);
     }
     if (text.contains('bank of india') || text.contains('boi')) {
-      return _BankMeta('Bank of India', '🏦', 0xFF0054A6);
+      return const _BankMeta('Bank of India', '🏦', 0xFF0054A6);
     }
     if (text.contains('central bank') || text.contains('cboi')) {
-      return _BankMeta('Central Bank of India', '🏦', 0xFF0D47A1);
+      return const _BankMeta('Central Bank of India', '🏦', 0xFF0D47A1);
     }
 
     final isCard = text.contains('credit card') || text.contains('card ending');
@@ -251,6 +288,7 @@ class _BankMeta {
   final String icon;
   final int color;
   final bool isCard;
+  final bool isLoan;
 
-  const _BankMeta(this.name, this.icon, this.color, {this.isCard = false});
+  const _BankMeta(this.name, this.icon, this.color, {this.isCard = false, this.isLoan = false});
 }

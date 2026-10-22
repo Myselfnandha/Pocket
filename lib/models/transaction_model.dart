@@ -19,6 +19,7 @@ class TransactionModel {
   final List<String> tags;
   final List<String> attachments; // Invoices, receipts, warranties, warranty PDFs/images
   final DateTime? createdAt;
+  final String? sourceMessageId;
 
   const TransactionModel({
     required this.id,
@@ -39,7 +40,16 @@ class TransactionModel {
     this.tags = const [],
     this.attachments = const [],
     this.createdAt,
+    this.sourceMessageId,
   });
+
+  /// Stable deterministic signature for idempotency and tombstone checks
+  String get signature {
+    final ref = (refId != null && refId!.trim().isNotEmpty) ? refId!.trim() : '';
+    final last4 = (counterpartyLast4 != null && counterpartyLast4!.trim().isNotEmpty) ? counterpartyLast4!.trim() : '';
+    final timeMin = date.millisecondsSinceEpoch ~/ (1000 * 60 * 30); // 30-minute bucket
+    return '${amount.toStringAsFixed(2)}_${timeMin}_${ref}_$last4';
+  }
 
   TransactionModel copyWith({
     String? id,
@@ -60,6 +70,7 @@ class TransactionModel {
     List<String>? tags,
     List<String>? attachments,
     DateTime? createdAt,
+    String? sourceMessageId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -80,6 +91,7 @@ class TransactionModel {
       tags: tags ?? this.tags,
       attachments: attachments ?? this.attachments,
       createdAt: createdAt ?? this.createdAt,
+      sourceMessageId: sourceMessageId ?? this.sourceMessageId,
     );
   }
 
@@ -102,6 +114,7 @@ class TransactionModel {
         'tags': tags,
         'attachments': attachments,
         'createdAt': (createdAt ?? date).toIso8601String(),
+        'sourceMessageId': sourceMessageId,
       };
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
@@ -162,6 +175,7 @@ class TransactionModel {
               .toList() ??
           (json['receiptImagePath'] != null ? [json['receiptImagePath'] as String] : const []),
       createdAt: parsedCreated,
+      sourceMessageId: json['sourceMessageId'] as String?,
     );
   }
 }

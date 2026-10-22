@@ -211,6 +211,11 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       showExpenseBtn: settings.widgetShowExpenseBtn,
       showIncomeBtn: settings.widgetShowIncomeBtn,
       showRefreshBtn: settings.widgetShowRefreshBtn,
+      showBalance: settings.widgetShowBalance,
+      showCardDigits: settings.widgetShowCardDigits,
+      showTodayExpense: settings.widgetShowTodayExpense,
+      showWalletName: settings.widgetShowWalletName,
+      showBudgetTag: settings.widgetShowBudgetTag,
     );
   }
 

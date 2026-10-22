@@ -92,6 +92,11 @@ class UserSettingsModel {
   // Subscription Detection Dismissals
   final List<String> dismissedSubscriptionCandidates;
 
+  // Ingestion Checkpoints & Persistent Tombstones
+  final List<String> deletedTransactionSignatures;
+  final List<String> processedMessageIds;
+  final int? lastSmsScanTimestamp;
+
   const UserSettingsModel({
     this.userName = '',
     this.userPhoneNumber,
@@ -144,6 +149,9 @@ class UserSettingsModel {
     this.hfAutoSyncEnabled = false,
     this.hfLastSyncTimestamp,
     this.dismissedSubscriptionCandidates = const [],
+    this.deletedTransactionSignatures = const [],
+    this.processedMessageIds = const [],
+    this.lastSmsScanTimestamp,
   });
 
   /// Smart currency-aware formatting: INR uses Indian numbering (₹1,20,000.00), others use international ($120,000.00)
@@ -222,6 +230,9 @@ class UserSettingsModel {
     bool? hfAutoSyncEnabled,
     int? hfLastSyncTimestamp,
     List<String>? dismissedSubscriptionCandidates,
+    List<String>? deletedTransactionSignatures,
+    List<String>? processedMessageIds,
+    int? lastSmsScanTimestamp,
   }) {
     return UserSettingsModel(
       userName: userName ?? this.userName,
@@ -277,6 +288,9 @@ class UserSettingsModel {
       hfAutoSyncEnabled: hfAutoSyncEnabled ?? this.hfAutoSyncEnabled,
       hfLastSyncTimestamp: hfLastSyncTimestamp ?? this.hfLastSyncTimestamp,
       dismissedSubscriptionCandidates: dismissedSubscriptionCandidates ?? this.dismissedSubscriptionCandidates,
+      deletedTransactionSignatures: deletedTransactionSignatures ?? this.deletedTransactionSignatures,
+      processedMessageIds: processedMessageIds ?? this.processedMessageIds,
+      lastSmsScanTimestamp: lastSmsScanTimestamp ?? this.lastSmsScanTimestamp,
     );
   }
 
@@ -332,6 +346,9 @@ class UserSettingsModel {
         'hfAutoSyncEnabled': hfAutoSyncEnabled,
         'hfLastSyncTimestamp': hfLastSyncTimestamp,
         'dismissedSubscriptionCandidates': dismissedSubscriptionCandidates,
+        'deletedTransactionSignatures': deletedTransactionSignatures,
+        'processedMessageIds': processedMessageIds,
+        'lastSmsScanTimestamp': lastSmsScanTimestamp,
       };
 
   factory UserSettingsModel.fromJson(Map<String, dynamic> json) =>
@@ -391,5 +408,14 @@ class UserSettingsModel {
                 ?.map((e) => e.toString())
                 .toList() ??
             const [],
+        deletedTransactionSignatures: (json['deletedTransactionSignatures'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        processedMessageIds: (json['processedMessageIds'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        lastSmsScanTimestamp: json['lastSmsScanTimestamp'] as int?,
       );
 }

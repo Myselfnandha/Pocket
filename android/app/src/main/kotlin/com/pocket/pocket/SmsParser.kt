@@ -14,7 +14,8 @@ data class ParsedSmsTransaction(
     val detectionSource: String = "sms",
     val rawPayload: String,
     val isIncome: Boolean,
-    val accountLast4: String? = null
+    val accountLast4: String? = null,
+    val sourceMessageId: String? = null
 ) {
     fun toJson(): JSONObject {
         return JSONObject().apply {
@@ -29,6 +30,9 @@ data class ParsedSmsTransaction(
             put("isIncome", isIncome)
             if (accountLast4 != null) {
                 put("counterpartyLast4", accountLast4)
+            }
+            if (sourceMessageId != null) {
+                put("sourceMessageId", sourceMessageId)
             }
         }
     }
@@ -69,7 +73,7 @@ object SmsParser {
         Pattern.compile("(?:from|by\\s+transfer\\s+from)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|upi|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
     )
 
-    fun parse(sender: String, body: String, timestamp: Long): ParsedSmsTransaction? {
+    fun parse(sender: String, body: String, timestamp: Long, smsId: String? = null): ParsedSmsTransaction? {
         val lower = body.lowercase()
 
         // 1. Check for transaction indicators
@@ -96,7 +100,15 @@ object SmsParser {
         // Clean sender display
         val cleanSender = cleanSenderAddress(sender)
 
+        val stableId = if (!smsId.isNullOrBlank()) {
+            "sms_$smsId"
+        } else {
+            val contentHash = Math.abs((sender + "_" + body + "_" + timestamp).hashCode())
+            "sms_$contentHash"
+        }
+
         return ParsedSmsTransaction(
+            id = stableId,
             amount = amount,
             merchant = merchant,
             appSource = "SMS ($cleanSender)",
@@ -104,7 +116,8 @@ object SmsParser {
             date = if (timestamp > 0) timestamp else System.currentTimeMillis(),
             rawPayload = body,
             isIncome = isCredit,
-            accountLast4 = accountLast4
+            accountLast4 = accountLast4,
+            sourceMessageId = smsId ?: stableId
         )
     }
 

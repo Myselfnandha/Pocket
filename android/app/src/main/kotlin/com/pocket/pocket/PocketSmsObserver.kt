@@ -52,7 +52,7 @@ class PocketSmsObserver(
 
                     lastObservedSmsId = smsId
 
-                    val parsed = SmsParser.parse(sender, body, date)
+                    val parsed = SmsParser.parse(sender, body, date, smsId.toString())
                     if (parsed != null && parsed.amount > 0.0) {
                         val prefs = context.getSharedPreferences(PocketNotificationListener.PREFS_NAME, Context.MODE_PRIVATE)
                         val autoSaveSms = prefs.getBoolean("auto_save_sms", false)

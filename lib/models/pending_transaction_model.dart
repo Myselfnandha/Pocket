@@ -12,6 +12,7 @@ class PendingTransactionModel {
   final String? rawPayload;
   final String? counterpartyLast4;
   final bool isIncome;
+  final String? sourceMessageId;
 
   const PendingTransactionModel({
     required this.id,
@@ -27,7 +28,16 @@ class PendingTransactionModel {
     this.rawPayload,
     this.counterpartyLast4,
     this.isIncome = false,
+    this.sourceMessageId,
   });
+
+  /// Stable deterministic signature for idempotency and tombstone checks
+  String get signature {
+    final ref = (refId != null && refId!.trim().isNotEmpty) ? refId!.trim() : '';
+    final last4 = (counterpartyLast4 != null && counterpartyLast4!.trim().isNotEmpty) ? counterpartyLast4!.trim() : '';
+    final timeMin = date.millisecondsSinceEpoch ~/ (1000 * 60 * 30); // 30-minute bucket
+    return '${amount.toStringAsFixed(2)}_${timeMin}_${ref}_$last4';
+  }
 
   PendingTransactionModel copyWith({
     String? id,
@@ -43,6 +53,7 @@ class PendingTransactionModel {
     String? rawPayload,
     String? counterpartyLast4,
     bool? isIncome,
+    String? sourceMessageId,
   }) {
     return PendingTransactionModel(
       id: id ?? this.id,
@@ -58,6 +69,7 @@ class PendingTransactionModel {
       rawPayload: rawPayload ?? this.rawPayload,
       counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
       isIncome: isIncome ?? this.isIncome,
+      sourceMessageId: sourceMessageId ?? this.sourceMessageId,
     );
   }
 
@@ -75,6 +87,7 @@ class PendingTransactionModel {
         'rawPayload': rawPayload,
         'counterpartyLast4': counterpartyLast4,
         'isIncome': isIncome,
+        'sourceMessageId': sourceMessageId,
       };
 
   factory PendingTransactionModel.fromJson(Map<String, dynamic> json) {
@@ -112,6 +125,7 @@ class PendingTransactionModel {
       rawPayload: json['rawPayload'] as String?,
       counterpartyLast4: json['counterpartyLast4'] as String?,
       isIncome: json['isIncome'] == true,
+      sourceMessageId: json['sourceMessageId'] as String?,
     );
   }
 }

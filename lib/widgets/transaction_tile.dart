@@ -5,6 +5,7 @@ import '../models/category_model.dart';
 import '../models/wallet_model.dart';
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
+import 'top_capsule_toast.dart';
 
 class TransactionTile extends ConsumerWidget {
   final TransactionModel transaction;
@@ -78,22 +79,13 @@ class TransactionTile extends ConsumerWidget {
       onDismissed: (_) {
         onDelete?.call();
         ref.read(transactionsProvider.notifier).deleteTransaction(transaction.id);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            backgroundColor: const Color(0xFF1E1E1E),
-            content: Text('Deleted "${transaction.title}"'),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Undo',
-              textColor: AppColors.primaryGreenLight,
-              onPressed: () {
-                ref.read(transactionsProvider.notifier).insertTransactionAt(0, transaction);
-              },
-            ),
-          ),
+        TopCapsuleToast.showBottom(
+          context,
+          message: 'Deleted "${transaction.title}"',
+          actionLabel: 'Undo',
+          onAction: () {
+            ref.read(transactionsProvider.notifier).insertTransactionAt(0, transaction);
+          },
         );
       },
       child: InkWell(

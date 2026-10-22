@@ -49,8 +49,12 @@ class PocketBarWidgetProvider : HomeWidgetProvider() {
             val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
             // Read preferences
-            @Suppress("DEPRECATION")
-            val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val prefs = try {
+                es.antonborri.home_widget.HomeWidgetPlugin.getData(context)
+            } catch (_: Exception) {
+                @Suppress("DEPRECATION")
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            }
             val rawBalance = prefs.getString("raw_total_balance", "₹0.00") ?: "₹0.00"
             val durationSec = prefs.getInt("widget_peek_duration_seconds", 2)
             val durationMs = durationSec * 1000L

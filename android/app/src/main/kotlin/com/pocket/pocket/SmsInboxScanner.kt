@@ -33,6 +33,7 @@ object SmsInboxScanner {
                 selectionArgs,
                 sortOrder
             )?.use { cursor ->
+                val idIdx = cursor.getColumnIndex("_id")
                 val addressIdx = cursor.getColumnIndex("address")
                 val bodyIdx = cursor.getColumnIndex("body")
                 val dateIdx = cursor.getColumnIndex("date")
@@ -41,6 +42,7 @@ object SmsInboxScanner {
                 val maxLimit = if (daysLookback <= 0) 10000 else 600
 
                 while (cursor.moveToNext() && count < maxLimit) {
+                    val smsId = if (idIdx >= 0) cursor.getString(idIdx) ?: "" else ""
                     val sender = if (addressIdx >= 0) cursor.getString(addressIdx) ?: "" else ""
                     val body = if (bodyIdx >= 0) cursor.getString(bodyIdx) ?: "" else ""
                     val date = if (dateIdx >= 0) cursor.getLong(dateIdx) else 0L
@@ -57,7 +59,7 @@ object SmsInboxScanner {
                         continue
                     }
 
-                    val parsed = SmsParser.parse(sender, body, date)
+                    val parsed = SmsParser.parse(sender, body, date, smsId)
                     if (parsed != null && parsed.amount > 0.0) {
                         resultList.put(parsed.toJson())
                         count++
@@ -66,8 +68,10 @@ object SmsInboxScanner {
                         val last4 = SmsParser.extractAccountLast4(body)
                         if (last4 != null || lower.contains("bal")) {
                             val cleanSender = cleanSenderAddress(sender)
+                            val stableAlertId = if (smsId.isNotBlank()) "sms_$smsId" else "sms_${Math.abs((sender + "_" + body + "_" + date).hashCode())}"
                             val obj = JSONObject().apply {
-                                put("id", UUID.randomUUID().toString())
+                                put("id", stableAlertId)
+                                put("sourceMessageId", smsId.ifBlank { stableAlertId })
                                 put("amount", 0.0)
                                 put("merchant", cleanSender.ifEmpty { "Bank Alert" })
                                 put("appSource", "SMS ($cleanSender)")
