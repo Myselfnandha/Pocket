@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/category_model.dart';
+import '../models/wallet_model.dart';
 import '../services/ai_forecasting_service.dart';
 import '../services/financial_health_service.dart';
 import 'transactions_provider.dart';
