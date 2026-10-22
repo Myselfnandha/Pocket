@@ -26,7 +26,7 @@ final subscriptionCandidatesProvider = Provider<List<SubscriptionCandidate>>((re
 
 final totalBalanceProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
-  final liquidWallets = wallets.where((w) => w.type != WalletType.loan);
+  final liquidWallets = wallets.where((w) => w.walletType != WalletType.loan);
   final total = liquidWallets.fold(0.0, (sum, w) => sum + w.currentBalance);
   final rounded = (total * 100).round() / 100.0;
   return rounded.abs() < 0.0001 ? 0.0 : rounded;
@@ -34,7 +34,7 @@ final totalBalanceProvider = Provider<double>((ref) {
 
 final totalLoanDebtProvider = Provider<double>((ref) {
   final wallets = ref.watch(walletsWithBalancesProvider);
-  final loanWallets = wallets.where((w) => w.type == WalletType.loan);
+  final loanWallets = wallets.where((w) => w.walletType == WalletType.loan);
   final total = loanWallets.fold(0.0, (sum, w) => sum + w.currentBalance);
   return (total * 100).round() / 100.0;
 });

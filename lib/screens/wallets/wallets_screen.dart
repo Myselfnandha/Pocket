@@ -3114,7 +3114,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                     ),
                     const SizedBox(height: 6),
                     ...loanTxs.map((tx) {
-                      final isCredit = tx.type == TransactionType.income || (tx.type == TransactionType.transfer && tx.walletId == loan.id);
+                      final isCredit = tx.type == TransactionType.income;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Row(

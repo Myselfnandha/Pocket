@@ -29,6 +29,9 @@ class DiscoveredBankAccount {
     required this.transactionCount,
   });
 
+  bool get isLoan => type == WalletType.loan;
+  String get suggestedIcon => icon;
+  double? get balance => hasBalance ? currentBalance : null;
   String get maskedAccountNumber => '•••• $accountLast4';
 
   WalletModel toWallet({required String currencySymbol, bool isDefault = false}) {

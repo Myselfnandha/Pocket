@@ -2,6 +2,25 @@ import 'package:flutter/material.dart';
 
 enum WalletType { cash, bank, upi, creditCard, savings, loan }
 
+extension WalletTypeExtension on WalletType {
+  String get displayName {
+    switch (this) {
+      case WalletType.cash:
+        return 'Cash';
+      case WalletType.bank:
+        return 'Bank';
+      case WalletType.upi:
+        return 'UPI';
+      case WalletType.creditCard:
+        return 'Credit Card';
+      case WalletType.savings:
+        return 'Savings';
+      case WalletType.loan:
+        return 'Loan';
+    }
+  }
+}
+
 class WalletModel {
   final String id;
   final String name;
@@ -27,6 +46,7 @@ class WalletModel {
     this.accountNumber,
   });
 
+  WalletType get type => walletType;
   Color get color => Color(colorValue);
 
   String get maskedAccountNumber {
