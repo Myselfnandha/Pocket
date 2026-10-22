@@ -101,6 +101,7 @@ class AppColors {
   static const Color expenseRed = Color(0xFFEF5350);
   static const Color warningAmber = Color(0xFFFFB300);
   static const Color infoBlue = Color(0xFF29B6F6);
+  static const Color accentCyan = Color(0xFF00E5FF);
 
   // Dark Theme (Pure AMOLED vs Standard Dark)
   static const Color pureBlackBackground = Color(0xFF000000);

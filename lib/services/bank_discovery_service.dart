@@ -35,15 +35,13 @@ class DiscoveredBankAccount {
     return WalletModel(
       id: id,
       name: bankName,
-      type: type,
-      currencySymbol: currencySymbol,
+      walletType: type,
       initialBalance: currentBalance,
       currentBalance: currentBalance,
       icon: icon,
       colorValue: colorValue,
       accountNumber: accountLast4,
       isDefault: isDefault,
-      createdAt: DateTime.now(),
     );
   }
 }

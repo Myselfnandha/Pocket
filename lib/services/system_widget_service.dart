@@ -5,7 +5,9 @@ import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet_model.dart';
 import '../models/settings_model.dart';
+import '../models/category_model.dart';
 import 'ai_forecasting_service.dart';
+import 'storage_service.dart';
 
 class SystemWidgetService {
   static const String androidWidgetName = 'PocketWidgetProvider';
