@@ -18,7 +18,7 @@ class TransactionModel {
   final String? rawPayload;
   final List<String> tags;
   final List<String> attachments; // Invoices, receipts, warranties, warranty PDFs/images
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   const TransactionModel({
     required this.id,
@@ -38,7 +38,7 @@ class TransactionModel {
     this.rawPayload,
     this.tags = const [],
     this.attachments = const [],
-    required this.createdAt,
+    this.createdAt,
   });
 
   TransactionModel copyWith({
@@ -101,7 +101,7 @@ class TransactionModel {
         'rawPayload': rawPayload,
         'tags': tags,
         'attachments': attachments,
-        'createdAt': createdAt.toIso8601String(),
+        'createdAt': (createdAt ?? date).toIso8601String(),
       };
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {

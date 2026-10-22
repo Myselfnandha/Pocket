@@ -236,6 +236,7 @@ void main() {
         categoryId: 'cat_transfer',
         walletId: 'w_hdfc',
         date: DateTime.now(),
+        createdAt: DateTime.now(),
       );
 
       final transferIncome = TransactionModel(
@@ -246,6 +247,7 @@ void main() {
         categoryId: 'cat_transfer',
         walletId: 'w_cash',
         date: DateTime.now(),
+        createdAt: DateTime.now(),
       );
 
       final actualExpense = TransactionModel(
@@ -256,6 +258,7 @@ void main() {
         categoryId: 'groceries',
         walletId: 'w_hdfc',
         date: DateTime.now(),
+        createdAt: DateTime.now(),
       );
 
       final txs = [transferExpense, transferIncome, actualExpense];

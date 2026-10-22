@@ -17,6 +17,7 @@ plugins {
 android {
     namespace = "com.pocket.pocket"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

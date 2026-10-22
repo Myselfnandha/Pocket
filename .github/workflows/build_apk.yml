@@ -66,6 +66,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Pre-install Android SDK Tools & NDK
+        run: |
+          yes | sdkmanager --licenses || true
+          for i in 1 2 3; do
+            echo "Attempt $i: Installing NDK and CMake..."
+            sdkmanager --install "ndk;27.0.12077973" "cmake;3.22.1" && break || {
+              echo "Installation glitch, cleaning up partial download before retrying..."
+              rm -rf /usr/local/lib/android/sdk/.temp /usr/local/lib/android/sdk/ndk/27.0.12077973 2>/dev/null || true
+              sleep 5
+            }
+          done
+
       - name: Setup Fast Gradle Cache & Build Action
         uses: gradle/actions/setup-gradle@v4
         with:
