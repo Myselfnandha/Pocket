@@ -149,9 +149,13 @@ class _AutoImportStudioScreenState extends ConsumerState<AutoImportStudioScreen>
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E28) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -203,10 +207,13 @@ class _AutoImportStudioScreenState extends ConsumerState<AutoImportStudioScreen>
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E28) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: 0.25),
-                  width: 1.2,
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -278,9 +285,13 @@ class _AutoImportStudioScreenState extends ConsumerState<AutoImportStudioScreen>
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF22222B) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isActive ? paletteColor.withValues(alpha: 0.4) : (isDark ? Colors.white10 : Colors.black12),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [

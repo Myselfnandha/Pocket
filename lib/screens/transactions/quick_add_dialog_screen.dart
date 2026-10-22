@@ -95,8 +95,14 @@ class _QuickAddDialogScreenState extends State<QuickAddDialogScreen> {
                         padding: const EdgeInsets.all(28),
                         decoration: BoxDecoration(
                           color: const Color(0xFF161616),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white10),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 28,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
                         child: const Column(
                           mainAxisSize: MainAxisSize.min,

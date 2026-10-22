@@ -423,9 +423,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -522,10 +519,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: activeColor.withValues(alpha: 0.4),
-                            width: 1.5,
-                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: activeColor.withValues(alpha: isDark ? 0.2 : 0.08),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -959,10 +959,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 14,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: _receiptFile == null
                           ? Row(
@@ -1025,10 +1029,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 14,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1135,10 +1143,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 14,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
@@ -1194,13 +1206,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _trackInDebtLedger
-                              ? (_type == TransactionType.expense ? AppColors.incomeGreen : AppColors.infoBlue)
-                              : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                          width: _trackInDebtLedger ? 1.5 : 1.0,
-                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _trackInDebtLedger
+                                ? (_type == TransactionType.expense ? AppColors.incomeGreen : AppColors.infoBlue).withValues(alpha: isDark ? 0.28 : 0.12)
+                                : Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1409,13 +1424,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
-                width: 1.5,
-              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
                   blurRadius: 28,
                   offset: const Offset(0, 10),
                 ),

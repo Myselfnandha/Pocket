@@ -304,11 +304,6 @@ class _TransactionsListScreenState
                           ? AppColors.primaryGreenLight.withValues(alpha: 0.2)
                           : (isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE)),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _categoryFilter != null
-                            ? AppColors.primaryGreenLight
-                            : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -371,11 +366,6 @@ class _TransactionsListScreenState
                           ? AppColors.primaryGreenLight.withValues(alpha: 0.2)
                           : (isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE)),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _walletFilter != null
-                            ? AppColors.primaryGreenLight
-                            : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -459,9 +449,6 @@ class _TransactionsListScreenState
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFEEEEEE),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -621,12 +608,14 @@ class _TransactionsListScreenState
                               color: isDark
                                   ? AppColors.darkSurfaceVariant
                                   : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppColors.darkCardBorder
-                                    : AppColors.lightCardBorder,
-                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: ListView.separated(
                               shrinkWrap: true,
@@ -635,8 +624,8 @@ class _TransactionsListScreenState
                               separatorBuilder: (context, index) => Divider(
                                 height: 1,
                                 color: isDark
-                                    ? AppColors.darkCardBorder
-                                    : AppColors.lightCardBorder,
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.black.withValues(alpha: 0.04),
                               ),
                               itemBuilder: (context, i) {
                                 final tx = items[i];
