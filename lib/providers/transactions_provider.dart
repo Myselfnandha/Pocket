@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import '../services/storage_service.dart';
+import '../services/system_widget_service.dart';
 import 'core_providers.dart';
 
 class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
@@ -58,6 +60,7 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
 
     state = [newTx, ...state];
     await _storage.saveTransactions(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
     return newTx;
   }
 
@@ -69,6 +72,7 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
         if (item.id == cleanTx.id) cleanTx else item,
     ];
     await _storage.saveTransactions(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> insertTransactionAt(int index, TransactionModel tx) async {
@@ -77,11 +81,13 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
     list.insert(safeIndex, tx);
     state = list;
     await _storage.saveTransactions(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> deleteTransaction(String id) async {
     state = state.where((tx) => tx.id != id).toList();
     await _storage.saveTransactions(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> refreshFromDisk() async {

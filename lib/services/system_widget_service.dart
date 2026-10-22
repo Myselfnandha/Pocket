@@ -22,17 +22,25 @@ class SystemWidgetService {
     double? monthlySavings,
     double? budgetRemaining,
     MonthSpendForecast? forecast,
-    bool privacyMode = false,
+    bool isCustomizationEnabled = true,
+    bool privacyMode = true,
     String? selectedWalletId,
     String secondaryAction = 'scan',
     String widgetTheme = 'glassFrost',
-    int peekDurationSeconds = 2,
+    int peekDurationSeconds = 3,
     bool showExpenseBtn = true,
     bool showIncomeBtn = true,
     bool showRefreshBtn = true,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
+
+      if (!isCustomizationEnabled) {
+        privacyMode = false;
+        selectedWalletId = null;
+        secondaryAction = 'scan';
+        widgetTheme = 'glassFrost';
+      }
 
       // 1. Resolve Account & Balance for Card Widget
       double cardBalance = totalBalance;
@@ -130,9 +138,25 @@ class SystemWidgetService {
           break;
       }
 
+      // 4b. Resolve Card Digits
+      String cardDigits = '•••• 2026';
+      if (selectedWalletId != null && wallets != null && wallets.isNotEmpty) {
+        final matched = wallets.where((w) => w.id == selectedWalletId);
+        if (matched.isNotEmpty && matched.first.maskedAccountNumber.isNotEmpty) {
+          cardDigits = matched.first.maskedAccountNumber;
+        }
+      } else if (wallets != null && wallets.isNotEmpty) {
+        final first = wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first);
+        if (first.maskedAccountNumber.isNotEmpty) {
+          cardDigits = first.maskedAccountNumber;
+        }
+      }
+
       // 5. Save to Android SharedPreferences via HomeWidget
+      await HomeWidget.saveWidgetData<bool>('widget_customization_enabled', isCustomizationEnabled);
       await HomeWidget.saveWidgetData<String>('total_balance', formattedTotal);
       await HomeWidget.saveWidgetData<String>('card_balance', formattedCard);
+      await HomeWidget.saveWidgetData<String>('card_digits', cardDigits);
       await HomeWidget.saveWidgetData<String>('raw_total_balance', formattedTotalRaw);
       await HomeWidget.saveWidgetData<String>('raw_card_balance', formattedCardRaw);
       await HomeWidget.saveWidgetData<bool>('widget_privacy_mode', privacyMode);
@@ -156,7 +180,7 @@ class SystemWidgetService {
       await HomeWidget.saveWidgetData<String>('accounts_summary', accountsSummary);
       await HomeWidget.saveWidgetData<String>('forecast_sparkline', sparklineData);
 
-      // 5. Update All Registered Widget Providers
+      // 6. Update All Registered Widget Providers
       for (final provider in [
         'PocketWidgetProvider',
         'PocketCardWidgetProvider',
@@ -171,6 +195,50 @@ class SystemWidgetService {
       }
     } catch (e) {
       debugPrint('SystemWidgetService update error: $e');
+    }
+  }
+
+  /// One-call synchronizer that reads directly from persistent storage and updates all widgets
+  static Future<void> syncFromStorage(StorageService storage) async {
+    try {
+      final settings = storage.getSettings();
+      final wallets = storage.getWallets();
+      final txs = storage.getTransactions();
+
+      double totalBalance = 0.0;
+      for (final w in wallets) {
+        totalBalance += w.currentBalance;
+      }
+
+      final now = DateTime.now();
+      double todayExpense = 0.0;
+      for (final tx in txs) {
+        if (tx.type == TransactionType.expense &&
+            tx.date.year == now.year &&
+            tx.date.month == now.month &&
+            tx.date.day == now.day) {
+          todayExpense += tx.amount;
+        }
+      }
+
+      await updateWidgetData(
+        totalBalance: totalBalance,
+        todayExpense: todayExpense,
+        currencySymbol: settings.currencySymbol,
+        wallets: wallets,
+        statType: settings.homeScreenWidgetStat,
+        isCustomizationEnabled: settings.isWidgetCustomizationEnabled,
+        privacyMode: settings.widgetPrivacyMode,
+        selectedWalletId: settings.widgetSelectedWalletId,
+        secondaryAction: settings.widgetSecondaryAction,
+        widgetTheme: settings.widgetTheme,
+        peekDurationSeconds: settings.widgetPeekDurationSeconds,
+        showExpenseBtn: settings.widgetShowExpenseBtn,
+        showIncomeBtn: settings.widgetShowIncomeBtn,
+        showRefreshBtn: settings.widgetShowRefreshBtn,
+      );
+    } catch (e) {
+      debugPrint('Error syncing widget from storage: $e');
     }
   }
 

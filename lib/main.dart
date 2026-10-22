@@ -74,6 +74,8 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       ref.read(walletsProvider.notifier).refreshFromDisk();
       ref.read(notificationsProvider.notifier).refreshFromDisk();
       ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
+      ref.read(pendingTransactionsProvider.notifier).syncRecentSmsInbox(daysLookback: 2);
+      _syncWidget();
     }
   }
 
@@ -200,6 +202,7 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       monthlySavings: monthlyStats.netSavings,
       budgetRemaining: budgetRemaining,
       forecast: forecast,
+      isCustomizationEnabled: settings.isWidgetCustomizationEnabled,
       privacyMode: settings.widgetPrivacyMode,
       selectedWalletId: settings.widgetSelectedWalletId,
       secondaryAction: settings.widgetSecondaryAction,

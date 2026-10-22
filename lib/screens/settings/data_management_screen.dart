@@ -750,6 +750,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           todayExpense: 0.0,
           currencySymbol: updatedSettings.currencySymbol,
           wallets: storage.getWallets(),
+          isCustomizationEnabled: updatedSettings.isWidgetCustomizationEnabled,
         );
       }
 

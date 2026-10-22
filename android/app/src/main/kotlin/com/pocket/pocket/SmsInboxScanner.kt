@@ -3,6 +3,8 @@ package com.pocket.pocket
 import android.content.Context
 import android.net.Uri
 import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
 
 object SmsInboxScanner {
 
@@ -36,7 +38,7 @@ object SmsInboxScanner {
                 val dateIdx = cursor.getColumnIndex("date")
 
                 var count = 0
-                val maxLimit = 600
+                val maxLimit = if (daysLookback <= 0) 10000 else 600
 
                 while (cursor.moveToNext() && count < maxLimit) {
                     val sender = if (addressIdx >= 0) cursor.getString(addressIdx) ?: "" else ""
@@ -45,9 +47,13 @@ object SmsInboxScanner {
 
                     if (body.isBlank()) continue
 
-                    // Fast reject personal chat messages that don't have currency indicators
                     val lower = body.lowercase()
-                    if (!lower.contains("₹") && !lower.contains("rs.") && !lower.contains("rs ") && !lower.contains("inr") && !lower.contains("$")) {
+                    val hasCurrency = lower.contains("₹") || lower.contains("rs") || lower.contains("inr") || lower.contains("$")
+                    val isBankOrAccount = lower.contains("a/c") || lower.contains("acct") || lower.contains("account") ||
+                            lower.contains("card ending") || lower.contains("bal") || lower.contains("balance")
+
+                    // Reject personal non-financial chats
+                    if (!hasCurrency && !isBankOrAccount) {
                         continue
                     }
 
@@ -55,6 +61,28 @@ object SmsInboxScanner {
                     if (parsed != null && parsed.amount > 0.0) {
                         resultList.put(parsed.toJson())
                         count++
+                    } else if (daysLookback <= 0 && isBankOrAccount) {
+                        // For onboarding/full discovery, capture bank balance alerts or notices
+                        val last4 = SmsParser.extractAccountLast4(body)
+                        if (last4 != null || lower.contains("bal")) {
+                            val cleanSender = cleanSenderAddress(sender)
+                            val obj = JSONObject().apply {
+                                put("id", UUID.randomUUID().toString())
+                                put("amount", 0.0)
+                                put("merchant", cleanSender.ifEmpty { "Bank Alert" })
+                                put("appSource", "SMS ($cleanSender)")
+                                put("refId", "")
+                                put("date", if (date > 0) date else System.currentTimeMillis())
+                                put("detectionSource", "sms")
+                                put("rawPayload", body)
+                                put("isIncome", false)
+                                if (last4 != null) {
+                                    put("counterpartyLast4", last4)
+                                }
+                            }
+                            resultList.put(obj)
+                            count++
+                        }
                     }
                 }
             }
@@ -63,5 +91,11 @@ object SmsInboxScanner {
         }
 
         return resultList.toString()
+    }
+
+    private fun cleanSenderAddress(sender: String): String {
+        val parts = sender.split("-")
+        val core = if (parts.size > 1) parts[1] else sender
+        return core.trim().take(12)
     }
 }

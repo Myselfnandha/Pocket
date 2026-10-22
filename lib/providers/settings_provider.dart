@@ -85,6 +85,10 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
     await updateSettings(state.copyWith(showCategoryTags: value));
   }
 
+  Future<void> setWidgetCustomizationEnabled(bool value) async {
+    await updateSettings(state.copyWith(isWidgetCustomizationEnabled: value));
+  }
+
   Future<void> setWidgetPrivacyMode(bool value) async {
     await updateSettings(state.copyWith(widgetPrivacyMode: value));
   }

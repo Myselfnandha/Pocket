@@ -44,3 +44,8 @@ This document records durable architectural decisions, system invariants, and in
 ### 10. Home Screen Widget Privacy Peek & Live Customization Suite
 - **Decision**: Home screen widgets support tap-to-peek privacy reveals with haptic feedback, an auto-masking timer (`widgetPeekDurationSeconds`), customizable visual themes (`glassFrost`, `oledBlack`, `midnightNavy`), and configurable action buttons.
 - **Rationale**: Balances glanceable desktop convenience with public privacy protection without requiring the app to be opened.
+
+### 11. Widget Isolated Tap Space & Global Customization Master Toggle
+- **Decision**: Android home screen widgets isolate the balance peek trigger to a dedicated pill button container (`btn_toggle_balance` / `txt_toggle_icon`) to prevent accidental mistouches from launching `MainActivity`. A global `isWidgetCustomizationEnabled` master toggle allows users to switch between customized widget parameters and default automatic sync across all accounts.
+- **Rationale**: Android widget root click listeners intercept taps that fall outside tight text bounds; a dedicated pill container prevents unwanted app launches. The master switch allows users to revert easily to zero-configuration global balance tracking.
+

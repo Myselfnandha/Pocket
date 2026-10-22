@@ -324,18 +324,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       final person = _debtContactName?.trim().isNotEmpty == true
           ? _debtContactName!.trim()
           : (title.isNotEmpty ? title : 'Contact');
-      final newDebt = DebtModel(
-        id: const Uuid().v4(),
+      await ref.read(debtsProvider.notifier).addDebt(
         personName: person,
         phoneNumber: _debtContactPhone,
-        totalAmount: amount,
-        remainingAmount: amount,
+        amount: amount,
         type: debtType,
         walletId: wId,
-        createdAt: _selectedDate,
         notes: 'Linked to transaction: $title',
+        updateWallet: false,
       );
-      await ref.read(debtsProvider.notifier).addDebt(newDebt);
     }
 
     // 3. Trigger Budget threshold checks

@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.2.2)'
+        description: 'Version Name (e.g. 1.2.3)'
         required: false
-        default: '1.2.2'
+        default: '1.2.3'
       build_number:
         description: 'Build Number (e.g. 34)'
         required: false

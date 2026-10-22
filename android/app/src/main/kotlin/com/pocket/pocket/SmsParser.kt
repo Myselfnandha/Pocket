@@ -37,17 +37,17 @@ data class ParsedSmsTransaction(
 object SmsParser {
 
     private val AMOUNT_PATTERN = Pattern.compile(
-        "(?:₹|rs\\.?|inr|usd|\\$)\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
+        "(?:₹|rs\\.?|rs:|inr|usd|\\$)\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
         Pattern.CASE_INSENSITIVE
     )
 
     private val SECONDARY_AMOUNT_PATTERN = Pattern.compile(
-        "(?:paid|debited(?:\\s+by|\\s+for)?|spent|credited(?:\\s+with)?|transferred)\\s+(?:₹|rs\\.?|inr|usd|\\$)?\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
+        "(?:paid|debited(?:\\s+by|\\s+for)?|spent|credited(?:\\s+with|\\s+for)?|transferred)\\s+(?:₹|rs\\.?|rs:|inr|usd|\\$)?\\s*([0-9]+(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?)",
         Pattern.CASE_INSENSITIVE
     )
 
     private val ACCOUNT_LAST4_PATTERN = Pattern.compile(
-        "(?:a/c|ac|account|card)\\s*(?:no\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[*xX.-]*([0-9]{3,4})\\b",
+        "(?:a/c|ac|account|card|acct)\\s*(?:no\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[*xX.-]*([0-9]{3,4})\\b",
         Pattern.CASE_INSENSITIVE
     )
 

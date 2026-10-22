@@ -9,6 +9,7 @@ import '../../models/wallet_model.dart';
 import '../../models/settings_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
+import '../../services/bank_discovery_service.dart';
 import '../../theme/app_theme.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -47,6 +48,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   bool _monthlySummaryEnabled = true;
 
   final List<WalletModel> _onboardingWallets = [];
+  List<DiscoveredBankAccount> _discoveredBankAccounts = [];
+  bool _isScanningSms = false;
+  bool _hasScannedSms = false;
   late List<CategoryModel> _onboardingCategories;
   final Map<String, double> _onboardingBudgets = {};
 
@@ -96,7 +100,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     )..forward();
 
     _onboardingCategories = List.from(defaultCategories);
-    // Starts with clean slate for Profile and Wallet Setup
+    // Auto-detect bank accounts if SMS permission is already granted
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final autoImport = ref.read(autoImportServiceProvider);
+        final perms = await autoImport.checkPermissions();
+        if (perms.isSmsListenerEnabled && !_hasScannedSms && !_isScanningSms) {
+          _detectBankAccountsFromSms();
+        }
+      } catch (_) {}
+    });
   }
 
   @override
@@ -307,7 +320,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (page) => setState(() => _currentPage = page),
+                onPageChanged: (page) {
+                  setState(() => _currentPage = page);
+                  if (page == 3 && !_hasScannedSms && !_isScanningSms) {
+                    _detectBankAccountsFromSms();
+                  }
+                },
                 children: [
                   _buildSlide1Welcome(isDark),
                   _buildSlide2Profile(isDark),
@@ -374,12 +392,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
     final features = [
-      {'icon': Icons.lock_rounded, 'label': '🔒 Hardware AES-256 Encryption • Zero-knowledge offline privacy'},
-      {'icon': Icons.auto_graph_rounded, 'label': '🔮 On-Device AI Forecasting • Confidence bands & burn rate predictions'},
-      {'icon': Icons.auto_fix_high_rounded, 'label': '✨ Natural Language Entry • Type or speak "1200 for dinner yesterday"'},
-      {'icon': Icons.alt_route_rounded, 'label': '🌊 Sankey Money Topology & 0–1000 Financial Health Score Gauge'},
-      {'icon': Icons.bolt_rounded, 'label': '⚡ Instant UPI Share-to-Log • Auto-parse payment receipts with OCR'},
-      {'icon': Icons.track_changes_rounded, 'label': '🎯 Savings Goals, Budget Rollover & Bill Due Calendar View'},
+      {'icon': Icons.lock_rounded, 'label': 'Hardware AES-256 Encryption • Zero-knowledge offline privacy'},
+      {'icon': Icons.auto_graph_rounded, 'label': 'On-Device AI Forecasting • Confidence bands & burn rate predictions'},
+      {'icon': Icons.auto_fix_high_rounded, 'label': 'Natural Language Entry • Type or speak "1200 for dinner yesterday"'},
+      {'icon': Icons.alt_route_rounded, 'label': 'Sankey Money Topology & 0–1000 Financial Health Score Gauge'},
+      {'icon': Icons.bolt_rounded, 'label': 'Instant UPI Share-to-Log • Auto-parse payment receipts with OCR'},
+      {'icon': Icons.track_changes_rounded, 'label': 'Savings Goals, Budget Rollover & Bill Due Calendar View'},
     ];
 
     return SingleChildScrollView(
@@ -933,153 +951,655 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     );
   }
 
+  Future<void> _detectBankAccountsFromSms() async {
+    setState(() => _isScanningSms = true);
+    try {
+      final autoImport = ref.read(autoImportServiceProvider);
+      final perms = await autoImport.checkPermissions();
+      if (!perms.isSmsListenerEnabled) {
+        final granted = await autoImport.requestSmsPermission();
+        if (!granted) {
+          if (mounted) setState(() => _isScanningSms = false);
+          return;
+        }
+      }
+
+      final detected = await BankDiscoveryService.discoverFromSms(autoImport, daysLookback: 0);
+      if (mounted) {
+        final symbol = _selectedCurrencySymbol ?? '₹';
+        setState(() {
+          _discoveredBankAccounts = detected;
+          _hasScannedSms = true;
+          _isScanningSms = false;
+
+          // Automatically quick-add all discovered bank accounts if empty
+          if (_onboardingWallets.isEmpty && detected.isNotEmpty) {
+            for (var i = 0; i < detected.length; i++) {
+              final acc = detected[i];
+              _onboardingWallets.add(acc.toWallet(
+                currencySymbol: symbol,
+                isDefault: i == 0,
+              ));
+            }
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isScanningSms = false);
+    }
+  }
+
   // --- Slide 4: Wallet Setup ---
   Widget _buildSlide4Wallets(bool isDark) {
     final symbol = _selectedCurrencySymbol ?? '₹';
+
+    // Separate manual wallets (wallets not discovered from SMS)
+    final manualWallets = _onboardingWallets.where((w) {
+      return !_discoveredBankAccounts.any(
+        (acc) => acc.accountLast4 == w.accountNumber && acc.bankName == w.name,
+      );
+    }).toList();
+
+    final allDiscoveredAdded = _discoveredBankAccounts.isNotEmpty &&
+        _discoveredBankAccounts.every((acc) =>
+            _onboardingWallets.any((w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Wallet Setup',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Add your bank accounts, cash in hand, UPI, or cards.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          if (_onboardingWallets.isEmpty) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                ),
-              ),
-              child: Center(
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('💳', style: TextStyle(fontSize: 32)),
-                    const SizedBox(height: 8),
                     Text(
-                      'No accounts added yet',
+                      'Account & Wallet Setup',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      'Tap below to add your primary bank, cash, or UPI.',
-                      textAlign: TextAlign.center,
+                      'Discovered automatically from your bank SMS alerts with live balances.',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-          ],
+              if (_hasScannedSms && !_isScanningSms)
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  tooltip: 'Re-scan SMS Inbox',
+                  onPressed: _detectBankAccountsFromSms,
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-          // Added Wallets List
-          ..._onboardingWallets.map((w) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
+          // 1. Scanning State (Futuristic Animated Loading Card)
+          if (_isScanningSms)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.2 : 0.12),
+                    AppColors.accentCyan.withValues(alpha: isDark ? 0.08 : 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                  width: 1.3,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primaryGreenLight,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Reading all SMS inbox...',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Discovering all bank accounts and live balances privately on-device',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          // 2. Not Scanned Yet Prompt
+          else if (!_hasScannedSms)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.22 : 0.14),
+                    AppColors.accentCyan.withValues(alpha: isDark ? 0.09 : 0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      color: AppColors.primaryGreenLight,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Auto-Detect From SMS',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Scan bank SMS alerts to discover accounts & live balances with zero typing.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _detectBankAccountsFromSms,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreenLight,
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('Read SMS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
+                ],
+              ),
+            )
+          // 3. Discovered Bank Accounts Quick Add Hub
+          else if (_discoveredBankAccounts.isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                  width: 1.3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Discovered Accounts (${_discoveredBankAccounts.length})',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            for (final acc in _discoveredBankAccounts) {
+                              final exists = _onboardingWallets.any(
+                                  (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName);
+                              if (!exists) {
+                                _onboardingWallets.add(acc.toWallet(
+                                  currencySymbol: symbol,
+                                  isDefault: _onboardingWallets.isEmpty,
+                                ));
+                              }
+                            }
+                          });
+                        },
+                        icon: Icon(
+                          allDiscoveredAdded ? Icons.done_all_rounded : Icons.playlist_add_check_rounded,
+                          size: 16,
+                          color: AppColors.primaryGreenLight,
+                        ),
+                        label: Text(
+                          allDiscoveredAdded ? 'All Added' : 'Add All',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                        ),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: AppColors.primaryGreenLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ..._discoveredBankAccounts.map((acc) {
+                    final addedWalletIndex = _onboardingWallets.indexWhere(
+                      (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+                    );
+                    final isAdded = addedWalletIndex != -1;
+                    final addedWallet = isAdded ? _onboardingWallets[addedWalletIndex] : null;
+                    final isDefault = addedWallet?.isDefault ?? false;
+                    final currentBal = addedWallet?.currentBalance ?? acc.currentBalance;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? (isAdded ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.15))
+                            : (isAdded ? AppColors.primaryGreenLight.withValues(alpha: 0.06) : const Color(0xFFF7F9FC)),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDefault
+                              ? AppColors.primaryGreenLight
+                              : (isAdded
+                                  ? AppColors.primaryGreenLight.withValues(alpha: 0.4)
+                                  : (isDark ? Colors.white12 : Colors.black12)),
+                          width: isDefault ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              // Bank Brand Icon Badge
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Color(acc.colorValue).withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Color(acc.colorValue).withValues(alpha: 0.35),
+                                    width: 1,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(acc.icon, style: const TextStyle(fontSize: 20)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            acc.bankName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 14,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            acc.maskedAccountNumber,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.4,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    InkWell(
+                                      onTap: () {
+                                        if (isAdded && addedWallet != null) {
+                                          _showEditBalanceDialog(addedWallet, isDark);
+                                        } else {
+                                          setState(() {
+                                            _onboardingWallets.add(acc.toWallet(
+                                              currencySymbol: symbol,
+                                              isDefault: _onboardingWallets.isEmpty,
+                                            ));
+                                          });
+                                          final newAdded = _onboardingWallets.firstWhere(
+                                            (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+                                          );
+                                          _showEditBalanceDialog(newAdded, isDark);
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Live Bal: $symbol${currentBal.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryGreenLight,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.edit_outlined, size: 12, color: AppColors.primaryGreenLight),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Quick Add / Added Action
+                              if (isAdded)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _onboardingWallets.removeWhere(
+                                            (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+                                          );
+                                          if (isDefault && _onboardingWallets.isNotEmpty) {
+                                            _onboardingWallets[0] = _onboardingWallets[0].copyWith(isDefault: true);
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryGreenLight.withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.check_rounded, size: 14, color: AppColors.primaryGreenLight),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Added',
+                                              style: TextStyle(
+                                                color: AppColors.primaryGreenLight,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 11.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    if (isDefault)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withValues(alpha: 0.18),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          '★ Primary',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.amber,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            for (var i = 0; i < _onboardingWallets.length; i++) {
+                                              final isThisOne = _onboardingWallets[i].accountNumber == acc.accountLast4 &&
+                                                  _onboardingWallets[i].name == acc.bankName;
+                                              _onboardingWallets[i] = _onboardingWallets[i].copyWith(isDefault: isThisOne);
+                                            }
+                                          });
+                                        },
+                                        child: Text(
+                                          'Make Primary',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              else
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _onboardingWallets.add(acc.toWallet(
+                                        currencySymbol: symbol,
+                                        isDefault: _onboardingWallets.isEmpty,
+                                      ));
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add_rounded, size: 15, color: Colors.black),
+                                  label: const Text(
+                                    'Quick Add',
+                                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5, color: Colors.black),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryGreenLight,
+                                    elevation: 0,
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ] else if (_hasScannedSms && _discoveredBankAccounts.isEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                 ),
               ),
               child: Row(
                 children: [
-                  Text(w.icon, style: const TextStyle(fontSize: 24)),
+                  const Text('ℹ️', style: TextStyle(fontSize: 20)),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                w.name,
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (w.maskedAccountNumber.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  w.maskedAccountNumber,
-                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        InkWell(
-                          onTap: () => _showEditBalanceDialog(w, isDark),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Starting: $symbol${w.currentBalance.toStringAsFixed(0)}',
-                                style: const TextStyle(color: AppColors.primaryGreenLight, fontWeight: FontWeight.w700, fontSize: 12),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.edit_outlined, size: 12, color: AppColors.primaryGreenLight),
-                            ],
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'No bank SMS alerts found in inbox. You can add your accounts manually below.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
-                    onPressed: () {
-                      setState(() {
-                        _onboardingWallets.removeWhere((item) => item.id == w.id);
-                      });
-                    },
                   ),
                 ],
               ),
-            );
-          }),
+            ),
+          ],
+
+          // 4. Additional Manual Accounts (e.g. Cash, or custom accounts)
+          if (manualWallets.isNotEmpty) ...[
+            Text(
+              'Additional Accounts (${manualWallets.length})',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...manualWallets.map((w) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: w.isDefault
+                        ? AppColors.primaryGreenLight
+                        : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(w.icon, style: const TextStyle(fontSize: 22)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                              if (w.isDefault) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: const Text('★ Primary',
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          InkWell(
+                            onTap: () => _showEditBalanceDialog(w, isDark),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Balance: $symbol${w.currentBalance.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryGreenLight,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.edit_outlined, size: 12, color: AppColors.primaryGreenLight),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
+                      onPressed: () {
+                        setState(() {
+                          _onboardingWallets.removeWhere((item) => item.id == w.id);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+          ],
+
+          // 5. Template Quick Add Buttons (Cash, Bank, UPI, Card)
+          Text(
+            'Add Other Account',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+            ),
+          ),
           const SizedBox(height: 8),
 
           // Quick Template Add Buttons

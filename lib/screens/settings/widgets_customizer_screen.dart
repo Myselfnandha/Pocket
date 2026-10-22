@@ -304,28 +304,146 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
           const SizedBox(height: 24),
 
           // Customization Controls
-          Text(
-            'WIDGET PREFERENCES',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
+          Row(
+            children: [
+              Text(
+                'WIDGET PREFERENCES',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: settings.isWidgetCustomizationEnabled
+                      ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                      : (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  settings.isWidgetCustomizationEnabled ? 'CUSTOM ACTIVE' : 'GLOBAL DEFAULT',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: settings.isWidgetCustomizationEnabled
+                        ? AppColors.primaryGreenLight
+                        : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
 
-          // Privacy Mode Switch
+          // Master Enable / Disable Widget Customization Card
           Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              color: settings.isWidgetCustomizationEnabled
+                  ? (isDark ? const Color(0xFF132218) : const Color(0xFFE8F5E9))
+                  : (isDark ? AppColors.darkSurface : AppColors.lightSurface),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                color: settings.isWidgetCustomizationEnabled
+                    ? AppColors.primaryGreenLight.withValues(alpha: 0.5)
+                    : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                width: settings.isWidgetCustomizationEnabled ? 1.5 : 1,
               ),
             ),
-            child: Column(
-              children: [
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              secondary: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: settings.isWidgetCustomizationEnabled
+                      ? AppColors.primaryGreenLight
+                      : (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  settings.isWidgetCustomizationEnabled
+                      ? Icons.tune_rounded
+                      : Icons.power_settings_new_rounded,
+                  color: settings.isWidgetCustomizationEnabled
+                      ? Colors.black
+                      : (isDark ? Colors.white60 : Colors.black54),
+                  size: 20,
+                ),
+              ),
+              title: const Text(
+                'Enable Widget Customization',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+              subtitle: Text(
+                settings.isWidgetCustomizationEnabled
+                    ? 'Custom account selection, themes & privacy peek applied'
+                    : 'Disabled • Widgets show total balance across all accounts',
+                style: const TextStyle(fontSize: 12),
+              ),
+              value: settings.isWidgetCustomizationEnabled,
+              activeThumbColor: AppColors.primaryGreenLight,
+              onChanged: (val) {
+                HapticFeedback.lightImpact();
+                ref.read(settingsProvider.notifier).setWidgetCustomizationEnabled(val);
+                TopCapsuleToast.show(
+                  context,
+                  message: val
+                      ? 'Custom widget preferences activated'
+                      : 'Widget customization disabled (using default global sync)',
+                  accentColor: val ? AppColors.primaryGreenLight : AppColors.accentOrange,
+                  icon: Icon(
+                    val ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                    color: Colors.black,
+                    size: 18,
+                  ),
+                );
+              },
+            ),
+          ),
+          if (!settings.isWidgetCustomizationEnabled) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.orangeAccent),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Turn on customization above to modify featured account, theme, privacy peek, and action buttons.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+
+          // Privacy Mode Switch & Sub-Options (Dimmed when customization is disabled)
+          AnimatedOpacity(
+            opacity: settings.isWidgetCustomizationEnabled ? 1.0 : 0.45,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: !settings.isWidgetCustomizationEnabled,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  children: [
                 SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   secondary: Container(
@@ -523,6 +641,8 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
               ],
             ),
           ),
+        ),
+      ),
           const SizedBox(height: 24),
 
           // Android Widget Instructions Card
@@ -718,13 +838,38 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'AVAILABLE BALANCE',
-                  style: TextStyle(
-                    color: Color(0xFF8A8A96),
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'AVAILABLE BALANCE',
+                      style: TextStyle(
+                        color: Color(0xFF8A8A96),
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Dedicated Space for Click to View/Hide Balance (Zero Mistouch)
+                    GestureDetector(
+                      onTap: onBalanceTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16231A),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFF1B4324), width: 1),
+                        ),
+                        child: Text(
+                          isPeeking ? '👁️ Hide' : (isPrivacyActive ? '👁️ View' : '👁️ Peek'),
+                          style: const TextStyle(
+                            color: Color(0xFF00C853),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 1),
                 GestureDetector(

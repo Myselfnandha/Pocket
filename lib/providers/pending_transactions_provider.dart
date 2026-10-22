@@ -107,6 +107,72 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     state = service.deduplicateAndAssignHeuristics([...state, item]);
   }
 
+  /// Actively queries recent SMS from Android SMS provider to catch up on any messages
+  /// that might have arrived while Pocket was sleeping or before permissions were granted.
+  Future<void> syncRecentSmsInbox({int daysLookback = 2}) async {
+    try {
+      final service = _ref.read(autoImportServiceProvider);
+      final recentSms = await service.scanSmsInbox(daysLookback: daysLookback);
+      if (recentSms.isEmpty) return;
+
+      final savedTxs = _ref.read(transactionsProvider);
+      final newItems = recentSms.where((item) => !service.isAlreadySaved(item, savedTxs)).toList();
+      if (newItems.isEmpty) return;
+
+      final current = List<PendingTransactionModel>.from(state);
+      final merged = service.deduplicateAndAssignHeuristics([...current, ...newItems]);
+      state = merged;
+
+      final settings = _ref.read(settingsProvider);
+      final wallets = _ref.read(walletsProvider);
+      final List<MapEntry<PendingTransactionModel, String?>> autoCommitItems = [];
+
+      for (final item in merged) {
+        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
+        if (isSms && (settings.autoSaveSms || (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')))) {
+          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          if (matchedWalletId != null) {
+            autoCommitItems.add(MapEntry(item, matchedWalletId));
+          }
+        }
+      }
+
+      for (final entry in autoCommitItems) {
+        final item = entry.key;
+        final targetWalletId = entry.value;
+        await approve(item.id, walletId: targetWalletId);
+        final title = '💬 SMS Auto-Logged';
+        final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
+        final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
+
+        await _ref.read(notificationsProvider.notifier).addNotification(
+          AppNotificationModel(
+            id: const Uuid().v4(),
+            title: title,
+            message: '${item.merchant}: ${settings.currencySymbol}${item.amount.toStringAsFixed(2)} was automatically logged$walletLabel.',
+            type: NotificationType.system,
+            createdAt: DateTime.now(),
+            actionData: {
+              'amount': item.amount,
+              'merchant': item.merchant,
+              'refId': item.refId,
+              'imagePath': item.imagePath,
+              'walletId': targetWalletId,
+            },
+          ),
+        );
+
+        NotificationService().showTransactionLoggedNotification(
+          title: item.merchant,
+          amount: item.amount,
+          currencySymbol: settings.currencySymbol,
+          isIncome: item.isIncome,
+          walletName: matchedWallet?.name,
+        );
+      }
+    } catch (_) {}
+  }
+
   /// Approves a single detected transaction and commits it into Pocket's permanent database
   Future<void> approve(
     String id, {

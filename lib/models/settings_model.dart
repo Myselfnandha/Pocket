@@ -64,6 +64,7 @@ class UserSettingsModel {
   final String navBarStyle; // 'frosted', 'glassmorphism', 'floating_island', 'neumorphic'
 
   // Dedicated Widget Suite Settings
+  final bool isWidgetCustomizationEnabled;
   final bool widgetPrivacyMode;
   final String? widgetSelectedWalletId;
   final String widgetSecondaryAction; // 'scan' or 'voice'
@@ -117,11 +118,12 @@ class UserSettingsModel {
     this.defaultQuickAddType = 'expense',
     this.transactionEntryMode = 'quick',
     this.navBarStyle = 'floating_island',
-    this.widgetPrivacyMode = false,
+    this.isWidgetCustomizationEnabled = true,
+    this.widgetPrivacyMode = true,
     this.widgetSelectedWalletId,
     this.widgetSecondaryAction = 'scan',
     this.widgetTheme = 'glassFrost',
-    this.widgetPeekDurationSeconds = 2,
+    this.widgetPeekDurationSeconds = 3,
     this.widgetShowExpenseBtn = true,
     this.widgetShowIncomeBtn = true,
     this.widgetShowRefreshBtn = true,
@@ -186,6 +188,7 @@ class UserSettingsModel {
     String? defaultQuickAddType,
     String? transactionEntryMode,
     String? navBarStyle,
+    bool? isWidgetCustomizationEnabled,
     bool? widgetPrivacyMode,
     String? widgetSelectedWalletId,
     bool clearWidgetSelectedWalletId = false,
@@ -236,6 +239,7 @@ class UserSettingsModel {
       defaultQuickAddType: defaultQuickAddType ?? this.defaultQuickAddType,
       transactionEntryMode: transactionEntryMode ?? this.transactionEntryMode,
       navBarStyle: navBarStyle ?? this.navBarStyle,
+      isWidgetCustomizationEnabled: isWidgetCustomizationEnabled ?? this.isWidgetCustomizationEnabled,
       widgetPrivacyMode: widgetPrivacyMode ?? this.widgetPrivacyMode,
       widgetSelectedWalletId: clearWidgetSelectedWalletId
           ? null
@@ -287,6 +291,7 @@ class UserSettingsModel {
         'defaultQuickAddType': defaultQuickAddType,
         'transactionEntryMode': transactionEntryMode,
         'navBarStyle': navBarStyle,
+        'isWidgetCustomizationEnabled': isWidgetCustomizationEnabled,
         'widgetPrivacyMode': widgetPrivacyMode,
         'widgetSelectedWalletId': widgetSelectedWalletId,
         'widgetSecondaryAction': widgetSecondaryAction,
@@ -337,11 +342,12 @@ class UserSettingsModel {
         defaultQuickAddType: json['defaultQuickAddType'] as String? ?? 'expense',
         transactionEntryMode: json['transactionEntryMode'] as String? ?? 'quick',
         navBarStyle: json['navBarStyle'] as String? ?? 'floating_island',
-        widgetPrivacyMode: json['widgetPrivacyMode'] as bool? ?? false,
+        isWidgetCustomizationEnabled: json['isWidgetCustomizationEnabled'] as bool? ?? true,
+        widgetPrivacyMode: json['widgetPrivacyMode'] as bool? ?? true,
         widgetSelectedWalletId: json['widgetSelectedWalletId'] as String?,
         widgetSecondaryAction: json['widgetSecondaryAction'] as String? ?? 'scan',
         widgetTheme: json['widgetTheme'] as String? ?? 'glassFrost',
-        widgetPeekDurationSeconds: json['widgetPeekDurationSeconds'] as int? ?? 2,
+        widgetPeekDurationSeconds: json['widgetPeekDurationSeconds'] as int? ?? 3,
         widgetShowExpenseBtn: json['widgetShowExpenseBtn'] as bool? ?? true,
         widgetShowIncomeBtn: json['widgetShowIncomeBtn'] as bool? ?? true,
         widgetShowRefreshBtn: json['widgetShowRefreshBtn'] as bool? ?? true,

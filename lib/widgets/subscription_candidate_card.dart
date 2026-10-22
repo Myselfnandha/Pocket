@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/recurring_model.dart';
+import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import '../providers/app_providers.dart';
 import '../services/subscription_detector_service.dart';
-import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
 
 class SubscriptionCandidateCard extends ConsumerWidget {
   final SubscriptionCandidate candidate;
@@ -209,8 +210,9 @@ class SubscriptionCandidateCard extends ConsumerWidget {
                         categoryId: candidate.categoryId,
                         walletId: defaultWalletId,
                         frequency: candidate.frequency,
-                        startDate: candidate.nextDueDate,
+                        dueDay: candidate.nextDueDate.day,
                         nextDueDate: candidate.nextDueDate,
+                        createdAt: DateTime.now(),
                         isActive: true,
                         note: 'Auto-detected from bank transactions (${candidate.matchReason})',
                       );

@@ -18,6 +18,8 @@ Before taking any architectural, coding, or tooling action, the agent must sweep
 | **AP-007** | **Claiming success without running verification commands** | Token-pressure or speed bias leads agent to skip test runs and pattern-match 'this looks right' or use speculative language. | Evidence Gate: Always run tests or re-read files, report actual terminal output, never say 'should work'. |
 | **AP-008** | **Editing files based on stale cached memory instead of current on-disk state** | Files read early in long sessions get modified externally or by background tasks while agent remembers old lines. | Freshness Gate: Re-read target file if >5 tool calls since last read; run git status before multi-file edits. |
 | **AP-009** | **Using invented library functions that don't exist in installed packages** | LLM hallucination on fast-moving libraries or niche frameworks where training memory contains plausible APIs. | Hallucination Guard: Verify every unfamiliar API symbol via tool inspection, REPL check, or docs before using. |
+| **AP-010** | **Android AppWidget partiallyUpdateAppWidget failing to refresh on MIUI / HyperOS** | Xiaomi launcher com.miui.home ignores partial widget diffs when not matching internal cached view hierarchy | Always execute full appWidgetManager.updateAppWidget(widgetId, views) with rebuilt RemoteViews to ensure 100% reliable state refresh. |
+| **AP-011** | **Widget tap target bleed launching host app on balance toggle touch** | Assigning click handler to text element with tight margins inside a root container with an app-launch PendingIntent causes accidental mistouches | Wrap interactive toggle in a dedicated pill button container (e.g. btn_toggle_balance) with distinct visual padding and dedicated PendingIntent. |
 
 ---
 

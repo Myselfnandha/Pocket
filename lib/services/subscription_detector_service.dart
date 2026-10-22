@@ -1,4 +1,5 @@
 import '../models/transaction_model.dart';
+import '../models/category_model.dart';
 import '../models/recurring_model.dart';
 import '../models/settings_model.dart';
 

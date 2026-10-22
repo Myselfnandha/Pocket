@@ -191,6 +191,27 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
               ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                secondary: Icon(
+                  Icons.tune_rounded,
+                  color: settings.isWidgetCustomizationEnabled
+                      ? AppColors.primaryGreenLight
+                      : (isDark ? Colors.white60 : Colors.black54),
+                ),
+                title: const Text('Widget Customization', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  settings.isWidgetCustomizationEnabled
+                      ? 'Custom accounts, themes & privacy peek enabled'
+                      : 'Disabled • Using adaptive automatic balance sync',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                value: settings.isWidgetCustomizationEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setWidgetCustomizationEnabled(val);
+                },
+              ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
                 leading: const Icon(Icons.widgets_rounded, color: AppColors.primaryGreenLight),
@@ -362,7 +383,7 @@ class SettingsScreen extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.5.19 • Unified Security & Complete UI'),
+                subtitle: Text('v1.5.20 • Unified Security & Complete UI'),
               ),
             ],
           ),

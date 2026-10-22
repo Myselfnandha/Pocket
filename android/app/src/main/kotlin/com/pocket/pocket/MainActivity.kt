@@ -33,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private var widgetChannel: MethodChannel? = null
     private var autoImportChannel: MethodChannel? = null
     private var screenshotObserver: PocketScreenshotObserver? = null
+    private var smsObserver: PocketSmsObserver? = null
     private var pendingSharedTransactionPayload: String? = null
     private var pendingWidgetUri: String? = null
 
@@ -239,8 +240,9 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Auto-enable screenshot watcher by default
+        // Auto-enable screenshot watcher and SMS observer
         setScreenshotWatcher(true)
+        setSmsObserver(true)
 
         // Check if app was started with intent extra or widget uri
         handleIntentForSharedTransaction(intent)
@@ -278,6 +280,33 @@ class MainActivity : FlutterActivity() {
                     contentResolver.unregisterContentObserver(it)
                 } catch (_: Exception) {}
                 screenshotObserver = null
+            }
+        }
+    }
+
+    private fun setSmsObserver(enabled: Boolean) {
+        val hasPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (enabled && hasPermission) {
+            if (smsObserver == null) {
+                smsObserver = PocketSmsObserver(applicationContext) { parsed ->
+                    runOnUiThread {
+                        autoImportChannel?.invokeMethod("onSmsReceived", parsed.toJson().toString())
+                    }
+                }
+                try {
+                    contentResolver.registerContentObserver(
+                        Uri.parse("content://sms"),
+                        true,
+                        smsObserver!!
+                    )
+                } catch (_: Exception) {}
+            }
+        } else {
+            smsObserver?.let {
+                try {
+                    contentResolver.unregisterContentObserver(it)
+                } catch (_: Exception) {}
+                smsObserver = null
             }
         }
     }
@@ -370,8 +399,15 @@ class MainActivity : FlutterActivity() {
             if (granted) {
                 val prefs = applicationContext.getSharedPreferences(PocketNotificationListener.PREFS_NAME, android.content.Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("auto_save_sms", true).apply()
+                setSmsObserver(true)
             }
             result.success(granted)
         }
+    }
+
+    override fun onDestroy() {
+        setScreenshotWatcher(false)
+        setSmsObserver(false)
+        super.onDestroy()
     }
 }

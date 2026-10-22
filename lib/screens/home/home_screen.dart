@@ -140,16 +140,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           },
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sms_outlined, size: 22),
-            tooltip: 'Scan SMS Inbox',
-            onPressed: () => SmsInboxScannerSheet.show(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_fix_high_rounded, color: AppColors.primaryGreenLight, size: 22),
-            tooltip: 'Natural Language Entry',
-            onPressed: () => NlpQuickAddModal.show(context),
-          ),
           Consumer(
             builder: (context, ref, child) {
               final unreadCount = ref.watch(unreadNotificationsCountProvider);

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/category_model.dart';
 import '../models/wallet_model.dart';
 import '../services/storage_service.dart';
+import '../services/system_widget_service.dart';
 import 'core_providers.dart';
 import 'transactions_provider.dart';
 
@@ -13,6 +15,7 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
   Future<void> addWallet(WalletModel wallet) async {
     state = [...state, wallet];
     await _storage.saveWallets(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> updateWallet(WalletModel wallet) async {
@@ -21,11 +24,13 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
         if (w.id == wallet.id) wallet else w,
     ];
     await _storage.saveWallets(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> deleteWallet(String id) async {
     state = state.where((w) => w.id != id).toList();
     await _storage.saveWallets(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> setDefaultWallet(String id) async {
@@ -34,6 +39,7 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
         w.copyWith(isDefault: w.id == id),
     ];
     await _storage.saveWallets(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> refreshFromDisk() async {
