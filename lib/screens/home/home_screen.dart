@@ -427,28 +427,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                     ],
                                   ),
                                 ),
-                                      Text(
-                                        dateKey.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.8,
-                                          color: isDark
-                                              ? AppColors.darkTextSecondary
-                                              : AppColors.lightTextSecondary,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark ? Colors.white38 : Colors.black38,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                                 // Transaction Tiles for this date
                                 for (int i = 0; i < txs.length; i++) ...[
                                   TransactionTile(
