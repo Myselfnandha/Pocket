@@ -153,10 +153,10 @@ class FinancialHealthGauge extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${pillar.score}/${pillar.maxScore} pts (${pillar.status})',
+                          '${pillar.score}/${pillar.maxScore} (${pillar.status})',
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
                             color: pillar.ratio >= 0.7 ? AppColors.incomeGreen : (pillar.ratio >= 0.4 ? AppColors.accentOrange : AppColors.expenseRed),
                           ),
                         ),

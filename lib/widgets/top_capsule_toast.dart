@@ -125,7 +125,7 @@ class _TopCapsuleToastWidgetState extends State<_TopCapsuleToastWidget>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Positioned(
-      top: topPadding + 8,
+      top: topPadding + kToolbarHeight + 8,
       left: 16,
       right: 16,
       child: Material(

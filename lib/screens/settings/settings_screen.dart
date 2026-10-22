@@ -35,7 +35,7 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Settings'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(context).bottom + 110),
         children: [
           // 1. Profile Card
           Container(
@@ -92,59 +92,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 2. Section: Real-Time Auto-Import (Moved to top below Profile Card)
-          _buildSectionHeader('AUTOMATION & REAL-TIME IMPORT'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('GPay, PhonePe, Paytm, Screen Reader & Screenshot Watcher'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/auto-import-studio'),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Save Screenshot Transactions', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
-                value: settings.autoSaveScreenshots,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
-                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 3. Section: Notifications & Reminders
-          _buildSectionHeader('NOTIFICATIONS & ALERTS'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.notifications_active_outlined, color: AppColors.accentOrange),
-                title: const Text('Alerts & Reminders', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Budget limits (80%/100%), recurring dues, daily reminder'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showNotificationSettingsModal(context, ref, settings),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 4. Section: Appearance & Theme
-          _buildSectionHeader('THEME & APPEARANCE'),
+          // 1. Section: Preferences & Appearance
+          _buildSectionHeader('PREFERENCES & APPEARANCE'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
@@ -191,127 +140,23 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showThemePicker(context, ref, settings),
               ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                secondary: Icon(
-                  Icons.tune_rounded,
-                  color: settings.isWidgetCustomizationEnabled
-                      ? AppColors.primaryGreenLight
-                      : (isDark ? Colors.white60 : Colors.black54),
-                ),
-                title: const Text('Widget Customization', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  settings.isWidgetCustomizationEnabled
-                      ? 'Custom accounts, themes & privacy peek enabled'
-                      : 'Disabled • Using adaptive automatic balance sync',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                value: settings.isWidgetCustomizationEnabled,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setWidgetCustomizationEnabled(val);
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.widgets_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Home Screen Widgets Suite', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Card 4x2, Safe-to-Spend 2x2, Quick Bar 4x1 & Desktop Pinning'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/widget-customizer'),
-              ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
                 leading: const Icon(Icons.view_carousel_rounded, color: AppColors.infoBlue),
-                title: const Text('Bottom Nav Bar Ambient Style', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('Bottom Nav Bar Style', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(_getNavBarStyleName(settings.navBarStyle)),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showNavBarStylePicker(context, ref, settings),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // 5. Section: Categories & Currency
-          _buildSectionHeader('CATEGORIES & CURRENCY'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.category_outlined, color: AppColors.infoBlue),
-                title: const Text('Manage Categories', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${categories.length} categories available'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showCategoriesManager(context, ref, categories),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.label_outline_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Category Tags on Items', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Show or hide category badge tags on transaction rows'),
-                value: settings.showCategoryTags,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).toggleCategoryTags(val);
-                },
-              ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               ListTile(
-                leading: const Icon(Icons.currency_exchange_rounded, color: AppColors.accentOrange),
-                title: const Text('Currency', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settings.currencySymbol} - ${settings.currencyCode}'),
+                leading: const Icon(Icons.widgets_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Home Screen Widgets', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Customize cards, safe-to-spend, quick bar & pinning'),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showCurrencyPicker(context, ref, settings),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // New Section: Defaults & Accounting Preferences
-          _buildSectionHeader('PREFERENCES & DEFAULT ACCOUNT'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Default Payment Account', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(defaultWalletName),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDefaultWalletPicker(context, ref, settings, wallets),
+                onTap: () => context.push('/widget-customizer'),
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.add_circle_outline_rounded, color: AppColors.infoBlue),
-                title: const Text('Default Quick-Add Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(settings.defaultQuickAddType == 'income' ? 'Income' : 'Expense'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDefaultQuickAddPicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.touch_app_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Transaction Entry Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showTransactionEntryModePicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
-                title: const Text('Month / Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Day ${settings.monthStartDay} of every month'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showMonthStartDayPicker(context, ref, settings),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // New Section: Security & Experience
-          _buildSectionHeader('SECURITY & EXPERIENCE'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
               SwitchListTile(
                 secondary: const Icon(Icons.fingerprint_rounded, color: AppColors.primaryGreenLight),
                 title: const Text('Biometric App Lock', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -347,7 +192,7 @@ class SettingsScreen extends ConsumerWidget {
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration_rounded, color: AppColors.infoBlue),
-                title: const Text('Haptic Touch Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('Haptic Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Tactile vibration on buttons and numeric keypad'),
                 value: settings.hapticFeedbackEnabled,
                 activeThumbColor: AppColors.primaryGreenLight,
@@ -359,31 +204,125 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 7. Section: Data & Account
-          _buildSectionHeader('DATA & ACCOUNT'),
+          // 2. Section: Accounts & Categories
+          _buildSectionHeader('ACCOUNTS & CATEGORIES'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
               ListTile(
-                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
-                title: const Text('Backup & Database Management', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
+                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Default Payment Account', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(defaultWalletName),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/data-management'),
+                onTap: () => _showDefaultWalletPicker(context, ref, settings, wallets),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.currency_exchange_rounded, color: AppColors.accentOrange),
+                title: const Text('Currency', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.currencySymbol} - ${settings.currencyCode}'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showCurrencyPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.category_outlined, color: AppColors.infoBlue),
+                title: const Text('Manage Categories', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${categories.length} categories available'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showCategoriesManager(context, ref, categories),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.label_outline_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Category Badges on Items', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Show or hide category badge tags on transaction rows'),
+                value: settings.showCategoryTags,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).toggleCategoryTags(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
+                title: const Text('Month & Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('Day ${settings.monthStartDay} of every month'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showMonthStartDayPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.touch_app_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Transaction Entry Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showTransactionEntryModePicker(context, ref, settings),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // 7. Section: About
-          _buildSectionHeader('ABOUT'),
+          // 3. Section: Smart Automation & Alerts
+          _buildSectionHeader('SMART AUTOMATION & ALERTS'),
           _buildSettingsGroup(
             isDark: isDark,
             children: [
+              ListTile(
+                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('GPay, PhonePe, Paytm, SMS alerts & Screen Reader'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/auto-import-studio'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Save Scanned Receipts', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
+                value: settings.autoSaveScreenshots,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
+                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined, color: AppColors.accentOrange),
+                title: const Text('Spending Alerts & Reminders', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Budget limits (80%/100%), recurring dues, daily reminder'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showNotificationSettingsModal(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // 4. Section: Data & About
+          _buildSectionHeader('DATA & SYSTEM'),
+          _buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
+                title: const Text('Backup & Data Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/data-management'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.5.20 • Unified Security & Complete UI'),
+                subtitle: Text('v1.5.24 • Clean Architecture & Universal Design'),
               ),
             ],
           ),

@@ -100,6 +100,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     )..forward();
 
     _onboardingCategories = List.from(defaultCategories);
+    if (_onboardingWallets.isEmpty) {
+      _onboardingWallets.add(defaultWallets.first);
+    }
     // Auto-detect bank accounts if SMS permission is already granted
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
@@ -392,12 +395,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
     final features = [
-      {'icon': Icons.lock_rounded, 'label': 'Hardware AES-256 Encryption • Zero-knowledge offline privacy'},
-      {'icon': Icons.auto_graph_rounded, 'label': 'On-Device AI Forecasting • Confidence bands & burn rate predictions'},
-      {'icon': Icons.auto_fix_high_rounded, 'label': 'Natural Language Entry • Type or speak "1200 for dinner yesterday"'},
-      {'icon': Icons.alt_route_rounded, 'label': 'Sankey Money Topology & 0–1000 Financial Health Score Gauge'},
-      {'icon': Icons.bolt_rounded, 'label': 'Instant UPI Share-to-Log • Auto-parse payment receipts with OCR'},
-      {'icon': Icons.track_changes_rounded, 'label': 'Savings Goals, Budget Rollover & Bill Due Calendar View'},
+      {'icon': Icons.lock_rounded, 'label': '100% Offline Privacy • Your financial data stays only on this device'},
+      {'icon': Icons.bolt_rounded, 'label': 'Instant Smart Logging • Log expenses in seconds with smart auto-suggestions'},
+      {'icon': Icons.auto_awesome_rounded, 'label': 'Smart Bank Tracking • Automatically detects SMS transaction alerts'},
+      {'icon': Icons.insights_rounded, 'label': 'Clear Visual Insights • Monthly spending trends, cashflow & health score'},
+      {'icon': Icons.receipt_long_rounded, 'label': 'Instant Receipt Scan • Snap or share bill screenshots with OCR'},
+      {'icon': Icons.savings_rounded, 'label': 'Savings Goals & Budgets • Stay on track with rollover category limits'},
     ];
 
     return SingleChildScrollView(
@@ -450,10 +453,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           ),
           const SizedBox(height: 8),
           Text(
-            'Next-generation offline personal financial intelligence suite with AMOLED Pure Black aesthetics.',
+            'Your private, effortless personal finance tracker. 100% offline, secure, and built for clarity.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 13.5,
               height: 1.4,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
@@ -558,52 +561,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             decoration: InputDecoration(
               hintText: 'Enter your name',
               prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primaryGreenLight),
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // User Mobile Number Input
-          const Text('Mobile Number (Optional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              hintText: '9876543210',
-              hintStyle: TextStyle(
-                color: isDark ? Colors.white30 : Colors.black26,
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-              ),
-              prefixIcon: InkWell(
-                onTap: () => _showCountryCodePicker(isDark),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_selectedCountryFlag, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 4),
-                      Text(
-                        _selectedCountryCode,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.arrow_drop_down_rounded, size: 18, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Container(height: 20, width: 1, color: isDark ? Colors.white24 : Colors.black12),
-                      const SizedBox(width: 6),
-                    ],
-                  ),
-                ),
-              ),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
@@ -972,14 +929,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           _hasScannedSms = true;
           _isScanningSms = false;
 
-          // Automatically quick-add all discovered bank accounts if empty
-          if (_onboardingWallets.isEmpty && detected.isNotEmpty) {
+          // Automatically quick-add all discovered bank accounts if not present
+          if (detected.isNotEmpty) {
             for (var i = 0; i < detected.length; i++) {
               final acc = detected[i];
-              _onboardingWallets.add(acc.toWallet(
-                currencySymbol: symbol,
-                isDefault: i == 0,
-              ));
+              final alreadyAdded = _onboardingWallets.any(
+                (w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName,
+              );
+              if (!alreadyAdded) {
+                _onboardingWallets.add(acc.toWallet(
+                  currencySymbol: symbol,
+                  isDefault: _onboardingWallets.isEmpty,
+                ));
+              }
             }
           }
         });
@@ -2509,19 +2471,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           _onboardingBudgets[catId] = amount;
         });
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryGreenLight
               : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
           ),
@@ -2612,38 +2576,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   const SizedBox(height: 8),
                   Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Reminder Time',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        ),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _dailyReminderTime,
+                      );
+                      if (picked != null) {
+                        setState(() => _dailyReminderTime = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Reminder Time',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreenLight.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.access_time_rounded, size: 16, color: AppColors.primaryGreenLight),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _dailyReminderTime.format(context),
+                                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primaryGreenLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        ),
-                        icon: const Icon(Icons.access_time_rounded, size: 16, color: AppColors.primaryGreenLight),
-                        label: Text(
-                          _dailyReminderTime.format(context),
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primaryGreenLight),
-                        ),
-                        onPressed: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: _dailyReminderTime,
-                          );
-                          if (picked != null) {
-                            setState(() => _dailyReminderTime = picked);
-                          }
-                        },
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ],

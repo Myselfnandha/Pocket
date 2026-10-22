@@ -342,17 +342,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             width: double.infinity,
                             margin: const EdgeInsets.only(top: 8),
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.darkSurfaceVariant
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppColors.darkCardBorder
-                                    : AppColors.lightCardBorder,
-                              ),
-                            ),
                             child: Column(
                               children: [
                                 const Text(
@@ -397,18 +386,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       final groupKeys = grouped.keys.toList();
 
                       return Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkSurfaceVariant
-                              : Colors.white,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.darkCardBorder
-                                : AppColors.lightCardBorder,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
+                        color: Colors.transparent,
                         child: ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.only(bottom: bottomPadding),
@@ -421,34 +399,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Day Indicator Header Bar
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? const Color(0xFF191D26)
-                                        : const Color(0xFFF4F6FA),
-                                    border: Border(
-                                      top: groupIndex > 0
-                                          ? BorderSide(
-                                              color: isDark
-                                                  ? AppColors.darkCardBorder
-                                                  : AppColors.lightCardBorder,
-                                              width: 1,
-                                            )
-                                          : BorderSide.none,
-                                      bottom: BorderSide(
-                                        color: isDark
-                                            ? AppColors.darkCardBorder
-                                            : AppColors.lightCardBorder,
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                  ),
+                                // Clean subtle Day Indicator Header
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
+                                      Text(
+                                        dateKey.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.8,
+                                          color: isDark
+                                              ? AppColors.darkTextSecondary
+                                              : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark ? Colors.white38 : Colors.black38,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                       Text(
                                         dateKey.toUpperCase(),
                                         style: TextStyle(

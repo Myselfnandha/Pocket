@@ -500,7 +500,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     return SingleChildScrollView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.paddingOf(context).bottom + 115),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1134,7 +1134,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
 
     return SingleChildScrollView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.paddingOf(context).bottom + 115),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1392,7 +1392,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   }) {
     return SingleChildScrollView(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.paddingOf(context).bottom + 115),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

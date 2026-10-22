@@ -445,11 +445,11 @@ class _ThreeStageSankeyPainter extends CustomPainter {
     // Draw Stream 1: Stage 1 (Inflows) -> Stage 2 (Accounts Hub)
     for (int i = 0; i < n1; i++) {
       final node1 = stage1Nodes[i];
-      final double y1 = n1 == 1 ? size.height * 0.5 : (size.height * 0.22) + i * ((size.height * 0.56) / (n1 - 1));
+      final double y1 = (size.height / (n1 + 1)) * (i + 1);
 
       for (int j = 0; j < n2; j++) {
         final node2 = stage2Nodes[j];
-        final double y2 = n2 == 1 ? size.height * 0.5 : (size.height * 0.22) + j * ((size.height * 0.56) / (n2 - 1));
+        final double y2 = (size.height / (n2 + 1)) * (j + 1);
 
         final bool isHighlight = selectedNodeId == null ||
             selectedNodeId == node1.id ||
@@ -486,11 +486,11 @@ class _ThreeStageSankeyPainter extends CustomPainter {
     // Draw Stream 2: Stage 2 (Accounts Hub) -> Stage 3 (Outflows & Savings)
     for (int j = 0; j < n2; j++) {
       final node2 = stage2Nodes[j];
-      final double y2 = n2 == 1 ? size.height * 0.5 : (size.height * 0.22) + j * ((size.height * 0.56) / (n2 - 1));
+      final double y2 = (size.height / (n2 + 1)) * (j + 1);
 
       for (int k = 0; k < n3; k++) {
         final node3 = stage3Nodes[k];
-        final double y3 = n3 == 1 ? size.height * 0.5 : (size.height * 0.14) + k * ((size.height * 0.72) / (n3 - 1));
+        final double y3 = (size.height / (n3 + 1)) * (k + 1);
 
         final bool isHighlight = selectedNodeId == null ||
             selectedNodeId == node2.id ||

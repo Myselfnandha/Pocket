@@ -44,51 +44,26 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallets & Accounts'),
-        actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-            decoration: BoxDecoration(
-              color: palette.primary.withValues(alpha: isDark ? 0.18 : 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: palette.primary.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              settings.formatCurrency(totalBalance),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: palette.primary,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.swap_horiz_rounded, color: palette.primary),
-            tooltip: 'Transfer Funds',
-            onPressed: () => _showTransferDialog(
-              context,
-              ref,
-              wallets,
-              settings.currencySymbol,
-              initialFromWalletId: activeWallet?.id,
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.add_circle_outline_rounded, color: palette.primary),
-            tooltip: 'Add Account',
-            onPressed: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(context).bottom + 110),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Stacked Account Deck with Floating Add Account Pill
+            // 1. Option 1: Combined Total Balance Executive Card
+            _buildVaultExecutiveCard(
+              context: context,
+              ref: ref,
+              totalBalance: totalBalance,
+              wallets: wallets,
+              settings: settings,
+              palette: palette,
+              isDark: isDark,
+              activeWallet: activeWallet,
+            ),
+            const SizedBox(height: 18),
+
+            // 2. Stacked Account Deck for Each Account
             _buildAccountStack(context, wallets, activeIndex, settings, palette, isDark),
             const SizedBox(height: 16),
 
@@ -2647,6 +2622,197 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   }
 
   // ==========================================
+  // --- OPTION 1: THE VAULT EXECUTIVE CARD ---
+  // ==========================================
+
+  Widget _buildVaultExecutiveCard({
+    required BuildContext context,
+    required WidgetRef ref,
+    required double totalBalance,
+    required List<WalletModel> wallets,
+    required UserSettingsModel settings,
+    required AppThemePalette palette,
+    required bool isDark,
+    required WalletModel? activeWallet,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13161F) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+          width: 1.2,
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            isDark ? const Color(0xFF1A202E) : Colors.white,
+            isDark ? const Color(0xFF10131B) : const Color(0xFFF7F9FC),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.primary.withValues(alpha: isDark ? 0.12 : 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Eyebrow: Total Net Worth & Account Count
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: palette.primary,
+                      boxShadow: [
+                        BoxShadow(
+                          color: palette.primary.withValues(alpha: 0.6),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'TOTAL NET BALANCE',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                      color: palette.primary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${wallets.length} Accounts Active',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Hero Currency Amount
+          Text(
+            settings.formatCurrency(totalBalance),
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Quick Actions Row: [⇄ Transfer] & [+ Add Account]
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => _showTransferDialog(
+                    context,
+                    ref,
+                    wallets,
+                    settings.currencySymbol,
+                    initialFromWalletId: activeWallet?.id,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: BoxDecoration(
+                      color: palette.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: palette.primary.withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.swap_horiz_rounded, size: 18, color: palette.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Transfer',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: palette.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: () => _showAddWalletDialog(context, ref, settings.currencySymbol),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.09) : Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.12),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline_rounded,
+                          size: 18,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Add Account',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
   // --- ENHANCED WALLET DECK & QUICK DOCK ---
   // ==========================================
 
@@ -2907,9 +3073,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF161922).withValues(alpha: 0.94)
-              : Colors.white.withValues(alpha: 0.96),
+          color: isDark ? const Color(0xFF13161F) : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isActive

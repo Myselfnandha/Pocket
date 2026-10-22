@@ -625,63 +625,32 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             ),
             const SizedBox(height: 14),
 
-            // Amount Input Field with auto-focus trigger
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _amountController,
-                    autofocus: widget.initialAmount == null || widget.initialAmount == 0,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
-                    ),
-                    decoration: InputDecoration(
-                      prefixText: '$currencySymbol ',
-                      prefixStyle: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
-                      ),
-                      hintText: '0.00',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      filled: true,
-                      fillColor: isDark ? const Color(0xFF202024) : const Color(0xFFF4F5F8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.white12 : Colors.black12,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.white12 : Colors.black12,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: _type == TransactionType.expense
-                              ? AppColors.expenseRed
-                              : AppColors.incomeGreen,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
+            // Amount Input Field with integrated receipt camera button
+            TextField(
+              controller: _amountController,
+              autofocus: widget.initialAmount == null || widget.initialAmount == 0,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
+              ),
+              decoration: InputDecoration(
+                prefixText: '$currencySymbol ',
+                prefixStyle: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: _type == TransactionType.expense ? AppColors.expenseRed : AppColors.incomeGreen,
                 ),
-                const SizedBox(width: 8),
-                // Camera / Receipt Attachment Icon Button
-                PopupMenuButton<ImageSource>(
+                suffixIcon: PopupMenuButton<ImageSource>(
+                  tooltip: 'Attach Receipt / Bill',
                   icon: Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF242424) : const Color(0xFFEEEEEE),
-                      borderRadius: BorderRadius.circular(12),
+                      color: _receiptImagePath != null
+                          ? AppColors.primaryGreenLight.withValues(alpha: 0.2)
+                          : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06)),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: _receiptImagePath != null ? AppColors.primaryGreenLight : Colors.transparent,
                         width: 1.2,
@@ -693,7 +662,6 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                       size: 20,
                     ),
                   ),
-                  tooltip: 'Attach Receipt / Bill',
                   onSelected: (source) => _pickReceipt(source),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
@@ -718,7 +686,33 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                     ),
                   ],
                 ),
-              ],
+                hintText: '0.00',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF202024) : const Color(0xFFF4F5F8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: _type == TransactionType.expense
+                        ? AppColors.expenseRed
+                        : AppColors.incomeGreen,
+                    width: 1.5,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -968,43 +962,51 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
               child: Row(
                 children: [
                   if (!widget.isStandaloneScreen) ...[
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        final amount = double.tryParse(_amountController.text.trim());
-                        context.push(
-                          '/add-transaction',
-                          extra: {
-                            'type': _type,
-                            'amount': amount,
-                            'title': _titleController.text.trim(),
-                            'categoryId': _selectedCategoryId,
-                            'walletId': _selectedWalletId,
-                            'note': _notesController.text.trim(),
-                            'receiptImagePath': _receiptImagePath,
-                            'senderName': _senderName,
-                            'receiverName': _receiverName,
-                            'refId': _refId,
-                            'counterpartyLast4': _counterpartyLast4,
-                          },
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          final amount = double.tryParse(_amountController.text.trim());
+                          context.push(
+                            '/add-transaction',
+                            extra: {
+                              'type': _type,
+                              'amount': amount,
+                              'title': _titleController.text.trim(),
+                              'categoryId': _selectedCategoryId,
+                              'walletId': _selectedWalletId,
+                              'note': _notesController.text.trim(),
+                              'receiptImagePath': _receiptImagePath,
+                              'senderName': _senderName,
+                              'receiverName': _receiverName,
+                              'refId': _refId,
+                              'counterpartyLast4': _counterpartyLast4,
+                            },
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          side: BorderSide(
+                            color: isDark ? Colors.white12 : Colors.black12,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text('Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                       ),
-                      child: const Text('More Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                   ],
                   Expanded(
+                    flex: 3,
                     child: ElevatedButton.icon(
                       onPressed: _isSaving ? null : _quickSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGreenLight,
                         foregroundColor: Colors.black,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       icon: _isSaving
@@ -1016,9 +1018,9 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
                           : const Icon(Icons.check_rounded, size: 20, color: Colors.black),
                       label: Text(
                         currentAmount > 0
-                            ? 'Quick Save  $currencySymbol${currencyFormat.format(currentAmount)}'
-                            : 'Quick Save',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                            ? 'Save $currencySymbol${currencyFormat.format(currentAmount)}'
+                            : 'Save',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                       ),
                     ),
                   ),

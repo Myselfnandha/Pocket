@@ -41,7 +41,7 @@ class SpendForecastCard extends ConsumerWidget {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'On-Device Spend Forecast',
+                        'Spend Forecast',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
