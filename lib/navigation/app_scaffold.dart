@@ -215,7 +215,7 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) => _handlePopInvoked(didPop),
       child: Scaffold(
-        extendBody: false,
+        extendBody: true,
         body: Stack(
           children: [
             PageView(
@@ -275,71 +275,91 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
               ),
           ],
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0F1015) : Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, -2),
-              ),
-            ],
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.paddingOf(context).bottom > 0
+                ? MediaQuery.paddingOf(context).bottom + 8
+                : 16,
           ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 64,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // 1. Home Tab (Branch 0)
-                  _buildNavItem(
-                    branchIndex: 0,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.grid_view_rounded,
-                    unselectedIcon: Icons.grid_view_outlined,
-                    label: 'Home',
-                    isDark: isDark,
-                    palette: palette,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+              child: Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF141720).withValues(alpha: 0.82)
+                      : Colors.white.withValues(alpha: 0.86),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.13)
+                        : Colors.black.withValues(alpha: 0.08),
+                    width: 1.0,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.10),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // 1. Home Tab (Branch 0)
+                    _buildNavItem(
+                      branchIndex: 0,
+                      currentIndex: currentIndex,
+                      selectedIcon: Icons.grid_view_rounded,
+                      unselectedIcon: Icons.grid_view_outlined,
+                      label: 'Home',
+                      isDark: isDark,
+                      palette: palette,
+                    ),
 
-                  // 2. Analytics Tab (Branch 1)
-                  _buildNavItem(
-                    branchIndex: 1,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.donut_large_rounded,
-                    unselectedIcon: Icons.donut_large_outlined,
-                    label: 'Analytics',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
+                    // 2. Analytics Tab (Branch 1)
+                    _buildNavItem(
+                      branchIndex: 1,
+                      currentIndex: currentIndex,
+                      selectedIcon: Icons.donut_large_rounded,
+                      unselectedIcon: Icons.donut_large_outlined,
+                      label: 'Analytics',
+                      isDark: isDark,
+                      palette: palette,
+                    ),
 
-                  // 3. Center Floating Elevated (+) Quick Add Button
-                  _buildCenterQuickAddButton(context, palette),
+                    // 3. Center Floating Elevated (+) Quick Add Button
+                    _buildCenterQuickAddButton(context, palette),
 
-                  // 4. Wallets Tab (Branch 2)
-                  _buildNavItem(
-                    branchIndex: 2,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.account_balance_wallet_rounded,
-                    unselectedIcon: Icons.account_balance_wallet_outlined,
-                    label: 'Wallets',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
+                    // 4. Wallets Tab (Branch 2)
+                    _buildNavItem(
+                      branchIndex: 2,
+                      currentIndex: currentIndex,
+                      selectedIcon: Icons.account_balance_wallet_rounded,
+                      unselectedIcon: Icons.account_balance_wallet_outlined,
+                      label: 'Wallets',
+                      isDark: isDark,
+                      palette: palette,
+                    ),
 
-                  // 5. Settings Tab (Branch 3)
-                  _buildNavItem(
-                    branchIndex: 3,
-                    currentIndex: currentIndex,
-                    selectedIcon: Icons.settings_rounded,
-                    unselectedIcon: Icons.settings_outlined,
-                    label: 'Settings',
-                    isDark: isDark,
-                    palette: palette,
-                  ),
-                ],
+                    // 5. Settings Tab (Branch 3)
+                    _buildNavItem(
+                      branchIndex: 3,
+                      currentIndex: currentIndex,
+                      selectedIcon: Icons.settings_rounded,
+                      unselectedIcon: Icons.settings_outlined,
+                      label: 'Settings',
+                      isDark: isDark,
+                      palette: palette,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

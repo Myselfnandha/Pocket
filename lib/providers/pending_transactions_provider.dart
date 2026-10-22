@@ -49,10 +49,19 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
 
       for (final item in merged) {
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
-        if (isSms && (settings.autoSaveSms || (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')))) {
-          // Strict user constraint: Only auto-log if explicit matching account digits or bank name found;
-          // otherwise keep safely in Pending Review queue.
-          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
+            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
+        final isAutoDirect = item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true');
+
+        if (isPaytm || isAutoDirect || (isSms && settings.autoSaveSms)) {
+          var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          if (matchedWalletId == null && wallets.isNotEmpty) {
+            final upiOrPaytm = wallets.where((w) =>
+                w.walletType == WalletType.upi ||
+                w.name.toLowerCase().contains('paytm') ||
+                w.name.toLowerCase().contains('upi')).firstOrNull;
+            matchedWalletId = upiOrPaytm?.id ?? wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id;
+          }
           if (matchedWalletId != null) {
             autoCommitItems.add(MapEntry(item, matchedWalletId));
           }
@@ -66,7 +75,9 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         final targetWalletId = entry.value;
         await approve(item.id, walletId: targetWalletId);
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
-        final title = isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged';
+        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
+            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
+        final title = isPaytm ? '📱 Paytm Auto-Logged' : (isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged');
         final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
         final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
 
@@ -95,6 +106,11 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           isIncome: item.isIncome,
           walletName: matchedWallet?.name,
         );
+      }
+
+      if (autoCommitItems.isNotEmpty) {
+        final storage = _ref.read(storageServiceProvider);
+        await SystemWidgetService.syncFromStorage(storage);
       }
     } catch (_) {
       // Non-blocking defensive catch
@@ -129,8 +145,19 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
 
       for (final item in merged) {
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
-        if (isSms && (settings.autoSaveSms || (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true')))) {
-          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
+            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
+        final isAutoDirect = item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true');
+
+        if (isPaytm || isAutoDirect || (isSms && settings.autoSaveSms)) {
+          var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          if (matchedWalletId == null && wallets.isNotEmpty) {
+            final upiOrPaytm = wallets.where((w) =>
+                w.walletType == WalletType.upi ||
+                w.name.toLowerCase().contains('paytm') ||
+                w.name.toLowerCase().contains('upi')).firstOrNull;
+            matchedWalletId = upiOrPaytm?.id ?? wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id;
+          }
           if (matchedWalletId != null) {
             autoCommitItems.add(MapEntry(item, matchedWalletId));
           }
@@ -141,7 +168,10 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         final item = entry.key;
         final targetWalletId = entry.value;
         await approve(item.id, walletId: targetWalletId);
-        final title = '💬 SMS Auto-Logged';
+        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
+        final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
+            (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
+        final title = isPaytm ? '📱 Paytm Auto-Logged' : (isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged');
         final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
         final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
 
@@ -169,6 +199,11 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           isIncome: item.isIncome,
           walletName: matchedWallet?.name,
         );
+      }
+
+      if (autoCommitItems.isNotEmpty) {
+        final storage = _ref.read(storageServiceProvider);
+        await SystemWidgetService.syncFromStorage(storage);
       }
     } catch (_) {}
   }

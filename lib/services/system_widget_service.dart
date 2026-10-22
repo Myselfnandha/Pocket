@@ -33,6 +33,11 @@ class SystemWidgetService {
     bool showExpenseBtn = true,
     bool showIncomeBtn = true,
     bool showRefreshBtn = true,
+    bool showBalance = true,
+    bool showCardDigits = true,
+    bool showTodayExpense = true,
+    bool showWalletName = true,
+    bool showBudgetTag = true,
   }) async {
     try {
       final currencyFormat = NumberFormat('#,##0.00');
@@ -167,6 +172,11 @@ class SystemWidgetService {
       await HomeWidget.saveWidgetData<bool>('widget_show_expense_btn', showExpenseBtn);
       await HomeWidget.saveWidgetData<bool>('widget_show_income_btn', showIncomeBtn);
       await HomeWidget.saveWidgetData<bool>('widget_show_refresh_btn', showRefreshBtn);
+      await HomeWidget.saveWidgetData<bool>('widget_show_balance', showBalance);
+      await HomeWidget.saveWidgetData<bool>('widget_show_card_digits', showCardDigits);
+      await HomeWidget.saveWidgetData<bool>('widget_show_today_expense', showTodayExpense);
+      await HomeWidget.saveWidgetData<bool>('widget_show_wallet_name', showWalletName);
+      await HomeWidget.saveWidgetData<bool>('widget_show_budget_tag', showBudgetTag);
       await HomeWidget.saveWidgetData<String>('card_wallet_name', walletLabel);
       await HomeWidget.saveWidgetData<String>('today_expense', formattedToday);
       await HomeWidget.saveWidgetData<String>('featured_stat_label', featuredStatLabel);
@@ -238,6 +248,11 @@ class SystemWidgetService {
         showExpenseBtn: settings.widgetShowExpenseBtn,
         showIncomeBtn: settings.widgetShowIncomeBtn,
         showRefreshBtn: settings.widgetShowRefreshBtn,
+        showBalance: settings.widgetShowBalance,
+        showCardDigits: settings.widgetShowCardDigits,
+        showTodayExpense: settings.widgetShowTodayExpense,
+        showWalletName: settings.widgetShowWalletName,
+        showBudgetTag: settings.widgetShowBudgetTag,
       );
     } catch (e) {
       debugPrint('Error syncing widget from storage: $e');

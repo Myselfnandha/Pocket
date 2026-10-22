@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/settings_model.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../services/system_widget_service.dart';
 import '../theme/app_theme.dart';
 import 'core_providers.dart';
 
@@ -21,6 +23,9 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
       minute: newSettings.dailyReminderMinute,
       enabled: newSettings.dailyReminderEnabled,
     );
+
+    // Keep Android system home screen widgets perfectly synced
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
   Future<void> setCurrency(String symbol, String code) async {
@@ -125,6 +130,28 @@ class SettingsNotifier extends StateNotifier<UserSettingsModel> {
       widgetShowExpenseBtn: showExpense ?? state.widgetShowExpenseBtn,
       widgetShowIncomeBtn: showIncome ?? state.widgetShowIncomeBtn,
       widgetShowRefreshBtn: showRefresh ?? state.widgetShowRefreshBtn,
+    ));
+  }
+
+  Future<void> setWidgetElementVisibility({
+    bool? showBalance,
+    bool? showCardDigits,
+    bool? showTodayExpense,
+    bool? showWalletName,
+    bool? showBudgetTag,
+    bool? showExpenseBtn,
+    bool? showIncomeBtn,
+    bool? showRefreshBtn,
+  }) async {
+    await updateSettings(state.copyWith(
+      widgetShowBalance: showBalance ?? state.widgetShowBalance,
+      widgetShowCardDigits: showCardDigits ?? state.widgetShowCardDigits,
+      widgetShowTodayExpense: showTodayExpense ?? state.widgetShowTodayExpense,
+      widgetShowWalletName: showWalletName ?? state.widgetShowWalletName,
+      widgetShowBudgetTag: showBudgetTag ?? state.widgetShowBudgetTag,
+      widgetShowExpenseBtn: showExpenseBtn ?? state.widgetShowExpenseBtn,
+      widgetShowIncomeBtn: showIncomeBtn ?? state.widgetShowIncomeBtn,
+      widgetShowRefreshBtn: showRefreshBtn ?? state.widgetShowRefreshBtn,
     ));
   }
 

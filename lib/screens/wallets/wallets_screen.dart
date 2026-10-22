@@ -2875,6 +2875,25 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
         break;
     }
 
+    String accountTypeLabel = 'Bank Account';
+    switch (wallet.walletType) {
+      case WalletType.creditCard:
+        accountTypeLabel = 'Credit Card';
+        break;
+      case WalletType.upi:
+        accountTypeLabel = 'UPI Account';
+        break;
+      case WalletType.bank:
+        accountTypeLabel = 'Bank Account';
+        break;
+      case WalletType.cash:
+        accountTypeLabel = 'Cash Wallet';
+        break;
+      case WalletType.savings:
+        accountTypeLabel = 'Savings Account';
+        break;
+    }
+
     final cardLast4 = wallet.accountNumber != null && wallet.accountNumber!.trim().isNotEmpty
         ? (wallet.accountNumber!.length >= 4
             ? wallet.accountNumber!.substring(wallet.accountNumber!.length - 4)
@@ -2925,10 +2944,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                       decoration: BoxDecoration(
                         color: wallet.color.withValues(alpha: isDark ? 0.22 : 0.14),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(9),
                         border: Border.all(
                           color: wallet.color.withValues(alpha: 0.4),
                           width: 1,
@@ -2937,22 +2956,25 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(networkIcon, size: 13, color: wallet.color),
-                          const SizedBox(width: 5),
-                          Text(
-                            networkBadge,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: wallet.color,
-                              letterSpacing: 0.8,
+                          Text(wallet.icon, style: const TextStyle(fontSize: 14)),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              wallet.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : Colors.black87,
+                                letterSpacing: 0.4,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(wallet.icon, style: const TextStyle(fontSize: 15)),
                   ],
                 ),
                 Text(
@@ -3003,7 +3025,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Account',
+                      'Account Type',
                       style: TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w600,
@@ -3011,14 +3033,21 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                         letterSpacing: 0.4,
                       ),
                     ),
-                    const SizedBox(height: 1),
-                    Text(
-                      wallet.displayName,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(networkIcon, size: 14, color: wallet.color),
+                        const SizedBox(width: 5),
+                        Text(
+                          accountTypeLabel,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

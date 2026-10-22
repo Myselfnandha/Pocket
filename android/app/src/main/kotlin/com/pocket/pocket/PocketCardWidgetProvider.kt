@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
@@ -142,6 +143,25 @@ class PocketCardWidgetProvider : HomeWidgetProvider() {
             val isPrivacy = widgetData.getBoolean("widget_privacy_mode", false) || totalBalance == "••••••"
             val cardDigits = widgetData.getString("card_digits", "•••• 2026") ?: "•••• 2026"
 
+            val isCustomizationEnabled = widgetData.getBoolean("widget_customization_enabled", true)
+            val showBalance = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_balance", true) else true
+            val showDigits = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_card_digits", true) else true
+            val showExpense = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_today_expense", true) else true
+            val showWallet = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_wallet_name", true) else true
+            val showBudget = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_budget_tag", true) else true
+            val showQuickAdd = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_expense_btn", true) else true
+            val showSecondary = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_income_btn", true) else true
+            val showRefresh = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_refresh_btn", true) else true
+            val widgetTheme = widgetData.getString("widget_theme", "glassFrost") ?: "glassFrost"
+
+            // Apply selected theme to background
+            val bgRes = when (widgetTheme) {
+                "oledBlack" -> R.drawable.widget_bg_oled_black
+                "midnightNavy" -> R.drawable.widget_bg_midnight_navy
+                else -> R.drawable.widget_bg_glass_frost
+            }
+            setInt(R.id.widget_root, "setBackgroundResource", bgRes)
+
             // Balance text & dedicated toggle button
             val displayBalance = if (isRevealed || !isPrivacy) rawBalance else "••••••"
             val toggleLabel = if (isRevealed) "👁️ Hide" else (if (isPrivacy) "👁️ View" else "👁️ Peek")
@@ -152,6 +172,16 @@ class PocketCardWidgetProvider : HomeWidgetProvider() {
             setTextViewText(R.id.widget_card_wallet_name, walletName)
             setTextViewText(R.id.widget_budget_tag, budgetTag)
             setTextViewText(R.id.widget_card_digits, cardDigits)
+
+            // Dynamic visibility for elements based on toggles
+            setViewVisibility(R.id.widget_total_balance, if (showBalance) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.btn_toggle_balance, if (showBalance && showRefresh) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.widget_today_expense, if (showExpense) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.widget_card_wallet_name, if (showWallet) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.widget_card_digits, if (showDigits) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.widget_budget_tag, if (showBudget) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.btn_quick_add, if (showQuickAdd) View.VISIBLE else View.GONE)
+            setViewVisibility(R.id.btn_secondary_action, if (showSecondary) View.VISIBLE else View.GONE)
 
             // Secondary action button text
             if (secondaryAction == "voice") {

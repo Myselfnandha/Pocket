@@ -193,6 +193,8 @@ class PocketNotificationListener : NotificationListenerService() {
 
         val merchant = extractMerchant(title, content)
         val refId = extractRefId(content)
+        val isIncome = isCreditTransaction(content)
+        val isPaytm = pkgName == "net.one97.paytm" || appSource.contains("Paytm", true) || content.contains("paytm", true)
 
         val txJson = JSONObject().apply {
             put("id", UUID.randomUUID().toString())
@@ -203,9 +205,86 @@ class PocketNotificationListener : NotificationListenerService() {
             put("date", if (postTime > 0) postTime else System.currentTimeMillis())
             put("detectionSource", "notification")
             put("rawPayload", content)
-            put("isIncome", isCreditTransaction(content))
+            put("isIncome", isIncome)
+            if (isPaytm) {
+                put("autoSaveDirect", true)
+            }
         }
 
         savePendingTransaction(applicationContext, txJson)
+
+        // Automatically update home screen widgets without foreground app running!
+        if (isPaytm || isAutoSaveEnabled(applicationContext)) {
+            updateWidgetDirectly(applicationContext, amount, isIncome, merchant)
+        }
+    }
+
+    private fun isAutoSaveEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("auto_save_sms", false) || prefs.getBoolean("auto_save_upi", true)
+    }
+
+    private fun updateWidgetDirectly(context: Context, amount: Double, isIncome: Boolean, merchant: String) {
+        try {
+            val widgetPrefs = try {
+                es.antonborri.home_widget.HomeWidgetPlugin.getData(context)
+            } catch (_: Exception) {
+                @Suppress("DEPRECATION")
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            }
+
+            val currentTotalRaw = widgetPrefs.getString("raw_total_balance", null)
+                ?: widgetPrefs.getString("total_balance", "₹0.00") ?: "₹0.00"
+
+            val currSymbol = if (currentTotalRaw.contains("$")) "$" else "₹"
+            val numRegex = Regex("""([0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]+)?)""")
+            val currentTotalMatch = numRegex.find(currentTotalRaw.replace(",", ""))
+            val currentTotalVal = currentTotalMatch?.value?.toDoubleOrNull() ?: 0.0
+
+            val newTotalVal = if (isIncome) currentTotalVal + amount else (currentTotalVal - amount)
+            val formattedNewTotal = String.format(java.util.Locale.US, "%.2f", newTotalVal)
+            val displayTotal = "$currSymbol$formattedNewTotal"
+
+            // Today's expense
+            val currentTodayStr = widgetPrefs.getString("today_expense", "₹0.00 Today") ?: "₹0.00 Today"
+            val todayNumMatch = numRegex.find(currentTodayStr.replace(",", ""))
+            val currentTodayVal = todayNumMatch?.value?.toDoubleOrNull() ?: 0.0
+            val newTodayVal = if (!isIncome) currentTodayVal + amount else currentTodayVal
+            val formattedNewToday = String.format(java.util.Locale.US, "%.2f", newTodayVal)
+            val displayToday = "$currSymbol$formattedNewToday Today"
+
+            // Save updated balance to widget SharedPreferences
+            widgetPrefs.edit()
+                .putString("total_balance", displayTotal)
+                .putString("raw_total_balance", displayTotal)
+                .putString("card_balance", displayTotal)
+                .putString("raw_card_balance", displayTotal)
+                .putString("today_expense", displayToday)
+                .apply()
+
+            // Trigger instant update across all 4 widget sizes
+            PocketWidgetProvider.refreshAll(context)
+            PocketCardWidgetProvider.refreshAll(context)
+            PocketRunwayWidgetProvider.refreshAll(context)
+            PocketBarWidgetProvider.refreshAll(context)
+
+            // Broadcast system widget update
+            val appWidgetManager = android.appwidget.AppWidgetManager.getInstance(context)
+            for (cls in listOf(
+                PocketWidgetProvider::class.java,
+                PocketCardWidgetProvider::class.java,
+                PocketRunwayWidgetProvider::class.java,
+                PocketBarWidgetProvider::class.java
+            )) {
+                val ids = appWidgetManager.getAppWidgetIds(android.content.ComponentName(context, cls))
+                if (ids != null && ids.isNotEmpty()) {
+                    val intent = android.content.Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+                        component = android.content.ComponentName(context, cls)
+                        putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    }
+                    context.sendBroadcast(intent)
+                }
+            }
+        } catch (_: Exception) {}
     }
 }

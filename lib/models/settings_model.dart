@@ -73,6 +73,11 @@ class UserSettingsModel {
   final bool widgetShowExpenseBtn;
   final bool widgetShowIncomeBtn;
   final bool widgetShowRefreshBtn;
+  final bool widgetShowBalance;
+  final bool widgetShowCardDigits;
+  final bool widgetShowTodayExpense;
+  final bool widgetShowWalletName;
+  final bool widgetShowBudgetTag;
 
   // SMS Auto-Read & Auto-Log Settings
   final bool autoSaveSms;
@@ -127,6 +132,11 @@ class UserSettingsModel {
     this.widgetShowExpenseBtn = true,
     this.widgetShowIncomeBtn = true,
     this.widgetShowRefreshBtn = true,
+    this.widgetShowBalance = true,
+    this.widgetShowCardDigits = true,
+    this.widgetShowTodayExpense = true,
+    this.widgetShowWalletName = true,
+    this.widgetShowBudgetTag = true,
     this.autoSaveSms = false,
     this.autoReadSmsEnabled = true,
     this.hfSpaceUrl,
@@ -198,6 +208,11 @@ class UserSettingsModel {
     bool? widgetShowExpenseBtn,
     bool? widgetShowIncomeBtn,
     bool? widgetShowRefreshBtn,
+    bool? widgetShowBalance,
+    bool? widgetShowCardDigits,
+    bool? widgetShowTodayExpense,
+    bool? widgetShowWalletName,
+    bool? widgetShowBudgetTag,
     bool? autoSaveSms,
     bool? autoReadSmsEnabled,
     String? hfSpaceUrl,
@@ -250,6 +265,11 @@ class UserSettingsModel {
       widgetShowExpenseBtn: widgetShowExpenseBtn ?? this.widgetShowExpenseBtn,
       widgetShowIncomeBtn: widgetShowIncomeBtn ?? this.widgetShowIncomeBtn,
       widgetShowRefreshBtn: widgetShowRefreshBtn ?? this.widgetShowRefreshBtn,
+      widgetShowBalance: widgetShowBalance ?? this.widgetShowBalance,
+      widgetShowCardDigits: widgetShowCardDigits ?? this.widgetShowCardDigits,
+      widgetShowTodayExpense: widgetShowTodayExpense ?? this.widgetShowTodayExpense,
+      widgetShowWalletName: widgetShowWalletName ?? this.widgetShowWalletName,
+      widgetShowBudgetTag: widgetShowBudgetTag ?? this.widgetShowBudgetTag,
       autoSaveSms: autoSaveSms ?? this.autoSaveSms,
       autoReadSmsEnabled: autoReadSmsEnabled ?? this.autoReadSmsEnabled,
       hfSpaceUrl: clearHfSpaceUrl ? null : (hfSpaceUrl ?? this.hfSpaceUrl),
@@ -300,6 +320,11 @@ class UserSettingsModel {
         'widgetShowExpenseBtn': widgetShowExpenseBtn,
         'widgetShowIncomeBtn': widgetShowIncomeBtn,
         'widgetShowRefreshBtn': widgetShowRefreshBtn,
+        'widgetShowBalance': widgetShowBalance,
+        'widgetShowCardDigits': widgetShowCardDigits,
+        'widgetShowTodayExpense': widgetShowTodayExpense,
+        'widgetShowWalletName': widgetShowWalletName,
+        'widgetShowBudgetTag': widgetShowBudgetTag,
         'autoSaveSms': autoSaveSms,
         'autoReadSmsEnabled': autoReadSmsEnabled,
         'hfSpaceUrl': hfSpaceUrl,
@@ -351,6 +376,11 @@ class UserSettingsModel {
         widgetShowExpenseBtn: json['widgetShowExpenseBtn'] as bool? ?? true,
         widgetShowIncomeBtn: json['widgetShowIncomeBtn'] as bool? ?? true,
         widgetShowRefreshBtn: json['widgetShowRefreshBtn'] as bool? ?? true,
+        widgetShowBalance: json['widgetShowBalance'] as bool? ?? true,
+        widgetShowCardDigits: json['widgetShowCardDigits'] as bool? ?? true,
+        widgetShowTodayExpense: json['widgetShowTodayExpense'] as bool? ?? true,
+        widgetShowWalletName: json['widgetShowWalletName'] as bool? ?? true,
+        widgetShowBudgetTag: json['widgetShowBudgetTag'] as bool? ?? true,
         autoSaveSms: json['autoSaveSms'] as bool? ?? false,
         autoReadSmsEnabled: json['autoReadSmsEnabled'] as bool? ?? true,
         hfSpaceUrl: json['hfSpaceUrl'] as String?,

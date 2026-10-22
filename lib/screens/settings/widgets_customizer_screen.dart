@@ -194,9 +194,17 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                     todaySpentStr: settings.formatCurrency(monthlyStats.todayExpense),
                     secondaryAction: settings.widgetSecondaryAction,
                     isOverBudget: budgetRemaining <= 0,
-                    widgetTheme: settings.widgetTheme,
+                    widgetTheme: settings.isWidgetCustomizationEnabled ? settings.widgetTheme : 'glassFrost',
                     isPrivacyActive: settings.widgetPrivacyMode,
                     isPeeking: _isPeeking,
+                    showBalance: settings.isWidgetCustomizationEnabled ? settings.widgetShowBalance : true,
+                    showCardDigits: settings.isWidgetCustomizationEnabled ? settings.widgetShowCardDigits : true,
+                    showTodayExpense: settings.isWidgetCustomizationEnabled ? settings.widgetShowTodayExpense : true,
+                    showWalletName: settings.isWidgetCustomizationEnabled ? settings.widgetShowWalletName : true,
+                    showBudgetTag: settings.isWidgetCustomizationEnabled ? settings.widgetShowBudgetTag : true,
+                    showQuickAdd: settings.isWidgetCustomizationEnabled ? settings.widgetShowExpenseBtn : true,
+                    showSecondary: settings.isWidgetCustomizationEnabled ? settings.widgetShowIncomeBtn : true,
+                    showRefresh: settings.isWidgetCustomizationEnabled ? settings.widgetShowRefreshBtn : true,
                     onBalanceTap: _triggerPreviewPeek,
                   )
                 else if (_selectedPreviewTab == 1)
@@ -206,16 +214,26 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                     daysLeft: daysRemaining,
                     budgetRemainingStr: settings.formatCurrency(budgetRemaining),
                     isOverBudget: budgetRemaining <= 0,
+                    widgetTheme: settings.isWidgetCustomizationEnabled ? settings.widgetTheme : 'glassFrost',
                     isPrivacyActive: settings.widgetPrivacyMode,
                     isPeeking: _isPeeking,
+                    showBalance: settings.isWidgetCustomizationEnabled ? settings.widgetShowBalance : true,
+                    showBudgetTag: settings.isWidgetCustomizationEnabled ? settings.widgetShowBudgetTag : true,
+                    showTodayExpense: settings.isWidgetCustomizationEnabled ? settings.widgetShowTodayExpense : true,
+                    showQuickAdd: settings.isWidgetCustomizationEnabled ? settings.widgetShowExpenseBtn : true,
                     onBalanceTap: _triggerPreviewPeek,
                   )
                 else
                   _buildBarWidgetPreview(
                     isDark: isDark,
                     totalBalanceStr: displayTotalStr,
+                    widgetTheme: settings.isWidgetCustomizationEnabled ? settings.widgetTheme : 'glassFrost',
+                    secondaryAction: settings.isWidgetCustomizationEnabled ? settings.widgetSecondaryAction : 'scan',
                     isPrivacyActive: settings.widgetPrivacyMode,
                     isPeeking: _isPeeking,
+                    showBalance: settings.isWidgetCustomizationEnabled ? settings.widgetShowBalance : true,
+                    showQuickAdd: settings.isWidgetCustomizationEnabled ? settings.widgetShowExpenseBtn : true,
+                    showSecondary: settings.isWidgetCustomizationEnabled ? settings.widgetShowIncomeBtn : true,
                     onBalanceTap: _triggerPreviewPeek,
                   ),
 
@@ -645,6 +663,287 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
       ),
           const SizedBox(height: 24),
 
+          // Element Visibility Section for all widget sizes
+          Row(
+            children: [
+              Text(
+                'ELEMENT VISIBILITY (ALL SIZES)',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: settings.isWidgetCustomizationEnabled
+                      ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                      : (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  settings.isWidgetCustomizationEnabled ? 'REAL-TIME SYNC' : 'OFF',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: settings.isWidgetCustomizationEnabled
+                        ? AppColors.primaryGreenLight
+                        : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          AnimatedOpacity(
+            opacity: settings.isWidgetCustomizationEnabled ? 1.0 : 0.45,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: !settings.isWidgetCustomizationEnabled,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.currency_rupee_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Balance & Amounts',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Card balance, runway allowance & bar total',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowBalance,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBalance: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.pin_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Card Digits / Masked Number',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        '•••• 2026 or last 4 digits on Card widget',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowCardDigits,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showCardDigits: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.today_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Today Expense & Remaining Budget',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Daily spend stat & remaining safe spend stats',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowTodayExpense,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showTodayExpense: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.badge_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Account / Wallet Name Tag',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Linked wallet name header on Card widget',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowWalletName,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showWalletName: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.verified_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Budget Status Indicator Tag',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'On Budget / Over Budget badge tag',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowBudgetTag,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBudgetTag: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.bolt_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        '⚡ Quick Add Button',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Primary 1-tap instant transaction logger HUD',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowExpenseBtn,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showExpenseBtn: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        'Secondary Action (Scan / Voice)',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Quick receipt scan or voice assistant launch',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowIncomeBtn,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showIncomeBtn: val);
+                      },
+                    ),
+                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      secondary: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.visibility_rounded, size: 18),
+                      ),
+                      title: const Text(
+                        '👁️ Peek / Reveal Balance Button',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                      ),
+                      subtitle: const Text(
+                        'Dedicated eye button to reveal masked dots on home screen',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      value: settings.widgetShowRefreshBtn,
+                      activeThumbColor: AppColors.primaryGreenLight,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showRefreshBtn: val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Android Widget Instructions Card
           Container(
             padding: const EdgeInsets.all(16),
@@ -755,6 +1054,14 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
     String widgetTheme = 'glassFrost',
     bool isPrivacyActive = false,
     bool isPeeking = false,
+    bool showBalance = true,
+    bool showCardDigits = true,
+    bool showTodayExpense = true,
+    bool showWalletName = true,
+    bool showBudgetTag = true,
+    bool showQuickAdd = true,
+    bool showSecondary = true,
+    bool showRefresh = true,
     VoidCallback? onBalanceTap,
   }) {
     final bgColor = widgetTheme == 'oledBlack'
@@ -763,6 +1070,9 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
     final borderColor = widgetTheme == 'oledBlack'
         ? const Color(0xFF383838)
         : (widgetTheme == 'midnightNavy' ? const Color(0xFF1E293B) : const Color(0xFF2A2A30));
+
+    final hasButtons = showQuickAdd || showSecondary;
+    final hasBottomStats = showTodayExpense || showBudgetTag;
 
     return Container(
       width: double.infinity,
@@ -805,26 +1115,29 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                 ),
               ),
               const Spacer(),
-              Text(
-                walletName,
-                style: const TextStyle(
-                  color: Color(0xFF9E9EA8),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+              if (showWalletName)
+                Text(
+                  walletName,
+                  style: const TextStyle(
+                    color: Color(0xFF9E9EA8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 2),
-          const Text(
-            '•••• 2026',
-            style: TextStyle(
-              color: Color(0xFF5A5A66),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+          if (showCardDigits) ...[
+            const SizedBox(height: 2),
+            const Text(
+              '•••• 2026',
+              style: TextStyle(
+                color: Color(0xFF5A5A66),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 8),
 
           // Inset Box
@@ -849,127 +1162,138 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                       ),
                     ),
                     const Spacer(),
-                    // Dedicated Space for Click to View/Hide Balance (Zero Mistouch)
-                    GestureDetector(
-                      onTap: onBalanceTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF16231A),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF1B4324), width: 1),
-                        ),
-                        child: Text(
-                          isPeeking ? '👁️ Hide' : (isPrivacyActive ? '👁️ View' : '👁️ Peek'),
-                          style: const TextStyle(
-                            color: Color(0xFF00C853),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                    if (showBalance && showRefresh)
+                      GestureDetector(
+                        onTap: onBalanceTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16231A),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF1B4324), width: 1),
+                          ),
+                          child: Text(
+                            isPeeking ? '👁️ Hide' : (isPrivacyActive ? '👁️ View' : '👁️ Peek'),
+                            style: const TextStyle(
+                              color: Color(0xFF00C853),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 1),
-                GestureDetector(
-                  onTap: onBalanceTap,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        balanceStr,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                if (showBalance) ...[
+                  const SizedBox(height: 1),
+                  GestureDetector(
+                    onTap: onBalanceTap,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          balanceStr,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      if (isPrivacyActive) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                          size: 15,
-                          color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
-                        ),
+                        if (isPrivacyActive) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                            size: 15,
+                            color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                          ),
+                        ],
                       ],
+                    ),
+                  ),
+                ],
+                if (hasBottomStats) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (showTodayExpense)
+                        Text(
+                          '$todaySpentStr Today',
+                          style: const TextStyle(
+                            color: Color(0xFFEF5350),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      if (showTodayExpense && showBudgetTag) ...[
+                        const SizedBox(width: 6),
+                        const Text('•', style: TextStyle(color: Color(0xFF44444E), fontSize: 10)),
+                        const SizedBox(width: 6),
+                      ],
+                      if (showBudgetTag)
+                        Text(
+                          isOverBudget ? '⚠️ Over Budget' : '✓ On Budget',
+                          style: TextStyle(
+                            color: isOverBudget ? const Color(0xFFFFA000) : const Color(0xFF00C853),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '$todaySpentStr Today',
-                      style: const TextStyle(
-                        color: Color(0xFFEF5350),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text('•', style: TextStyle(color: Color(0xFF44444E), fontSize: 10)),
-                    const SizedBox(width: 6),
-                    Text(
-                      isOverBudget ? '⚠️ Over Budget' : '✓ On Budget',
-                      style: TextStyle(
-                        color: isOverBudget ? const Color(0xFFFFA000) : const Color(0xFF00C853),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 10),
-
-          // Action Buttons Row
-          Row(
-            children: [
-              Expanded(
-                flex: 6,
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '⚡ Quick Add',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11.5,
+          if (hasButtons) ...[
+            const SizedBox(height: 10),
+            // Action Buttons Row
+            Row(
+              children: [
+                if (showQuickAdd)
+                  Expanded(
+                    flex: showSecondary ? 6 : 1,
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00C853),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '⚡ Quick Add',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11.5,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 4,
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF202024),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF32323A)),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    secondaryAction == 'voice' ? '🎙️ Voice' : '📸 Scan',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11.5,
+                if (showQuickAdd && showSecondary) const SizedBox(width: 8),
+                if (showSecondary)
+                  Expanded(
+                    flex: showQuickAdd ? 4 : 1,
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF202024),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF32323A)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        secondaryAction == 'voice' ? '🎙️ Voice' : '📸 Scan',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -982,17 +1306,31 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
     required int daysLeft,
     required String budgetRemainingStr,
     required bool isOverBudget,
+    String widgetTheme = 'glassFrost',
     bool isPrivacyActive = false,
     bool isPeeking = false,
+    bool showBalance = true,
+    bool showBudgetTag = true,
+    bool showTodayExpense = true,
+    bool showQuickAdd = true,
     VoidCallback? onBalanceTap,
   }) {
+    final bgColor = widgetTheme == 'oledBlack'
+        ? Colors.black
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF0F172A) : const Color(0xFF131316));
+    final borderColor = widgetTheme == 'oledBlack'
+        ? const Color(0xFF383838)
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF1E293B) : const Color(0xFF28282E));
+
+    final hasInset = showBudgetTag || showTodayExpense;
+
     return Container(
       width: 220,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF131316),
+        color: bgColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF28282E), width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1018,96 +1356,102 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          GestureDetector(
-            onTap: onBalanceTap,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  safeDailyStr,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  '/ day',
-                  style: TextStyle(
-                    color: Color(0xFF7A7A88),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (isPrivacyActive) ...[
-                  const SizedBox(width: 6),
-                  Icon(
-                    isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                    size: 15,
-                    color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1E),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF142618),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFF00C853)),
-                  ),
-                  child: Text(
-                    isOverBudget ? '⚠️ OVER BUDGET' : '✓ ON TRACK',
+          if (showBalance) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: onBalanceTap,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    safeDailyStr,
                     style: const TextStyle(
-                      color: Color(0xFF00C853),
-                      fontSize: 8.5,
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    '/ day',
+                    style: TextStyle(
+                      color: Color(0xFF7A7A88),
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$budgetRemainingStr remaining',
-                  style: const TextStyle(color: Color(0xFFA0A0AA), fontSize: 9.5),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          Container(
-            height: 32,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00C853),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              '➕ Log Spend',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w800,
-                fontSize: 11.5,
+                  if (isPrivacyActive) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                      size: 15,
+                      color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
+          ],
+          if (hasInset) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: widgetTheme == 'oledBlack' ? const Color(0xFF111113) : const Color(0xFF1A1A1E),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showBudgetTag)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF142618),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF00C853)),
+                      ),
+                      child: Text(
+                        isOverBudget ? '⚠️ OVER BUDGET' : '✓ ON TRACK',
+                        style: const TextStyle(
+                          color: Color(0xFF00C853),
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  if (showBudgetTag && showTodayExpense) const SizedBox(height: 4),
+                  if (showTodayExpense)
+                    Text(
+                      '$budgetRemainingStr remaining',
+                      style: const TextStyle(color: Color(0xFFA0A0AA), fontSize: 9.5),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (showQuickAdd) ...[
+            const SizedBox(height: 10),
+            Container(
+              height: 32,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C853),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                '➕ Log Spend',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1117,18 +1461,30 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
   Widget _buildBarWidgetPreview({
     required bool isDark,
     required String totalBalanceStr,
+    String widgetTheme = 'glassFrost',
+    String secondaryAction = 'scan',
     bool isPrivacyActive = false,
     bool isPeeking = false,
+    bool showBalance = true,
+    bool showQuickAdd = true,
+    bool showSecondary = true,
     VoidCallback? onBalanceTap,
   }) {
+    final bgColor = widgetTheme == 'oledBlack'
+        ? Colors.black
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF0F172A) : const Color(0xFF161619));
+    final borderColor = widgetTheme == 'oledBlack'
+        ? const Color(0xFF383838)
+        : (widgetTheme == 'midnightNavy' ? const Color(0xFF1E293B) : const Color(0xFF2A2A32));
+
     return Container(
       width: double.infinity,
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF161619),
+        color: bgColor,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFF2A2A32), width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Row(
         children: [
@@ -1149,53 +1505,56 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: onBalanceTap,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      totalBalanceStr,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+          if (showBalance) ...[
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: onBalanceTap,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        totalBalanceStr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                    if (isPrivacyActive) ...[
-                      const SizedBox(width: 4),
-                      Icon(
-                        isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                        size: 13,
-                        color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
-                      ),
+                      if (isPrivacyActive) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          isPeeking ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                          size: 13,
+                          color: isPeeking ? AppColors.primaryGreenLight : Colors.white38,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-                const Text(
-                  'Pocket Balance',
-                  style: TextStyle(
-                    color: Color(0xFF7A7A85),
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-              ],
+                  const Text(
+                    'Pocket Balance',
+                    style: TextStyle(
+                      color: Color(0xFF7A7A85),
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           const Spacer(),
 
-          // 3 Action Circles
-          _buildCircleBtn('➕', const Color(0xFF00C853)),
-          const SizedBox(width: 8),
-          _buildCircleBtn('📸', Colors.white),
-          const SizedBox(width: 8),
-          _buildCircleBtn('🎙️', Colors.white),
+          if (showQuickAdd) ...[
+            _buildCircleBtn('➕', const Color(0xFF00C853)),
+          ],
+          if (showQuickAdd && showSecondary) const SizedBox(width: 8),
+          if (showSecondary) ...[
+            _buildCircleBtn(secondaryAction == 'voice' ? '🎙️' : '📸', Colors.white),
+          ],
         ],
       ),
     );

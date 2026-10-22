@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
@@ -21,6 +22,24 @@ class PocketBarWidgetProvider : HomeWidgetProvider() {
     companion object {
         const val ACTION_PEEK_BAR_BALANCE = "com.pocket.pocket.ACTION_PEEK_BAR_BALANCE"
         private val handler = Handler(Looper.getMainLooper())
+
+        fun refreshAll(context: Context) {
+            try {
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val component = ComponentName(context, PocketBarWidgetProvider::class.java)
+                val ids = appWidgetManager.getAppWidgetIds(component)
+                if (ids != null && ids.isNotEmpty()) {
+                    val widgetData = try {
+                        es.antonborri.home_widget.HomeWidgetPlugin.getData(context)
+                    } catch (_: Exception) {
+                        @Suppress("DEPRECATION")
+                        android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                    }
+                    val provider = PocketBarWidgetProvider()
+                    provider.onUpdate(context, appWidgetManager, ids, widgetData)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -92,8 +111,29 @@ class PocketBarWidgetProvider : HomeWidgetProvider() {
                 val views = RemoteViews(context.packageName, R.layout.pocket_bar_widget_layout).apply {
                     val barBalance = widgetData.getString("total_balance", "₹0.00") ?: "₹0.00"
                     val isPrivacy = widgetData.getBoolean("widget_privacy_mode", false) || barBalance == "••••••"
+                    val secondaryAction = widgetData.getString("secondary_action_type", "scan") ?: "scan"
+
+                    val isCustomizationEnabled = widgetData.getBoolean("widget_customization_enabled", true)
+                    val showBalance = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_balance", true) else true
+                    val showQuickAdd = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_expense_btn", true) else true
+                    val showSecondary = if (isCustomizationEnabled) widgetData.getBoolean("widget_show_income_btn", true) else true
+                    val widgetTheme = widgetData.getString("widget_theme", "glassFrost") ?: "glassFrost"
+
+                    // Apply selected theme to background
+                    val bgRes = when (widgetTheme) {
+                        "oledBlack" -> R.drawable.widget_bg_oled_black
+                        "midnightNavy" -> R.drawable.widget_bg_midnight_navy
+                        else -> R.drawable.widget_bg_glass_frost
+                    }
+                    setInt(R.id.widget_root, "setBackgroundResource", bgRes)
 
                     setTextViewText(R.id.widget_bar_balance, barBalance)
+
+                    // Dynamic visibility based on element toggles
+                    setViewVisibility(R.id.btn_bar_balance, if (showBalance) View.VISIBLE else View.GONE)
+                    setViewVisibility(R.id.btn_bar_add, if (showQuickAdd) View.VISIBLE else View.GONE)
+                    setViewVisibility(R.id.btn_bar_scan, if (showSecondary && secondaryAction != "voice") View.VISIBLE else View.GONE)
+                    setViewVisibility(R.id.btn_bar_voice, if (showSecondary && secondaryAction == "voice") View.VISIBLE else View.GONE)
 
                     // Balance pill tap -> open main app or peek
                     val mainPendingIntent = HomeWidgetLaunchIntent.getActivity(

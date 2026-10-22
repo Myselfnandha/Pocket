@@ -327,15 +327,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               // 2. Containerized Scrolling Recent Activity Section with Day Indicators
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 92),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Consumer(
                     builder: (context, ref, _) {
                       final allTxs = ref.watch(transactionsProvider);
                       final displayList = allTxs.take(30).toList();
+                      final bottomPadding = MediaQuery.paddingOf(context).bottom + 92;
 
                       if (displayList.isEmpty) {
                         return SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.only(bottom: bottomPadding),
                           child: Container(
                             width: double.infinity,
                             margin: const EdgeInsets.only(top: 8),
@@ -344,7 +346,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                               color: isDark
                                   ? AppColors.darkSurfaceVariant
                                   : Colors.white,
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: isDark
                                     ? AppColors.darkCardBorder
@@ -399,7 +401,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           color: isDark
                               ? AppColors.darkSurfaceVariant
                               : Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                           border: Border.all(
                             color: isDark
                                 ? AppColors.darkCardBorder
@@ -409,7 +411,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         clipBehavior: Clip.antiAlias,
                         child: ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
+                          padding: EdgeInsets.only(bottom: bottomPadding),
                           itemCount: groupKeys.length,
                           itemBuilder: (context, groupIndex) {
                             final dateKey = groupKeys[groupIndex];

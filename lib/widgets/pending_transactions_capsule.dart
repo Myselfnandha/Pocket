@@ -25,18 +25,18 @@ class PendingTransactionsCapsule extends ConsumerWidget {
     final count = pending.length;
 
     return Container(
-      margin: const EdgeInsets.only(top: 14),
+      margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1B1B22) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? const Color(0xFF181B22) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: palette.primary.withValues(alpha: 0.4),
-          width: 1.2,
+          color: palette.primary.withValues(alpha: 0.35),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.primary.withValues(alpha: 0.10),
-            blurRadius: 10,
+            color: palette.primary.withValues(alpha: 0.12),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -44,113 +44,96 @@ class PendingTransactionsCapsule extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           onTap: () => showPendingTransactionsSheet(context),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Row(
               children: [
-                // Glowing Pulse Icon
+                // Small Glowing Indicator Dot / Icon
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 26,
+                  height: 26,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: palette.primary.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: palette.primary.withValues(alpha: 0.6),
-                      width: 1.2,
-                    ),
+                    color: palette.primary.withValues(alpha: 0.18),
                   ),
                   child: Center(
                     child: Icon(
                       Icons.bolt_rounded,
                       color: palette.primary,
-                      size: 24,
+                      size: 16,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 8),
 
-                // Info Text
+                // Pill Text: Compact Merchant • Amount • Source
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            count == 1 ? '1 Detected Payment' : '$count Detected Payments',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: palette.primary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              firstItem.appSource,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: palette.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${firstItem.merchant} • ${CurrencyFormatter.format(firstItem.amount, currencySymbol: currency)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: palette.primary.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        child: Text(
+                          count > 1 ? '$count Detected' : firstItem.appSource,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: palette.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          '${firstItem.merchant} • ${CurrencyFormatter.format(firstItem.amount, currencySymbol: currency)}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
-                // Quick Action Buttons
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Quick 1-tap Approve
-                    IconButton(
-                      icon: const Icon(Icons.check_circle_outline_rounded),
+                // Compact Quick-Approve Button
+                InkWell(
+                  onTap: () async {
+                    await ref.read(pendingTransactionsProvider.notifier).approve(firstItem.id);
+                    if (context.mounted) {
+                      TopCapsuleToast.show(
+                        context,
+                        title: 'Saved ${CurrencyFormatter.format(firstItem.amount, currencySymbol: currency)} to ${firstItem.merchant}',
+                        icon: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.check_circle_rounded,
                       color: palette.primary,
-                      iconSize: 26,
-                      tooltip: 'Approve',
-                      onPressed: () async {
-                        await ref.read(pendingTransactionsProvider.notifier).approve(firstItem.id);
-                        if (context.mounted) {
-                          TopCapsuleToast.show(
-                            context,
-                            title: 'Saved ${CurrencyFormatter.format(firstItem.amount, currencySymbol: currency)} to ${firstItem.merchant}',
-                            icon: const Icon(Icons.check_circle_rounded, color: Colors.green),
-                          );
-                        }
-                      },
+                      size: 20,
                     ),
-                    // Review Chevron
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                      size: 22,
-                    ),
-                  ],
+                  ),
+                ),
+
+                // Tiny Chevron
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                  size: 18,
                 ),
               ],
             ),
