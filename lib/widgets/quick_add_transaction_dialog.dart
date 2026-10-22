@@ -114,6 +114,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
   String? _counterpartyLast4;
   final DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
+  List<WalletModel>? _displayedWallets;
 
   @override
   void initState() {
@@ -368,6 +369,19 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
       } else {
         _selectedWalletId = wallets.first.id;
       }
+    }
+
+    // Static initial sort: placed selected account at index 0 on modal open
+    if (_displayedWallets == null || _displayedWallets!.length != wallets.length) {
+      final sorted = List<WalletModel>.from(wallets);
+      if (_selectedWalletId != null) {
+        sorted.sort((a, b) {
+          if (a.id == _selectedWalletId) return -1;
+          if (b.id == _selectedWalletId) return 1;
+          return 0;
+        });
+      }
+      _displayedWallets = sorted;
     }
     if (_selectedCategoryId == null && categories.isNotEmpty) {
       _selectedCategoryId = categories.first.id;
@@ -814,7 +828,7 @@ class _QuickAddTransactionDialogState extends ConsumerState<QuickAddTransactionD
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: wallets.map((w) {
+                children: (_displayedWallets ?? wallets).map((w) {
                   final isSelected = _selectedWalletId == w.id;
                   final formattedBalance = settings.formatCurrency(w.currentBalance);
 

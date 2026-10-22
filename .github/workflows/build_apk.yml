@@ -9,13 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.2.3)'
+        description: 'Version Name (e.g. 1.2.7)'
         required: false
-        default: '1.2.3'
+        default: '1.2.7'
       build_number:
-        description: 'Build Number (e.g. 34)'
+        description: 'Build Number (e.g. 37)'
         required: false
-        default: '34'
+        default: '37'
 
 concurrency:
   group: pocket-release-pipeline

@@ -569,10 +569,6 @@ class SettingsScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E1E24) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: activePalette.primary.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
@@ -1068,10 +1064,6 @@ class SettingsScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E1E24) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: palette.primary.withValues(alpha: 0.35),
-                    width: 1.5,
-                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
@@ -1290,7 +1282,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1337,7 +1335,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1406,7 +1410,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1473,7 +1483,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1523,7 +1539,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1575,7 +1597,13 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E24) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

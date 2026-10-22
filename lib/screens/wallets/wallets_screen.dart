@@ -432,14 +432,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -680,14 +676,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -832,14 +824,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -984,14 +972,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -1151,14 +1135,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E22) : Colors.white,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -1587,11 +1567,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.expenseRed.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 20,
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
               ],
@@ -1706,14 +1685,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -1985,14 +1960,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -2020,51 +1991,153 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: fromWalletId,
-                      decoration: InputDecoration(
-                        labelText: 'From Account',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    Text(
+                      'FROM ACCOUNT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                       ),
-                      items: wallets.map((w) {
-                        return DropdownMenuItem(
-                          value: w.id,
-                          child: Text('${w.icon} ${w.displayName} (${w.maskedAccountNumber.isNotEmpty ? "${w.maskedAccountNumber} • " : ""}$currencySymbol${w.currentBalance.toStringAsFixed(0)})'),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() {
-                            fromWalletId = val;
-                            if (toWalletId == val) {
-                              toWalletId = wallets.firstWhere((w) => w.id != val).id;
-                            }
-                          });
-                        }
-                      },
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: wallets.map((w) {
+                          final isSelected = fromWalletId == w.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setDialogState(() {
+                                  fromWalletId = w.id;
+                                  if (toWalletId == w.id) {
+                                    toWalletId = wallets.firstWhere((other) => other.id != w.id).id;
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? palette.primary.withValues(alpha: isDark ? 0.22 : 0.15)
+                                      : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? palette.primary : Colors.transparent,
+                                    width: 1.3,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(w.icon, style: const TextStyle(fontSize: 13)),
+                                    const SizedBox(width: 6),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          w.displayName,
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                            color: isSelected
+                                                ? (isDark ? Colors.white : Colors.black)
+                                                : (isDark ? Colors.white70 : Colors.black87),
+                                          ),
+                                        ),
+                                        Text(
+                                          '$currencySymbol${w.currentBalance.toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected ? palette.primary : (isDark ? Colors.white38 : Colors.black38),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: toWalletId,
-                      decoration: InputDecoration(
-                        labelText: 'To Account',
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    Text(
+                      'TO ACCOUNT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                       ),
-                      items: wallets.where((w) => w.id != fromWalletId).map((w) {
-                        return DropdownMenuItem(
-                          value: w.id,
-                          child: Text('${w.icon} ${w.displayName} (${w.maskedAccountNumber.isNotEmpty ? "${w.maskedAccountNumber} • " : ""}$currencySymbol${w.currentBalance.toStringAsFixed(0)})'),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() => toWalletId = val);
-                        }
-                      },
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: wallets.where((w) => w.id != fromWalletId).map((w) {
+                          final isSelected = toWalletId == w.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setDialogState(() => toWalletId = w.id);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.22 : 0.15)
+                                      : (isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primaryGreenLight : Colors.transparent,
+                                    width: 1.3,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(w.icon, style: const TextStyle(fontSize: 13)),
+                                    const SizedBox(width: 6),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          w.displayName,
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                            color: isSelected
+                                                ? (isDark ? Colors.white : Colors.black)
+                                                : (isDark ? Colors.white70 : Colors.black87),
+                                          ),
+                                        ),
+                                        Text(
+                                          '$currencySymbol${w.currentBalance.toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white38 : Colors.black38),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -2214,14 +2287,10 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E22) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: palette.primary.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                    blurRadius: 28,
                     offset: const Offset(0, 10),
                   ),
                 ],
