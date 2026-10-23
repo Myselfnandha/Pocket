@@ -165,13 +165,21 @@ class _BalanceCardState extends ConsumerState<BalanceCard> {
                             : AppColors.lightTextSecondary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: _togglePeek,
-                      child: Icon(
-                        isPrivacy ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        size: 15,
-                        color: isDark ? Colors.white38 : Colors.black38,
+                    const SizedBox(width: 4),
+                    Semantics(
+                      label: isPrivacy ? 'Reveal total balance' : 'Hide total balance',
+                      button: true,
+                      child: IconButton(
+                        onPressed: _togglePeek,
+                        icon: Icon(
+                          isPrivacy ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          size: 16,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                        tooltip: isPrivacy ? 'Reveal Balance' : 'Mask Balance',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                        splashRadius: 20,
                       ),
                     ),
                   ],
