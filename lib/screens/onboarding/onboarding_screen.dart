@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/budget_model.dart';
 import '../../models/category_model.dart';
@@ -1592,24 +1593,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       ),
                     ),
                     if (acc.balance != null) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Text(
                         '•',
                         style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
+                      const SizedBox(width: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
                         child: Text(
                           isLoan
-                              ? 'Due: $symbol${acc.balance!.toStringAsFixed(0)}'
-                              : 'Bal: $symbol${acc.balance!.toStringAsFixed(0)}',
+                              ? 'Due: $symbol${NumberFormat('#,##0').format(acc.balance)}'
+                              : 'Bal: $symbol${NumberFormat('#,##0').format(acc.balance)}',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: isLoan ? Colors.amber : AppColors.primaryGreenLight,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1618,7 +1619,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           // Actions
           if (isAdded)
             Column(
@@ -1638,7 +1639,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
                       color: (isLoan ? Colors.amber : AppColors.primaryGreenLight).withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(10),

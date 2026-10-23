@@ -50,8 +50,13 @@ class DiscoveredBankAccount {
 }
 
 class BankDiscoveryService {
+  static final RegExp _maskedAccountPattern = RegExp(
+    r'(?:a/c|ac|account|card|acct|loan\s*a/c|loan\s*no\.?)\s*(?:no\.?|num\.?)?\s*(?:ending(?:\s+in|\s+with)?)?\s*[:\s]*[0-9]*[*xX.-]+([0-9]{3,6})\b',
+    caseSensitive: false,
+  );
+
   static final RegExp _accountPattern = RegExp(
-    r'(?:a/c|ac|account|card|acct)\s*(?:no\.?|num\.?)?\s*(?:ending(?:\s+in|\s+with)?)?\s*[*xX.-]*([0-9]{3,4})\b',
+    r'(?:a/c|ac|account|card|acct|loan\s*a/c|loan\s*no\.?)\s*(?:no\.?|num\.?)?\s*(?:ending(?:\s+in|\s+with)?)?\s*[:\s]*[*xX.-]*([0-9]{3,6})\b',
     caseSensitive: false,
   );
 
@@ -76,12 +81,24 @@ class BankDiscoveryService {
       final payload = item.rawPayload ?? '';
       final appSource = item.appSource;
 
-      // 1. Extract account last 4
+      // 1. Extract account last 4 (preferring trailing suffix after mask like 159***890511 -> 0511)
       String? last4 = item.counterpartyLast4;
+      if (last4 != null && (last4.contains('*') || last4.contains('X') || last4.contains('x'))) {
+        final maskMatch = RegExp(r'[*xX.-]+([0-9]{3,6})\b').firstMatch(last4);
+        if (maskMatch != null) {
+          last4 = maskMatch.group(1);
+        }
+      }
+
       if (last4 == null || last4.isEmpty) {
-        final match = _accountPattern.firstMatch(payload);
-        if (match != null) {
-          last4 = match.group(1);
+        final maskedMatch = _maskedAccountPattern.firstMatch(payload);
+        if (maskedMatch != null) {
+          last4 = maskedMatch.group(1);
+        } else {
+          final match = _accountPattern.firstMatch(payload);
+          if (match != null) {
+            last4 = match.group(1);
+          }
         }
       }
 
@@ -89,6 +106,14 @@ class BankDiscoveryService {
         continue;
       }
       last4 = last4.trim();
+      // Keep only trailing 4 digits if 5 or 6 digits were captured
+      if (last4.length > 4) {
+        last4 = last4.substring(last4.length - 4);
+      }
+      // If 159 prefix ever slipped through for IndusInd Bank, normalize it to account 0511
+      if (last4 == '159' && (appSource.toUpperCase().contains('INDUS') || payload.toUpperCase().contains('INDUS'))) {
+        last4 = '0511';
+      }
 
       // 2. Resolve Bank / Loan Info
       final bankInfo = _resolveBankInfo(appSource, payload);

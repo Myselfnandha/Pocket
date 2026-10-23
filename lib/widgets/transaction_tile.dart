@@ -78,10 +78,11 @@ class TransactionTile extends ConsumerWidget {
       ),
       onDismissed: (_) {
         onDelete?.call();
+        final settings = ref.read(settingsProvider);
         ref.read(transactionsProvider.notifier).deleteTransaction(transaction.id);
         TopCapsuleToast.showBottom(
           context,
-          message: 'Deleted "${transaction.title}"',
+          message: 'Deleted "${transaction.title}" (${settings.formatCurrency(transaction.amount)})',
           actionLabel: 'Undo',
           onAction: () {
             ref.read(transactionsProvider.notifier).insertTransactionAt(0, transaction);

@@ -92,239 +92,167 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 1. Section: Preferences & Appearance
-          _buildSectionHeader('PREFERENCES & APPEARANCE'),
-          _buildSettingsGroup(
-            isDark: isDark,
-            children: [
-              Consumer(
-                builder: (context, ref, child) {
-                  final activePalette = ref.watch(activePaletteProvider);
-                  return ListTile(
-                    leading: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: activePalette.primary,
-                        boxShadow: [
-                          BoxShadow(
-                            color: activePalette.primary.withValues(alpha: 0.5),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
-                      ),
+          // Category Folders Header
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'CATEGORIES & CONFIGURATION',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+          ),
+
+          // 1. Appearance & Display Folder
+          Consumer(
+            builder: (context, ref, child) {
+              final activePalette = ref.watch(activePaletteProvider);
+              return _buildFolderCard(
+                context: context,
+                isDark: isDark,
+                icon: Icons.palette_rounded,
+                iconColor: activePalette.primary,
+                title: 'Appearance & Display',
+                subtitle: 'Theme studio, dark mode, accent palettes, nav style & haptics',
+                trailingBadge: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: activePalette.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: activePalette.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    activePalette.name,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: activePalette.primary,
                     ),
-                    title: const Text('Theme & Accent Palette', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('${activePalette.name} (5 Presets + Custom Color)'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _showThemeStudioModal(context, ref, settings),
-                  );
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.brightness_medium_rounded, color: AppColors.infoBlue),
-                title: const Text('Display Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  settings.themeMode == AppThemeMode.autoTime
-                      ? 'Auto Mode (Switches Light/Dark based on time of day)'
-                      : (settings.manualThemeStyle == ManualThemeStyle.light
-                          ? 'Light Mode'
-                          : (settings.manualThemeStyle == ManualThemeStyle.pureBlack || settings.isPureBlackEnabled
-                              ? 'Pure Black AMOLED'
-                              : 'Dark Mode (Charcoal)')),
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showThemePicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.view_carousel_rounded, color: AppColors.infoBlue),
-                title: const Text('Bottom Nav Bar Style', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(_getNavBarStyleName(settings.navBarStyle)),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showNavBarStylePicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.widgets_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Home Screen Widgets', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Customize cards, safe-to-spend, quick bar & pinning'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/widget-customizer'),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.fingerprint_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Biometric App Lock', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Require fingerprint or device unlock on app open'),
-                value: settings.biometricLockEnabled,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) async {
-                  if (val) {
-                    final isSecure = await SecurityService.isDeviceSecure();
-                    if (!isSecure) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enable a device screen lock (PIN, pattern, or fingerprint) in Android Settings first.'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                      return;
-                    }
-                    final authenticated = await SecurityService.authenticate();
-                    if (authenticated) {
-                      ref.read(settingsProvider.notifier).setBiometricLock(true);
-                    }
-                  } else {
-                    final authenticated = await SecurityService.authenticate();
-                    if (authenticated) {
-                      ref.read(settingsProvider.notifier).setBiometricLock(false);
-                    }
-                  }
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.vibration_rounded, color: AppColors.infoBlue),
-                title: const Text('Haptic Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Tactile vibration on buttons and numeric keypad'),
-                value: settings.hapticFeedbackEnabled,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setHapticFeedback(val);
-                },
-              ),
-            ],
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AppearanceSettingsSubPage()),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 24),
 
-          // 2. Section: Accounts & Categories
-          _buildSectionHeader('ACCOUNTS & CATEGORIES'),
-          _buildSettingsGroup(
+          // 2. Home Screen Widgets Folder
+          _buildFolderCard(
+            context: context,
             isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Default Payment Account', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(defaultWalletName),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDefaultWalletPicker(context, ref, settings, wallets),
+            icon: Icons.widgets_rounded,
+            iconColor: const Color(0xFF8B5CF6),
+            title: 'Home Screen Widgets',
+            subtitle: 'Customize desktop cards, safe-to-spend, peek timer & quick bar',
+            trailingBadge: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
               ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.currency_exchange_rounded, color: AppColors.accentOrange),
-                title: const Text('Currency', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settings.currencySymbol} - ${settings.currencyCode}'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showCurrencyPicker(context, ref, settings),
+              child: Text(
+                settings.isWidgetCustomizationEnabled ? 'CUSTOM' : 'DEFAULT',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF8B5CF6),
+                ),
               ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.category_outlined, color: AppColors.infoBlue),
-                title: const Text('Manage Categories', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${categories.length} categories available'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showCategoriesManager(context, ref, categories),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.label_outline_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Category Badges on Items', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Show or hide category badge tags on transaction rows'),
-                value: settings.showCategoryTags,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).toggleCategoryTags(val);
-                },
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
-                title: const Text('Month & Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Day ${settings.monthStartDay} of every month'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showMonthStartDayPicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.touch_app_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Transaction Entry Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showTransactionEntryModePicker(context, ref, settings),
-              ),
-            ],
+            ),
+            onTap: () => context.push('/widget-customizer'),
           ),
-          const SizedBox(height: 24),
 
-          // 3. Section: Smart Automation & Alerts
-          _buildSectionHeader('SMART AUTOMATION & ALERTS'),
-          _buildSettingsGroup(
+          // 3. Accounts & Categories Folder
+          _buildFolderCard(
+            context: context,
             isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('GPay, PhonePe, Paytm, SMS alerts & Screen Reader'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/auto-import-studio'),
+            icon: Icons.account_balance_wallet_rounded,
+            iconColor: const Color(0xFF3B82F6),
+            title: 'Accounts & Categories',
+            subtitle: 'Default wallet, currency, category manager & salary cycle start',
+            trailingBadge: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
               ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              SwitchListTile(
-                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
-                title: const Text('Auto-Save Scanned Receipts', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
-                value: settings.autoSaveScreenshots,
-                activeThumbColor: AppColors.primaryGreenLight,
-                onChanged: (val) {
-                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
-                },
+              child: Text(
+                '${categories.length} Cats',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF3B82F6),
+                ),
               ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
-                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showDuplicateWindowPicker(context, ref, settings),
-              ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              ListTile(
-                leading: const Icon(Icons.notifications_active_outlined, color: AppColors.accentOrange),
-                title: const Text('Spending Alerts & Reminders', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Budget limits (80%/100%), recurring dues, daily reminder'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showNotificationSettingsModal(context, ref, settings),
-              ),
-            ],
+            ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AccountsCategoriesSubPage()),
+            ),
           ),
-          const SizedBox(height: 24),
 
-          // 4. Section: Data & About
-          _buildSectionHeader('DATA & SYSTEM'),
-          _buildSettingsGroup(
+          // 4. Smart Automation & Security Folder
+          _buildFolderCard(
+            context: context,
             isDark: isDark,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
-                title: const Text('Backup & Data Management', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push('/data-management'),
+            icon: Icons.security_rounded,
+            iconColor: const Color(0xFF10B981),
+            title: 'Smart Automation & Security',
+            subtitle: 'Auto-import studio, biometric lock, spending alerts & receipt scan',
+            trailingBadge: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: (settings.biometricLockEnabled ? const Color(0xFF10B981) : Colors.grey)
+                    .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
               ),
-              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-              const ListTile(
-                leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
-                title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.5.24 • Clean Architecture & Universal Design'),
+              child: Text(
+                settings.biometricLockEnabled ? 'LOCK ON' : 'UNLOCKED',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: settings.biometricLockEnabled ? const Color(0xFF10B981) : (isDark ? Colors.white60 : Colors.black54),
+                ),
               ),
-            ],
+            ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SmartAutomationSecuritySubPage()),
+            ),
+          ),
+
+          // 5. Data & System Folder
+          _buildFolderCard(
+            context: context,
+            isDark: isDark,
+            icon: Icons.cloud_sync_rounded,
+            iconColor: const Color(0xFFF59E0B),
+            title: 'Data & System',
+            subtitle: 'Full JSON backup, restore, CSV export/import, storage & version',
+            trailingBadge: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'v1.5.24',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFF59E0B),
+                ),
+              ),
+            ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DataSystemSubPage()),
+            ),
           ),
           const SizedBox(height: 32),
         ],
@@ -332,7 +260,101 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  static Widget _buildFolderCard({
+    required BuildContext context,
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Widget? trailingBadge,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                          if (trailingBadge != null) ...[
+                            const SizedBox(width: 8),
+                            trailingBadge,
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.3,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -347,7 +369,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingsGroup({required bool isDark, required List<Widget> children}) {
+  static Widget buildSettingsGroup({required bool isDark, required List<Widget> children}) {
     return Material(
       color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
       shape: RoundedRectangleBorder(
@@ -1855,6 +1877,361 @@ class SettingsScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+// ==========================================
+// Sub-Page 1: Appearance & Display
+// ==========================================
+class AppearanceSettingsSubPage extends ConsumerWidget {
+  const AppearanceSettingsSubPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const s = SettingsScreen();
+    final settings = ref.watch(settingsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activePalette = ref.watch(activePaletteProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Appearance & Display'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        children: [
+          SettingsScreen.buildSectionHeader('PALETTE & THEME'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: activePalette.primary,
+                    boxShadow: [
+                      BoxShadow(
+                        color: activePalette.primary.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+                  ),
+                ),
+                title: const Text('Theme & Accent Palette', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${activePalette.name} (5 Presets + Custom Color)'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showThemeStudioModal(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.brightness_medium_rounded, color: AppColors.infoBlue),
+                title: const Text('Display Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  settings.themeMode == AppThemeMode.autoTime
+                      ? 'Auto Mode (Switches Light/Dark based on time of day)'
+                      : (settings.manualThemeStyle == ManualThemeStyle.light
+                          ? 'Light Mode'
+                          : (settings.manualThemeStyle == ManualThemeStyle.pureBlack || settings.isPureBlackEnabled
+                              ? 'Pure Black AMOLED'
+                              : 'Dark Mode (Charcoal)')),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showThemePicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.view_carousel_rounded, color: AppColors.infoBlue),
+                title: const Text('Bottom Nav Bar Style', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(s._getNavBarStyleName(settings.navBarStyle)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showNavBarStylePicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SettingsScreen.buildSectionHeader('DEVICE & INTERACTION'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.vibration_rounded, color: AppColors.infoBlue),
+                title: const Text('Haptic Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Tactile vibration on buttons and numeric keypad'),
+                value: settings.hapticFeedbackEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setHapticFeedback(val);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// Sub-Page 2: Accounts & Categories
+// ==========================================
+class AccountsCategoriesSubPage extends ConsumerWidget {
+  const AccountsCategoriesSubPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const s = SettingsScreen();
+    final settings = ref.watch(settingsProvider);
+    final categories = ref.watch(categoriesProvider);
+    final wallets = ref.watch(walletsWithBalancesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final defaultWallet = wallets.where((w) => w.id == settings.defaultWalletId).firstOrNull ??
+        wallets.where((w) => w.isDefault).firstOrNull ??
+        (wallets.isNotEmpty ? wallets.first : null);
+    final defaultWalletName = defaultWallet != null
+        ? '${defaultWallet.icon} ${defaultWallet.name}'
+        : 'First Active Account';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Accounts & Categories'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        children: [
+          SettingsScreen.buildSectionHeader('ACCOUNTS & CURRENCY'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Default Payment Account', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(defaultWalletName),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showDefaultWalletPicker(context, ref, settings, wallets),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.currency_exchange_rounded, color: AppColors.accentOrange),
+                title: const Text('Currency', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.currencySymbol} - ${settings.currencyCode}'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showCurrencyPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined, color: AppColors.accentOrange),
+                title: const Text('Month & Salary Cycle Start', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('Day ${settings.monthStartDay} of every month'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showMonthStartDayPicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.touch_app_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Transaction Entry Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showTransactionEntryModePicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SettingsScreen.buildSectionHeader('CATEGORIES & LABELS'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.category_outlined, color: AppColors.infoBlue),
+                title: const Text('Manage Categories', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${categories.length} categories available'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showCategoriesManager(context, ref, categories),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.label_outline_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Category Badges on Items', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Show or hide category badge tags on transaction rows'),
+                value: settings.showCategoryTags,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).toggleCategoryTags(val);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// Sub-Page 3: Smart Automation & Security
+// ==========================================
+class SmartAutomationSecuritySubPage extends ConsumerWidget {
+  const SmartAutomationSecuritySubPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const s = SettingsScreen();
+    final settings = ref.watch(settingsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Smart Automation & Security'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        children: [
+          SettingsScreen.buildSectionHeader('SECURITY & ACCESS'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.fingerprint_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Biometric App Lock', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Require fingerprint or device unlock on app open'),
+                value: settings.biometricLockEnabled,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) async {
+                  if (val) {
+                    final isSecure = await SecurityService.isDeviceSecure();
+                    if (!isSecure) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enable a device screen lock (PIN, pattern, or fingerprint) in Android Settings first.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    final authenticated = await SecurityService.authenticate();
+                    if (authenticated) {
+                      ref.read(settingsProvider.notifier).setBiometricLock(true);
+                    }
+                  } else {
+                    final authenticated = await SecurityService.authenticate();
+                    if (authenticated) {
+                      ref.read(settingsProvider.notifier).setBiometricLock(false);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SettingsScreen.buildSectionHeader('AUTOMATION & LOGGING'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.bolt_rounded, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Import Studio', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('GPay, PhonePe, Paytm, SMS alerts & Screen Reader'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/auto-import-studio'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              SwitchListTile(
+                secondary: const Icon(Icons.screenshot_outlined, color: AppColors.primaryGreenLight),
+                title: const Text('Auto-Save Scanned Receipts', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Instantly save parsed receipts to database without prompting'),
+                value: settings.autoSaveScreenshots,
+                activeThumbColor: AppColors.primaryGreenLight,
+                onChanged: (val) {
+                  ref.read(settingsProvider.notifier).setAutoSaveScreenshots(val);
+                },
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.av_timer_rounded, color: AppColors.accentOrange),
+                title: const Text('Duplicate Detection Window', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${settings.duplicateDetectionWindowSeconds ~/ 60} minutes'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showDuplicateWindowPicker(context, ref, settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SettingsScreen.buildSectionHeader('ALERTS & REMINDERS'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_active_outlined, color: AppColors.accentOrange),
+                title: const Text('Spending Alerts & Reminders', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Budget limits (80%/100%), recurring dues, daily reminder'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showNotificationSettingsModal(context, ref, settings),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// Sub-Page 4: Data & System
+// ==========================================
+class DataSystemSubPage extends ConsumerWidget {
+  const DataSystemSubPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Data & System'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        children: [
+          SettingsScreen.buildSectionHeader('DATA MANAGEMENT'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
+                title: const Text('Backup & Data Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.push('/data-management'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SettingsScreen.buildSectionHeader('SYSTEM & ABOUT'),
+          SettingsScreen.buildSettingsGroup(
+            isDark: isDark,
+            children: [
+              const ListTile(
+                leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
+                title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('v1.5.24 • Clean Architecture & Universal Design'),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              const ListTile(
+                leading: Icon(Icons.offline_pin_rounded, color: AppColors.primaryGreenLight),
+                title: Text('Privacy Architecture', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('100% on-device local SQLite & secure preferences. Zero telemetry.'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

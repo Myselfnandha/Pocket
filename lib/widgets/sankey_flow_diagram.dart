@@ -264,13 +264,50 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
           ),
           const SizedBox(height: 12),
 
-          // Stage Column Headers
+          // Stage Column Headers matching exactly the 3-column flex layout below
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('INFLOWS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: AppColors.incomeGreen)),
-              Text('ACCOUNTS HUB', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: palette.primary)),
-              Text('OUTFLOWS & SAVINGS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: AppColors.accentOrange)),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'INFLOWS',
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: AppColors.incomeGreen,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'ACCOUNTS HUB',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: palette.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'OUTFLOWS & SAVINGS',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: AppColors.accentOrange,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),

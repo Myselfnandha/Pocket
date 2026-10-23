@@ -69,8 +69,8 @@ class FinancialHealthGauge extends ConsumerWidget {
           // Central Radial Speedometer Gauge
           Center(
             child: SizedBox(
-              width: 200,
-              height: 110,
+              width: 220,
+              height: 125,
               child: CustomPaint(
                 painter: _HealthGaugePainter(
                   score: report.totalScore,
@@ -78,29 +78,36 @@ class FinancialHealthGauge extends ConsumerWidget {
                   isDark: isDark,
                 ),
                 child: Align(
-                  alignment: Alignment.bottomCenter,
+                  alignment: const Alignment(0, 0.45),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         '${report.totalScore}',
                         style: TextStyle(
-                          fontSize: 34,
+                          fontSize: 32,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                           color: scoreColor,
                         ),
                       ),
-                      Text(
-                        report.statusTitle.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                          letterSpacing: 0.6,
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scoreColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          report.statusTitle.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: scoreColor,
+                            letterSpacing: 0.6,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
@@ -248,8 +255,8 @@ class _HealthGaugePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height);
-    final radius = size.width * 0.42;
+    final center = Offset(size.width / 2, size.height - 4);
+    final radius = size.width * 0.40;
 
     // Background track arc
     final bgPaint = Paint()

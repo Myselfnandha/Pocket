@@ -11,6 +11,11 @@ class PendingTransactionModel {
   final String detectionSource; // 'notification', 'screen_reader', 'screenshot'
   final String? rawPayload;
   final String? counterpartyLast4;
+  final String? senderBank;
+  final String? senderName;
+  final String? receiverName;
+  final String? linkedContactName;
+  final String? linkedContactPhone;
   final bool isIncome;
   final String? sourceMessageId;
 
@@ -27,6 +32,11 @@ class PendingTransactionModel {
     this.detectionSource = 'notification',
     this.rawPayload,
     this.counterpartyLast4,
+    this.senderBank,
+    this.senderName,
+    this.receiverName,
+    this.linkedContactName,
+    this.linkedContactPhone,
     this.isIncome = false,
     this.sourceMessageId,
   });
@@ -52,6 +62,11 @@ class PendingTransactionModel {
     String? detectionSource,
     String? rawPayload,
     String? counterpartyLast4,
+    String? senderBank,
+    String? senderName,
+    String? receiverName,
+    String? linkedContactName,
+    String? linkedContactPhone,
     bool? isIncome,
     String? sourceMessageId,
   }) {
@@ -68,6 +83,11 @@ class PendingTransactionModel {
       detectionSource: detectionSource ?? this.detectionSource,
       rawPayload: rawPayload ?? this.rawPayload,
       counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
+      senderBank: senderBank ?? this.senderBank,
+      senderName: senderName ?? this.senderName,
+      receiverName: receiverName ?? this.receiverName,
+      linkedContactName: linkedContactName ?? this.linkedContactName,
+      linkedContactPhone: linkedContactPhone ?? this.linkedContactPhone,
       isIncome: isIncome ?? this.isIncome,
       sourceMessageId: sourceMessageId ?? this.sourceMessageId,
     );
@@ -86,6 +106,11 @@ class PendingTransactionModel {
         'detectionSource': detectionSource,
         'rawPayload': rawPayload,
         'counterpartyLast4': counterpartyLast4,
+        'senderBank': senderBank,
+        'senderName': senderName,
+        'receiverName': receiverName,
+        'linkedContactName': linkedContactName,
+        'linkedContactPhone': linkedContactPhone,
         'isIncome': isIncome,
         'sourceMessageId': sourceMessageId,
       };
@@ -124,6 +149,11 @@ class PendingTransactionModel {
       detectionSource: json['detectionSource'] as String? ?? 'notification',
       rawPayload: json['rawPayload'] as String?,
       counterpartyLast4: json['counterpartyLast4'] as String?,
+      senderBank: json['senderBank'] as String?,
+      senderName: json['senderName'] as String?,
+      receiverName: json['receiverName'] as String?,
+      linkedContactName: json['linkedContactName'] as String?,
+      linkedContactPhone: json['linkedContactPhone'] as String?,
       isIncome: json['isIncome'] == true,
       sourceMessageId: json['sourceMessageId'] as String?,
     );

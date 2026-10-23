@@ -66,7 +66,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
               isDark: isDark,
               activeWallet: activeWallet,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
 
             // 2. Tab Switch: Accounts vs Loans
             Container(
@@ -167,7 +167,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
 
             if (_selectedTab == 0) ...[
               // 2. Stacked Account Deck for Each Account

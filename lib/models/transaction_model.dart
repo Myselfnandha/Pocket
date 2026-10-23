@@ -14,6 +14,9 @@ class TransactionModel {
   final String? receiverName;
   final String? refId;
   final String? counterpartyLast4;
+  final String? senderBank;
+  final String? linkedContactName;
+  final String? linkedContactPhone;
   final String? appSource;
   final String? rawPayload;
   final List<String> tags;
@@ -35,6 +38,9 @@ class TransactionModel {
     this.receiverName,
     this.refId,
     this.counterpartyLast4,
+    this.senderBank,
+    this.linkedContactName,
+    this.linkedContactPhone,
     this.appSource,
     this.rawPayload,
     this.tags = const [],
@@ -65,6 +71,9 @@ class TransactionModel {
     String? receiverName,
     String? refId,
     String? counterpartyLast4,
+    String? senderBank,
+    String? linkedContactName,
+    String? linkedContactPhone,
     String? appSource,
     String? rawPayload,
     List<String>? tags,
@@ -86,6 +95,9 @@ class TransactionModel {
       receiverName: receiverName ?? this.receiverName,
       refId: refId ?? this.refId,
       counterpartyLast4: counterpartyLast4 ?? this.counterpartyLast4,
+      senderBank: senderBank ?? this.senderBank,
+      linkedContactName: linkedContactName ?? this.linkedContactName,
+      linkedContactPhone: linkedContactPhone ?? this.linkedContactPhone,
       appSource: appSource ?? this.appSource,
       rawPayload: rawPayload ?? this.rawPayload,
       tags: tags ?? this.tags,
@@ -109,6 +121,9 @@ class TransactionModel {
         'receiverName': receiverName,
         'refId': refId,
         'counterpartyLast4': counterpartyLast4,
+        'senderBank': senderBank,
+        'linkedContactName': linkedContactName,
+        'linkedContactPhone': linkedContactPhone,
         'appSource': appSource,
         'rawPayload': rawPayload,
         'tags': tags,
@@ -166,6 +181,9 @@ class TransactionModel {
       receiverName: json['receiverName'] as String?,
       refId: json['refId'] as String?,
       counterpartyLast4: json['counterpartyLast4'] as String?,
+      senderBank: json['senderBank'] as String?,
+      linkedContactName: json['linkedContactName'] as String?,
+      linkedContactPhone: json['linkedContactPhone'] as String?,
       appSource: json['appSource'] as String?,
       rawPayload: json['rawPayload'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??

@@ -15,6 +15,9 @@ data class ParsedSmsTransaction(
     val rawPayload: String,
     val isIncome: Boolean,
     val accountLast4: String? = null,
+    val senderBank: String? = null,
+    val senderName: String? = null,
+    val receiverName: String? = null,
     val sourceMessageId: String? = null
 ) {
     fun toJson(): JSONObject {
@@ -30,6 +33,15 @@ data class ParsedSmsTransaction(
             put("isIncome", isIncome)
             if (accountLast4 != null) {
                 put("counterpartyLast4", accountLast4)
+            }
+            if (senderBank != null) {
+                put("senderBank", senderBank)
+            }
+            if (senderName != null) {
+                put("senderName", senderName)
+            }
+            if (receiverName != null) {
+                put("receiverName", receiverName)
             }
             if (sourceMessageId != null) {
                 put("sourceMessageId", sourceMessageId)
@@ -97,6 +109,11 @@ object SmsParser {
         // 5. Extract Account Last 4
         val accountLast4 = extractAccountLast4(body)
 
+        // 6. Extract Bank & Parties
+        val senderBank = extractSenderBank(sender, body)
+        val senderName = if (isCredit) merchant else null
+        val receiverName = if (!isCredit) merchant else null
+
         // Clean sender display
         val cleanSender = cleanSenderAddress(sender)
 
@@ -117,8 +134,36 @@ object SmsParser {
             rawPayload = body,
             isIncome = isCredit,
             accountLast4 = accountLast4,
+            senderBank = senderBank,
+            senderName = senderName,
+            receiverName = receiverName,
             sourceMessageId = smsId ?: stableId
         )
+    }
+
+    fun extractSenderBank(sender: String, body: String): String? {
+        val combined = "$sender $body".lowercase()
+        return when {
+            combined.contains("sbiinb") || combined.contains("sbipay") || combined.contains("state bank") || combined.contains("sbi") -> "State Bank of India"
+            combined.contains("hdfcbk") || combined.contains("hdfc") -> "HDFC Bank"
+            combined.contains("icicib") || combined.contains("icici") -> "ICICI Bank"
+            combined.contains("axisbk") || combined.contains("axis") -> "Axis Bank"
+            combined.contains("kotakb") || combined.contains("kotak") -> "Kotak Mahindra Bank"
+            combined.contains("indbnk") || combined.contains("indusind") || combined.contains("indusb") -> "IndusInd Bank"
+            combined.contains("pnbsms") || combined.contains("punjab national") || combined.contains("pnb") -> "Punjab National Bank"
+            combined.contains("bobsms") || combined.contains("bank of baroda") || combined.contains("bob") -> "Bank of Baroda"
+            combined.contains("canbnk") || combined.contains("canara") -> "Canara Bank"
+            combined.contains("unionb") || combined.contains("ubin") || combined.contains("union bank") -> "Union Bank of India"
+            combined.contains("idfcfb") || combined.contains("idfc") -> "IDFC FIRST Bank"
+            combined.contains("fedbnk") || combined.contains("federal bank") -> "Federal Bank"
+            combined.contains("rblbnk") || combined.contains("rbl") -> "RBL Bank"
+            combined.contains("yesbnk") || combined.contains("yes bank") -> "Yes Bank"
+            combined.contains("paytmb") || combined.contains("paytm bank") -> "Paytm Payments Bank"
+            combined.contains("airtel") -> "Airtel Payments Bank"
+            combined.contains("jupiter") -> "Jupiter"
+            combined.contains("fi money") -> "Fi Money"
+            else -> null
+        }
     }
 
     private fun isDebitText(lower: String): Boolean {

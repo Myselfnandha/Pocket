@@ -10,6 +10,7 @@ import '../../models/wallet_model.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/top_capsule_toast.dart';
+import '../../services/system_contact_service.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
@@ -188,11 +189,13 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // Dedicated Transfer & Payment Details Card (Sender, Receiver, UTR, Last 4, Source)
+            // Dedicated Transfer & Payment Details Card (Bank Account, Sender, Receiver, UTR, Last 4, Source, Contact)
             if (currentTx.senderName != null ||
                 currentTx.receiverName != null ||
                 currentTx.refId != null ||
                 currentTx.counterpartyLast4 != null ||
+                currentTx.senderBank != null ||
+                currentTx.linkedContactName != null ||
                 currentTx.appSource != null) ...[
               Container(
                 decoration: BoxDecoration(
@@ -208,7 +211,22 @@ class TransactionDetailScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
+                    // Sender Bank & Masked Account
+                    if (currentTx.senderBank != null ||
+                        (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty)) ...[
+                      _buildDetailRow(
+                        context,
+                        icon: Icons.account_balance_rounded,
+                        label: 'Bank & Account',
+                        value: [
+                          if (currentTx.senderBank != null && currentTx.senderBank!.isNotEmpty) currentTx.senderBank!,
+                          if (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty) '•••• ${currentTx.counterpartyLast4}',
+                        ].join('  •  '),
+                        isDark: isDark,
+                      ),
+                    ],
                     if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty) ...[
+                      if (currentTx.senderBank != null || (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty)) _buildDivider(isDark),
                       _buildDetailRow(
                         context,
                         icon: Icons.person_outline_rounded,
@@ -218,22 +236,12 @@ class TransactionDetailScreen extends ConsumerWidget {
                       ),
                     ],
                     if (currentTx.receiverName != null && currentTx.receiverName!.isNotEmpty) ...[
-                      if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty) _buildDivider(isDark),
+                      if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty || currentTx.senderBank != null) _buildDivider(isDark),
                       _buildDetailRow(
                         context,
                         icon: Icons.person_pin_circle_outlined,
                         label: 'Paid to (Receiver)',
                         value: currentTx.receiverName!,
-                        isDark: isDark,
-                      ),
-                    ],
-                    if (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty) ...[
-                      _buildDivider(isDark),
-                      _buildDetailRow(
-                        context,
-                        icon: Icons.phone_android_rounded,
-                        label: 'Account / Mobile',
-                        value: '•••• ${currentTx.counterpartyLast4}',
                         isDark: isDark,
                       ),
                     ],
@@ -259,6 +267,188 @@ class TransactionDetailScreen extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ],
+                    _buildDivider(isDark),
+                    // Assigned Contact / Account Section
+                    if (currentTx.linkedContactName != null && currentTx.linkedContactName!.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF19221C) : const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.primaryGreenLight.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.primaryGreenLight.withValues(alpha: 0.2),
+                                child: Text(
+                                  currentTx.linkedContactName![0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGreenLight,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            currentTx.linkedContactName!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'Linked Contact',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryGreenLight,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (currentTx.linkedContactPhone != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        currentTx.linkedContactPhone!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                tooltip: 'Change Contact / Account',
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => _showAssignModal(context, ref, currentTx, isDark),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                                tooltip: 'Unlink Contact',
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () async {
+                                  final unlinkedTx = currentTx.copyWith(
+                                    linkedContactName: null,
+                                    linkedContactPhone: null,
+                                  );
+                                  await ref.read(transactionsProvider.notifier).updateTransaction(unlinkedTx);
+                                  if (context.mounted) {
+                                    TopCapsuleToast.showBottom(context, message: 'Contact unlinked');
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                            label: const Text(
+                              'Assign to Contact or Account',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primaryGreenLight,
+                              side: BorderSide(color: AppColors.primaryGreenLight.withValues(alpha: 0.35)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () => _showAssignModal(context, ref, currentTx, isDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ] else ...[
+              // If none of the counterparty fields are present, provide a clean 1-tap card to link contact or account
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.05),
+                      blurRadius: 18,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreenLight.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.person_add_alt_1_rounded,
+                        size: 17,
+                        color: AppColors.primaryGreenLight,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Assign Contact / Account',
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            'Link this transaction to a person or bank',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _showAssignModal(context, ref, currentTx, isDark),
+                      child: const Text('Assign', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
@@ -560,23 +750,36 @@ class TransactionDetailScreen extends ConsumerWidget {
     required bool isDark,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreenLight.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: AppColors.primaryGreenLight,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
@@ -584,7 +787,7 @@ class TransactionDetailScreen extends ConsumerWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: valueColor ??
                     (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
@@ -620,11 +823,12 @@ class TransactionDetailScreen extends ConsumerWidget {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
+              final settings = ref.read(settingsProvider);
               ref.read(transactionsProvider.notifier).deleteTransaction(tx.id);
               Navigator.pop(ctx);
               TopCapsuleToast.showBottom(
                 context,
-                message: 'Deleted "${tx.title}"',
+                message: 'Deleted "${tx.title}" (${settings.formatCurrency(tx.amount)})',
                 actionLabel: 'Undo',
                 onAction: () {
                   ref.read(transactionsProvider.notifier).insertTransactionAt(0, tx);
@@ -633,6 +837,302 @@ class TransactionDetailScreen extends ConsumerWidget {
               context.pop();
             },
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignModal(BuildContext context, WidgetRef ref, TransactionModel tx, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1C1C24) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomSheetCtx) {
+        final wallets = ref.watch(walletsWithBalancesProvider);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.assignment_ind_rounded, color: AppColors.primaryGreenLight, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Assign Contact or Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 2),
+                          Text('Remember party details for this and future transactions', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Option 1: Pick from Device Contacts
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.infoBlue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.contacts_rounded, color: AppColors.infoBlue, size: 20),
+                  ),
+                  title: const Text('Pick from Device Contacts', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Native contact picker (zero permissions)', style: TextStyle(fontSize: 11.5, color: Colors.grey)),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: () async {
+                    Navigator.pop(bottomSheetCtx);
+                    final contact = await SystemContactService.pickContact();
+                    if (contact != null) {
+                      final updatedTx = tx.copyWith(
+                        linkedContactName: contact.name,
+                        linkedContactPhone: contact.phone,
+                      );
+                      await ref.read(transactionsProvider.notifier).updateTransaction(updatedTx);
+                      if (context.mounted) {
+                        TopCapsuleToast.showBottom(context, message: 'Assigned to ${contact.name}');
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Option 2: Assign to Wallet / Bank Account
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.amber, size: 20),
+                  ),
+                  title: const Text('Assign to Bank Account / Wallet', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    'Current: ${wallets.firstWhere((w) => w.id == tx.walletId, orElse: () => wallets.first).name}',
+                    style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: () {
+                    Navigator.pop(bottomSheetCtx);
+                    _showWalletSelectorModal(context, ref, tx, isDark);
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Option 3: Manual Name/Phone Entry
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.edit_note_rounded, color: Colors.purple, size: 20),
+                  ),
+                  title: const Text('Enter Details Manually', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Type custom counterparty name or bank', style: TextStyle(fontSize: 11.5, color: Colors.grey)),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: () {
+                    Navigator.pop(bottomSheetCtx);
+                    _showManualAssignDialog(context, ref, tx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showWalletSelectorModal(BuildContext context, WidgetRef ref, TransactionModel tx, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1C1C24) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final wallets = ref.watch(walletsWithBalancesProvider);
+        final settings = ref.watch(settingsProvider);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Select Wallet / Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 14),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: wallets.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final w = wallets[index];
+                      final isSelected = w.id == tx.walletId;
+                      return ListTile(
+                        selected: isSelected,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white10 : Colors.black12),
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: Color(w.colorValue).withValues(alpha: 0.2),
+                          child: Text(w.icon, style: const TextStyle(fontSize: 18)),
+                        ),
+                        title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: w.accountNumber != null ? Text('A/C •••• ${w.accountNumber}') : null,
+                        trailing: Text(
+                          settings.formatCurrency(w.currentBalance),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          final updatedTx = tx.copyWith(walletId: w.id);
+                          await ref.read(transactionsProvider.notifier).updateTransaction(updatedTx);
+                          if (context.mounted) {
+                            TopCapsuleToast.showBottom(context, message: 'Assigned to ${w.name}');
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showManualAssignDialog(BuildContext context, WidgetRef ref, TransactionModel tx) {
+    final nameCtrl = TextEditingController(text: tx.linkedContactName ?? tx.senderName ?? tx.receiverName ?? '');
+    final phoneCtrl = TextEditingController(text: tx.linkedContactPhone ?? '');
+    final bankCtrl = TextEditingController(text: tx.senderBank ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Assign Counterparty Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Contact / Person Name',
+                  prefixIcon: Icon(Icons.person_rounded, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number (Optional)',
+                  prefixIcon: Icon(Icons.phone_rounded, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: bankCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Bank Name (Optional)',
+                  prefixIcon: Icon(Icons.account_balance_rounded, size: 20),
+                  hintText: 'e.g. State Bank of India, HDFC',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameCtrl.text.trim();
+              final newPhone = phoneCtrl.text.trim();
+              final newBank = bankCtrl.text.trim();
+
+              final updatedTx = tx.copyWith(
+                linkedContactName: newName.isNotEmpty ? newName : null,
+                linkedContactPhone: newPhone.isNotEmpty ? newPhone : null,
+                senderBank: newBank.isNotEmpty ? newBank : tx.senderBank,
+              );
+              await ref.read(transactionsProvider.notifier).updateTransaction(updatedTx);
+              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+              if (context.mounted) {
+                TopCapsuleToast.showBottom(
+                  context,
+                  message: newName.isNotEmpty ? 'Assigned to $newName' : 'Details saved',
+                );
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),

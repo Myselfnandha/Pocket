@@ -645,23 +645,26 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Daily Avg Spend',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              SizedBox(
+                                height: 18,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'Daily Avg Spend',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Icon(
-                                    Icons.info_outline_rounded,
-                                    size: 11,
-                                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                                  ),
-                                ],
+                                    const SizedBox(width: 3),
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      size: 11,
+                                      color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
@@ -712,12 +715,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              totalBudgetLimit > 0 ? 'Budget Left' : 'Safe to Spend',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            SizedBox(
+                              height: 18,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  totalBudgetLimit > 0 ? 'Budget Left' : 'Safe to Spend',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 2),

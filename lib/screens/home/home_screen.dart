@@ -331,7 +331,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   child: Consumer(
                     builder: (context, ref, _) {
                       final allTxs = ref.watch(transactionsProvider);
-                      final displayList = allTxs.take(30).toList();
+                      final sortedTxs = List<TransactionModel>.from(allTxs)
+                        ..sort((a, b) => b.date.compareTo(a.date));
+                      final displayList = sortedTxs.take(30).toList();
                       final bottomPadding = MediaQuery.paddingOf(context).bottom + 92;
 
                       if (displayList.isEmpty) {
@@ -417,7 +419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                         ),
                                       ),
                                       Text(
-                                        '${txs.length} ${txs.length == 1 ? 'entry' : 'entries'}',
+                                        '${txs.length} ${txs.length == 1 ? 'transaction' : 'transactions'}',
                                         style: TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w500,

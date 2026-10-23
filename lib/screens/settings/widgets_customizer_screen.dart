@@ -446,499 +446,448 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
           ],
           const SizedBox(height: 14),
 
-          // Privacy Mode Switch & Sub-Options (Dimmed when customization is disabled)
+          // Unified Controls Container (Dimmed when customization is disabled)
           AnimatedOpacity(
             opacity: settings.isWidgetCustomizationEnabled ? 1.0 : 0.45,
             duration: const Duration(milliseconds: 200),
             child: IgnorePointer(
               ignoring: !settings.isWidgetCustomizationEnabled,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  secondary: Container(
-                    width: 38,
-                    height: 38,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Account & Identification Card
+                  _buildModuleHeader('ACCOUNT & IDENTIFICATION', isDark),
+                  Container(
                     decoration: BoxDecoration(
-                      color: settings.widgetPrivacyMode
-                          ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
-                          : (isDark ? Colors.white10 : Colors.black12),
-                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                     ),
-                    child: Icon(
-                      settings.widgetPrivacyMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                      color: settings.widgetPrivacyMode ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black54),
-                      size: 20,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF3B82F6), size: 20),
+                          ),
+                          title: const Text(
+                            'Featured Payment Account',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            activeCardWalletName,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showWalletPicker(context, ref, wallets, settings.widgetSelectedWalletId),
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.badge_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            'Show Account Name Tag',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Display account label on top corner of Card widget',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowWalletName,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showWalletName: val);
+                          },
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.pin_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            'Show Masked Digits',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Display •••• 2026 or last 4 digits on Card widget',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowCardDigits,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showCardDigits: val);
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  title: const Text(
-                    'Privacy Mode on Desktop',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: const Text(
-                    'Mask sensitive balance amounts (••••••) on your phone home screen',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  value: settings.widgetPrivacyMode,
-                  activeThumbColor: AppColors.primaryGreenLight,
-                  onChanged: (val) {
-                    ref.read(settingsProvider.notifier).setWidgetPrivacyMode(val);
-                  },
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  const SizedBox(height: 18),
 
-                // Card Account Selector
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
+                  // 2. Balance & Privacy Mode Card
+                  _buildModuleHeader('BALANCE & PRIVACY REVEAL', isDark),
+                  Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                     ),
-                    child: const Icon(Icons.account_balance_wallet_rounded, size: 20),
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.currency_rupee_rounded, color: AppColors.primaryGreenLight, size: 18),
+                          ),
+                          title: const Text(
+                            'Show Balance Amounts',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Display total balance & runway allowance across widgets',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowBalance,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBalance: val);
+                          },
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: settings.widgetPrivacyMode
+                                  ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
+                                  : (isDark ? Colors.white10 : Colors.black12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              settings.widgetPrivacyMode ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                              color: settings.widgetPrivacyMode ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black54),
+                              size: 18,
+                            ),
+                          ),
+                          title: const Text(
+                            'Desktop Privacy Masking',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Mask sensitive numbers with dots (••••••) on phone desktop',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetPrivacyMode,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            ref.read(settingsProvider.notifier).setWidgetPrivacyMode(val);
+                          },
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.timer_outlined, size: 18),
+                          ),
+                          title: const Text(
+                            'Balance Peek Duration',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            '${settings.widgetPeekDurationSeconds}.0s timer before auto re-masking',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showPeekDurationPicker(context, ref, settings.widgetPeekDurationSeconds),
+                        ),
+                      ],
+                    ),
                   ),
-                  title: const Text(
-                    'Card Widget Featured Account',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    activeCardWalletName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showWalletPicker(context, ref, wallets, settings.widgetSelectedWalletId),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  const SizedBox(height: 18),
 
-                // Secondary Action Preference
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
+                  // 3. Spend Metrics & Budget Runway Card
+                  _buildModuleHeader('SPEND METRICS & RUNWAY', isDark),
+                  Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                     ),
-                    child: Icon(
-                      settings.widgetSecondaryAction == 'voice'
-                          ? Icons.mic_rounded
-                          : Icons.camera_alt_rounded,
-                      size: 20,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.accentOrange.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.analytics_rounded, color: AppColors.accentOrange, size: 18),
+                          ),
+                          title: const Text(
+                            'Featured Metric Stat',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            _getStatTitle(settings.homeScreenWidgetStat),
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showStatPicker(context, ref, settings.homeScreenWidgetStat),
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.today_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            'Show Today\'s Spend & Burn Rate',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Daily expenditure & remaining safe spend allowance',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowTodayExpense,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showTodayExpense: val);
+                          },
+                        ),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.verified_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            'Show Budget Status Indicator',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'On Budget / Over Budget badge tag and days remaining',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowBudgetTag,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBudgetTag: val);
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  title: const Text(
-                    'Secondary Action Button',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    settings.widgetSecondaryAction == 'voice'
-                        ? '🎙️ Voice / NLP Assistant'
-                        : '📸 Receipt Camera Scanner',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showSecondaryActionPicker(context, ref, settings.widgetSecondaryAction),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  const SizedBox(height: 18),
 
-                // Featured Stat Metric
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
+                  // 4. Appearance & Action HUD Card
+                  _buildModuleHeader('THEME & ACTION HUD', isDark),
+                  Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                     ),
-                    child: const Icon(Icons.analytics_rounded, size: 20),
-                  ),
-                  title: const Text(
-                    'Featured Metric Stat',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    _getStatTitle(settings.homeScreenWidgetStat),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showStatPicker(context, ref, settings.homeScreenWidgetStat),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                // Widget Theme Selector
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.palette_rounded, size: 20),
-                  ),
-                  title: const Text(
-                    'Widget Visual Theme',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    _getThemeTitle(settings.widgetTheme),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showWidgetThemePicker(context, ref, settings.widgetTheme),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                // Balance Peek Duration
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.timer_outlined, size: 20),
-                  ),
-                  title: const Text(
-                    'Balance Peek Reveal Duration',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    '${settings.widgetPeekDurationSeconds}.0 Seconds timer before auto-masking',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showPeekDurationPicker(context, ref, settings.widgetPeekDurationSeconds),
-                ),
-                Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                // Action Buttons Customizer
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.tune_rounded, size: 20),
-                  ),
-                  title: const Text(
-                    'Widget Action Buttons',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    '${settings.widgetShowExpenseBtn ? "Expense • " : ""}${settings.widgetShowIncomeBtn ? "Income • " : ""}${settings.widgetShowRefreshBtn ? "Refresh" : ""}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _showActionButtonsCustomizer(
-                    context,
-                    ref,
-                    settings.widgetShowExpenseBtn,
-                    settings.widgetShowIncomeBtn,
-                    settings.widgetShowRefreshBtn,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-          const SizedBox(height: 24),
-
-          // Element Visibility Section for all widget sizes
-          Row(
-            children: [
-              Text(
-                'ELEMENT VISIBILITY (ALL SIZES)',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: settings.isWidgetCustomizationEnabled
-                      ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
-                      : (isDark ? Colors.white10 : Colors.black12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  settings.isWidgetCustomizationEnabled ? 'REAL-TIME SYNC' : 'OFF',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                    color: settings.isWidgetCustomizationEnabled
-                        ? AppColors.primaryGreenLight
-                        : (isDark ? Colors.white60 : Colors.black54),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          AnimatedOpacity(
-            opacity: settings.isWidgetCustomizationEnabled ? 1.0 : 0.45,
-            duration: const Duration(milliseconds: 200),
-            child: IgnorePointer(
-              ignoring: !settings.isWidgetCustomizationEnabled,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.palette_rounded, color: Color(0xFF8B5CF6), size: 18),
+                          ),
+                          title: const Text(
+                            'Widget Visual Theme',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            _getThemeTitle(settings.widgetTheme),
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showWidgetThemePicker(context, ref, settings.widgetTheme),
                         ),
-                        child: const Icon(Icons.currency_rupee_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Balance & Amounts',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Card balance, runway allowance & bar total',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowBalance,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBalance: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              settings.widgetSecondaryAction == 'voice'
+                                  ? Icons.mic_rounded
+                                  : Icons.camera_alt_rounded,
+                              size: 18,
+                            ),
+                          ),
+                          title: const Text(
+                            'Secondary Action Target',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            settings.widgetSecondaryAction == 'voice'
+                                ? '🎙️ Voice / NLP Assistant'
+                                : '📸 Receipt Camera Scanner',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showSecondaryActionPicker(context, ref, settings.widgetSecondaryAction),
                         ),
-                        child: const Icon(Icons.pin_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Card Digits / Masked Number',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        '•••• 2026 or last 4 digits on Card widget',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowCardDigits,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showCardDigits: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.bolt_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            '⚡ Quick Add Button',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            '1-Tap instant transaction logger button on widget',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowExpenseBtn,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showExpenseBtn: val);
+                          },
                         ),
-                        child: const Icon(Icons.today_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Today Expense & Remaining Budget',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Daily spend stat & remaining safe spend stats',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowTodayExpense,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showTodayExpense: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            '📸 / 🎙️ Secondary Action Button',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Quick scanner or voice assistant button',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowIncomeBtn,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showIncomeBtn: val);
+                          },
                         ),
-                        child: const Icon(Icons.badge_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Account / Wallet Name Tag',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Linked wallet name header on Card widget',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowWalletName,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showWalletName: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
+                        Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black12,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.visibility_rounded, size: 18),
+                          ),
+                          title: const Text(
+                            '👁️ Peek & Refresh Button',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                          subtitle: const Text(
+                            'Dedicated eye icon button to reveal masked balance & refresh',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: settings.widgetShowRefreshBtn,
+                          activeThumbColor: AppColors.primaryGreenLight,
+                          onChanged: (val) {
+                            HapticFeedback.lightImpact();
+                            ref.read(settingsProvider.notifier).setWidgetElementVisibility(showRefreshBtn: val);
+                          },
                         ),
-                        child: const Icon(Icons.verified_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Budget Status Indicator Tag',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'On Budget / Over Budget badge tag',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowBudgetTag,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showBudgetTag: val);
-                      },
+                      ],
                     ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.bolt_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        '⚡ Quick Add Button',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Primary 1-tap instant transaction logger HUD',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowExpenseBtn,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showExpenseBtn: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.camera_alt_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        'Secondary Action (Scan / Voice)',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Quick receipt scan or voice assistant launch',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowIncomeBtn,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showIncomeBtn: val);
-                      },
-                    ),
-                    Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-
-                    SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.visibility_rounded, size: 18),
-                      ),
-                      title: const Text(
-                        '👁️ Peek / Reveal Balance Button',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      subtitle: const Text(
-                        'Dedicated eye button to reveal masked dots on home screen',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: settings.widgetShowRefreshBtn,
-                      activeThumbColor: AppColors.primaryGreenLight,
-                      onChanged: (val) {
-                        HapticFeedback.lightImpact();
-                        ref.read(settingsProvider.notifier).setWidgetElementVisibility(showRefreshBtn: val);
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -988,6 +937,21 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModuleHeader(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.1,
+          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+        ),
       ),
     );
   }

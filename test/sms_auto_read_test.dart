@@ -140,6 +140,9 @@ void main() {
         walletId: 'w_hdfc',
         date: DateTime(2026, 10, 15, 10, 0),
         counterpartyLast4: '1234',
+        senderBank: 'HDFC Bank',
+        linkedContactName: 'John Doe',
+        linkedContactPhone: '+91 9876543210',
         appSource: 'SMS (AD-HDFCBK)',
         rawPayload: 'Your A/C 1234 is credited with Rs 85,000 on 15-OCT-26 by Salary',
         createdAt: DateTime(2026, 10, 15, 10, 1),
@@ -147,11 +150,17 @@ void main() {
 
       final json = tx.toJson();
       expect(json['counterpartyLast4'], '1234');
+      expect(json['senderBank'], 'HDFC Bank');
+      expect(json['linkedContactName'], 'John Doe');
+      expect(json['linkedContactPhone'], '+91 9876543210');
       expect(json['appSource'], 'SMS (AD-HDFCBK)');
       expect(json['rawPayload'], contains('Salary'));
 
       final reconstructed = TransactionModel.fromJson(json);
       expect(reconstructed.counterpartyLast4, '1234');
+      expect(reconstructed.senderBank, 'HDFC Bank');
+      expect(reconstructed.linkedContactName, 'John Doe');
+      expect(reconstructed.linkedContactPhone, '+91 9876543210');
       expect(reconstructed.appSource, 'SMS (AD-HDFCBK)');
       expect(reconstructed.rawPayload, tx.rawPayload);
     });

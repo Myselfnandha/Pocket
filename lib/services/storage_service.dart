@@ -163,7 +163,9 @@ class StorageService {
     }
     try {
       final List<dynamic> decoded = jsonDecode(raw);
-      _cachedTransactions = decoded.map((e) => TransactionModel.fromJson(e)).toList();
+      final list = decoded.map((e) => TransactionModel.fromJson(e)).toList();
+      list.sort((a, b) => b.date.compareTo(a.date));
+      _cachedTransactions = list;
       return _cachedTransactions!;
     } catch (_) {
       _cachedTransactions = [];
@@ -172,8 +174,9 @@ class StorageService {
   }
 
   Future<void> saveTransactions(List<TransactionModel> list) async {
-    _cachedTransactions = List.unmodifiable(list);
-    final raw = jsonEncode(list.map((e) => e.toJson()).toList());
+    final sorted = List<TransactionModel>.from(list)..sort((a, b) => b.date.compareTo(a.date));
+    _cachedTransactions = List.unmodifiable(sorted);
+    final raw = jsonEncode(sorted.map((e) => e.toJson()).toList());
     await _prefs.setString(_kTransactions, _encryptString(raw));
   }
 

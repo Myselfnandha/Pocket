@@ -95,6 +95,14 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
 
     final filteredCategories = categories.where((c) => c.type == _type).toList();
 
+    // Auto-select default account if current selection is missing or invalid
+    if (!wallets.any((w) => w.id == _selectedWalletId) && wallets.isNotEmpty) {
+      final defaultId = settings.defaultWalletId;
+      _selectedWalletId = (defaultId != null && wallets.any((w) => w.id == defaultId))
+          ? defaultId
+          : wallets.first.id;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Transaction'),
@@ -114,7 +122,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -125,16 +133,17 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                   ButtonSegment(
                     value: TransactionType.expense,
                     label: Text('Expense'),
-                    icon: Icon(Icons.call_made_rounded, size: 16),
+                    icon: Icon(Icons.call_made_rounded, size: 15),
                   ),
                   ButtonSegment(
                     value: TransactionType.income,
                     label: Text('Income'),
-                    icon: Icon(Icons.call_received_rounded, size: 16),
+                    icon: Icon(Icons.call_received_rounded, size: 15),
                   ),
                 ],
                 selected: {_type},
                 style: SegmentedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
                   selectedBackgroundColor: _type == TransactionType.expense
                       ? AppColors.expenseRed.withValues(alpha: 0.2)
                       : AppColors.incomeGreen.withValues(alpha: 0.2),
@@ -153,64 +162,69 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
 
             // Amount Input
             Text(
               'Amount (${settings.currencySymbol})',
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 prefixText: '${settings.currencySymbol} ',
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             // Title Input
             const Text(
               'Title',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             TextField(
               controller: _titleController,
+              style: const TextStyle(fontSize: 14),
               decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 hintText: 'e.g. Starbucks, Electricity Bill',
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             // Category Selector Chips
             const Text(
               'Category',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: filteredCategories.map((cat) {
                 final isSelected = _selectedCategoryId == cat.id;
                 return ChoiceChip(
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   avatar: Text(cat.icon),
-                  label: Text(cat.name),
+                  label: Text(cat.name, style: const TextStyle(fontSize: 12)),
                   selected: isSelected,
                   selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.25),
                   onSelected: (_) {
@@ -219,26 +233,28 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             // Wallet Selector
             const Text(
               'Wallet / Account',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: wallets.map((w) {
                 final isSelected = _selectedWalletId == w.id;
                 return ChoiceChip(
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   avatar: Text(w.icon),
-                  label: Text(w.name),
+                  label: Text(w.name, style: const TextStyle(fontSize: 12)),
                   selected: isSelected,
                   selectedColor: AppColors.primaryGreenLight.withValues(alpha: 0.25),
                   onSelected: (_) {
@@ -247,18 +263,18 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             // Date Picker
             const Text(
               'Date',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () async {
@@ -273,52 +289,50 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 }
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                      blurRadius: 14,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryGreenLight),
-                    const SizedBox(width: 12),
+                    const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primaryGreenLight),
+                    const SizedBox(width: 10),
                     Text(
                       DateFormat('EEEE, d MMMM yyyy').format(_selectedDate),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     const Spacer(),
-                    const Icon(Icons.arrow_drop_down),
+                    const Icon(Icons.arrow_drop_down, size: 20),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             // Note Input
             const Text(
               'Note (Optional)',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primaryGreenLight,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             TextField(
               controller: _noteController,
-              maxLines: 3,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 13),
               decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 hintText: 'Add additional details or remarks...',
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ),
       ),

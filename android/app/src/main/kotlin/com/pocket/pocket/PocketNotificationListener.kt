@@ -152,6 +152,41 @@ class PocketNotificationListener : NotificationListenerService() {
                     !lower.contains("debited")
         }
 
+        fun extractAccountLast4(text: String): String? {
+            val pattern = Pattern.compile("(?:a/c|ac|account|card|acct|ending\\s*(?:in|with)?|using|linked to)[\\s:.-]*[*xX•.-]*([0-9]{3,4})\\b", Pattern.CASE_INSENSITIVE)
+            val matcher = pattern.matcher(text)
+            if (matcher.find()) {
+                return matcher.group(1)?.trim()
+            }
+            return null
+        }
+
+        fun extractSenderBank(text: String, appSource: String): String? {
+            val lower = "$appSource $text".lowercase()
+            return when {
+                lower.contains("state bank") || lower.contains("sbi") -> "State Bank of India"
+                lower.contains("hdfc") -> "HDFC Bank"
+                lower.contains("icici") -> "ICICI Bank"
+                lower.contains("axis") -> "Axis Bank"
+                lower.contains("kotak") -> "Kotak Mahindra Bank"
+                lower.contains("indusind") || lower.contains("indusb") -> "IndusInd Bank"
+                lower.contains("punjab national") || lower.contains("pnb") -> "Punjab National Bank"
+                lower.contains("bank of baroda") || lower.contains("bob") -> "Bank of Baroda"
+                lower.contains("canara") -> "Canara Bank"
+                lower.contains("union bank") || lower.contains("uboi") -> "Union Bank of India"
+                lower.contains("indian bank") || lower.contains("indbnk") -> "Indian Bank"
+                lower.contains("idfc") -> "IDFC FIRST Bank"
+                lower.contains("federal bank") -> "Federal Bank"
+                lower.contains("rbl") -> "RBL Bank"
+                lower.contains("yes bank") -> "Yes Bank"
+                lower.contains("paytm bank") || lower.contains("paytm payments bank") -> "Paytm Payments Bank"
+                lower.contains("airtel payments bank") -> "Airtel Payments Bank"
+                lower.contains("jupiter") -> "Jupiter"
+                lower.contains("fi money") -> "Fi Money"
+                else -> null
+            }
+        }
+
         private fun cleanMerchantName(name: String): String {
             return name.replace(Regex("(?i)(ltd|pvt|limited|india|store|upi|payment)$"), "")
                 .trim()
@@ -194,6 +229,10 @@ class PocketNotificationListener : NotificationListenerService() {
         val merchant = extractMerchant(title, content)
         val refId = extractRefId(content)
         val isIncome = isCreditTransaction(content)
+        val last4 = extractAccountLast4(content)
+        val senderBank = extractSenderBank(content, appSource)
+        val senderName = if (isIncome) merchant else null
+        val receiverName = if (!isIncome) merchant else null
         val isPaytm = pkgName == "net.one97.paytm" || appSource.contains("Paytm", true) || content.contains("paytm", true)
 
         val txJson = JSONObject().apply {
@@ -206,6 +245,18 @@ class PocketNotificationListener : NotificationListenerService() {
             put("detectionSource", "notification")
             put("rawPayload", content)
             put("isIncome", isIncome)
+            if (!last4.isNullOrEmpty()) {
+                put("counterpartyLast4", last4)
+            }
+            if (!senderBank.isNullOrEmpty()) {
+                put("senderBank", senderBank)
+            }
+            if (!senderName.isNullOrEmpty()) {
+                put("senderName", senderName)
+            }
+            if (!receiverName.isNullOrEmpty()) {
+                put("receiverName", receiverName)
+            }
             if (isPaytm) {
                 put("autoSaveDirect", true)
             }

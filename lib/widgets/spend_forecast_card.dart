@@ -123,34 +123,37 @@ class SpendForecastCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
 
-          // Forecast Trajectory Shaded Chart
-          SizedBox(
-            height: 120,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _ForecastTrajectoryPainter(
-                trajectory: forecast.trajectory,
-                daysElapsed: forecast.daysElapsed,
-                totalDays: forecast.totalDaysInMonth,
-                isDark: isDark,
+          // Forecast Trajectory Shaded Chart (Rendered only when active trajectory data exists)
+          if (forecast.trajectory.isNotEmpty &&
+              forecast.trajectory.any((p) => p.upperConfidenceBound > 0)) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 110,
+              width: double.infinity,
+              child: CustomPaint(
+                painter: _ForecastTrajectoryPainter(
+                  trajectory: forecast.trajectory,
+                  daysElapsed: forecast.daysElapsed,
+                  totalDays: forecast.totalDaysInMonth,
+                  isDark: isDark,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-          // Chart Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendDot(color: AppColors.primaryGreenLight, label: 'Actual Spend'),
-              const SizedBox(width: 16),
-              _buildLegendDot(color: AppColors.infoBlue, label: 'AI Forecast'),
-              const SizedBox(width: 16),
-              _buildLegendDot(color: AppColors.infoBlue.withValues(alpha: 0.3), label: 'Confidence Band'),
-            ],
-          ),
+            // Chart Legend
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendDot(color: AppColors.primaryGreenLight, label: 'Actual Spend'),
+                const SizedBox(width: 16),
+                _buildLegendDot(color: AppColors.infoBlue, label: 'AI Forecast'),
+                const SizedBox(width: 16),
+                _buildLegendDot(color: AppColors.infoBlue.withValues(alpha: 0.3), label: 'Confidence Band'),
+              ],
+            ),
+          ],
         ],
       ),
     );
