@@ -29,6 +29,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _currencySearchController = TextEditingController();
+  bool _isCurrencyDropdownOpen = false;
   String? _selectedCurrencySymbol = '₹';
   String? _selectedCurrencyCode = 'INR';
 
@@ -123,6 +125,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     _pageController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
+    _currencySearchController.dispose();
     super.dispose();
   }
 
@@ -173,7 +176,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       }
     }
 
-    if (_currentPage == 3) {
+    if (_currentPage == 2) {
       // Validate Wallets page
       if (_onboardingWallets.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +189,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       }
     }
 
-    if (_currentPage < 6) {
+    if (_currentPage < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.fastOutSlowIn,
@@ -198,7 +201,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   Future<void> _finishOnboarding() async {
     if (_onboardingWallets.isEmpty) {
-      _pageController.animateToPage(3, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      _pageController.animateToPage(2, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -283,12 +286,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       body: SafeArea(
         child: Column(
           children: [
-            // Top Futuristic Animated Step Indicator Bar (7 steps)
+            // Top Futuristic Animated Step Indicator Bar (6 steps)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(7, (index) {
+                children: List.generate(6, (index) {
                   final isActive = index == _currentPage;
                   final isDone = index < _currentPage;
                   return AnimatedContainer(
@@ -319,21 +322,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               ),
             ),
 
-            // Page View (7 Responsive, Scroll-Safe Slides)
+            // Page View (6 Responsive, Scroll-Safe Slides)
             Expanded(
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (page) {
                   setState(() => _currentPage = page);
-                  if (page == 3 && !_hasScannedSms && !_isScanningSms) {
+                  if (page == 2 && !_hasScannedSms && !_isScanningSms) {
                     _detectBankAccountsFromSms();
                   }
                 },
                 children: [
                   _buildSlide1Welcome(isDark),
                   _buildSlide2Profile(isDark),
-                  _buildSlide3Theme(isDark),
                   _buildSlide4Wallets(isDark),
                   _buildSlide5Categories(isDark),
                   _buildSlide6CategoryBudgets(isDark),
@@ -376,7 +378,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _currentPage == 6 ? 'Get Started' : 'Continue',
+                          _currentPage == 5 ? 'Get Started' : 'Continue',
                           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                         ),
                         const SizedBox(width: 6),
@@ -396,12 +398,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   // --- Slide 1: Welcome & Enterprise Security Matrix ---
   Widget _buildSlide1Welcome(bool isDark) {
     final features = [
-      {'icon': Icons.lock_rounded, 'label': '100% Offline & Private'},
-      {'icon': Icons.bolt_rounded, 'label': 'Smart Expense Logging'},
-      {'icon': Icons.auto_awesome_rounded, 'label': 'Auto SMS Bank Alerts'},
-      {'icon': Icons.insights_rounded, 'label': 'Visual Trends & Insights'},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Instant Receipt Scan & OCR'},
-      {'icon': Icons.savings_rounded, 'label': 'Smart Budgets & Goals'},
+      {'icon': Icons.lock_rounded, 'label': '100% Offline'},
+      {'icon': Icons.bolt_rounded, 'label': 'Smart Logging'},
+      {'icon': Icons.auto_awesome_rounded, 'label': 'Auto SMS Alerts'},
+      {'icon': Icons.insights_rounded, 'label': 'Visual Trends'},
+      {'icon': Icons.receipt_long_rounded, 'label': 'Receipt Scan'},
+      {'icon': Icons.savings_rounded, 'label': 'Smart Budgets'},
     ];
 
     return SingleChildScrollView(
@@ -464,65 +466,81 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           ),
           const SizedBox(height: 20),
 
-          // Staggered Feature Cards Cascading in
-          ...List.generate(features.length, (index) {
-            final start = (index * 0.12).clamp(0.0, 0.7);
-            final end = (start + 0.3).clamp(0.0, 1.0);
-            final animation = CurvedAnimation(
-              parent: _featuresAnimCtrl,
-              curve: Interval(start, end, curve: Curves.easeOutCubic),
-            );
+          // 2-Column Compact Micro-Pills Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 2.7,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: features.length,
+            itemBuilder: (context, index) {
+              final start = (index * 0.10).clamp(0.0, 0.7);
+              final end = (start + 0.3).clamp(0.0, 1.0);
+              final animation = CurvedAnimation(
+                parent: _featuresAnimCtrl,
+                curve: Interval(start, end, curve: Curves.easeOutCubic),
+              );
 
-            return AnimatedBuilder(
-              animation: animation,
-              builder: (context, child) {
-                final offset = Offset(0, 30 * (1.0 - animation.value));
-                return Opacity(
-                  opacity: animation.value.clamp(0.0, 1.0),
-                  child: Transform.translate(
-                    offset: offset,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildFeaturePill(
+              return AnimatedBuilder(
+                animation: animation,
+                builder: (context, child) {
+                  final offset = Offset(0, 20 * (1.0 - animation.value));
+                  return Opacity(
+                    opacity: animation.value.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: offset,
+                      child: _buildFeatureMicroPill(
                         features[index]['icon'] as IconData,
                         features[index]['label'] as String,
                         isDark,
                       ),
                     ),
-                  ),
-                );
-              },
-            );
-          }),
+                  );
+                },
+              );
+            },
+          ),
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildFeaturePill(IconData icon, String label, bool isDark) {
+  Widget _buildFeatureMicroPill(IconData icon, String label, bool isDark) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
         ),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.primaryGreenLight),
-          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: AppColors.primaryGreenLight),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -532,6 +550,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   // --- Slide 2: User Profile & Currency ---
   Widget _buildSlide2Profile(bool isDark) {
+    final selectedCurrencyObj = _currencies.firstWhere(
+      (c) => c['code'] == _selectedCurrencyCode,
+      orElse: () => {'symbol': '₹', 'code': 'INR', 'name': 'Indian Rupee'},
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
@@ -600,264 +623,212 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           ),
           const SizedBox(height: 20),
 
+          // Inline Searchable Currency Dropdown Field (Default ₹ INR)
           const Text('Select Currency', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 2.3,
-            ),
-            itemCount: _currencies.length,
-            itemBuilder: (context, index) {
-              final c = _currencies[index];
-              final isSelected = _selectedCurrencyCode == c['code'];
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedCurrencySymbol = c['symbol'];
-                    _selectedCurrencyCode = c['code'];
-                  });
-                },
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isCurrencyDropdownOpen = !_isCurrencyDropdownOpen;
+                if (!_isCurrencyDropdownOpen) {
+                  _currencySearchController.clear();
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primaryGreenLight.withValues(alpha: 0.15)
-                        : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primaryGreenLight
-                          : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                      width: isSelected ? 1.5 : 1,
+                border: Border.all(
+                  color: _isCurrencyDropdownOpen
+                      ? AppColors.primaryGreenLight
+                      : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                  width: _isCurrencyDropdownOpen ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _selectedCurrencySymbol ?? '₹',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.primaryGreenLight,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        c['symbol']!,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${selectedCurrencyObj['code']} (${selectedCurrencyObj['name']})',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              c['code']!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
-                              ),
-                            ),
-                            Text(
-                              c['name']!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 1),
+                        Text(
+                          'Default application currency',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Slide 3: Theme Preferences ---
-  Widget _buildSlide3Theme(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Theme & Display',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Choose your visual appearance and AMOLED display optimization.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          _buildThemeModeCard(
-            title: 'Auto Mode (Time-Based)',
-            subtitle: 'Automatically switches to Light (6AM-6PM) & Dark (6PM-6AM)',
-            icon: Icons.auto_mode_rounded,
-            isSelected: _selectedThemeMode == AppThemeMode.autoTime,
-            onTap: () => _applyThemeRealtime(mode: AppThemeMode.autoTime),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 10),
-
-          _buildThemeModeCard(
-            title: 'Dark Theme',
-            subtitle: 'Always dark background with soft mint green accents',
-            icon: Icons.dark_mode_rounded,
-            isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.dark,
-            onTap: () => _applyThemeRealtime(
-              mode: AppThemeMode.manual,
-              style: ManualThemeStyle.dark,
-            ),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 10),
-
-          _buildThemeModeCard(
-            title: 'Light Theme',
-            subtitle: 'Crisp, clean bright appearance with high contrast',
-            icon: Icons.light_mode_rounded,
-            isSelected: _selectedThemeMode == AppThemeMode.manual && _selectedThemeStyle == ManualThemeStyle.light,
-            onTap: () => _applyThemeRealtime(
-              mode: AppThemeMode.manual,
-              style: ManualThemeStyle.light,
-            ),
-            isDark: isDark,
-          ),
-          const SizedBox(height: 18),
-
-          // AMOLED Pure Black Toggle
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                  Icon(
+                    _isCurrencyDropdownOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.primaryGreenLight,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.brightness_2_rounded, color: AppColors.primaryGreenLight, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Midnight Pure Black (#000000)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'True #000000 pixels for maximum battery savings',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch(
-                  value: _isPureBlack,
-                  activeThumbColor: AppColors.primaryGreenLight,
-                  onChanged: (val) => _applyThemeRealtime(pureBlack: val),
-                ),
-              ],
-            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeModeCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryGreenLight.withValues(alpha: 0.12)
-              : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primaryGreenLight
-                : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87)),
-            const SizedBox(width: 12),
-            Expanded(
+          if (_isCurrencyDropdownOpen) ...[
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                      color: isSelected ? AppColors.primaryGreenLight : (isDark ? Colors.white : Colors.black),
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: TextField(
+                      controller: _currencySearchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search currency (e.g. INR, USD, Rupee)...',
+                        hintStyle: const TextStyle(fontSize: 12),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.primaryGreenLight),
+                        suffixIcon: _currencySearchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 16),
+                                onPressed: () {
+                                  _currencySearchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF191B22) : const Color(0xFFF3F4F6),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: Builder(
+                      builder: (context) {
+                        final query = _currencySearchController.text.trim().toLowerCase();
+                        final filtered = _currencies.where((c) {
+                          if (query.isEmpty) return true;
+                          return c['code']!.toLowerCase().contains(query) ||
+                              c['name']!.toLowerCase().contains(query) ||
+                              c['symbol']!.toLowerCase().contains(query);
+                        }).toList();
+
+                        if (filtered.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(
+                              child: Text('No matching currencies found', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.only(bottom: 8),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                          ),
+                          itemBuilder: (ctx, i) {
+                            final c = filtered[i];
+                            final isSelected = _selectedCurrencyCode == c['code'];
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedCurrencySymbol = c['symbol'];
+                                  _selectedCurrencyCode = c['code'];
+                                  _isCurrencyDropdownOpen = false;
+                                  _currencySearchController.clear();
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                color: isSelected
+                                    ? AppColors.primaryGreenLight.withValues(alpha: 0.12)
+                                    : Colors.transparent,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      c['symbol']!,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSelected ? AppColors.primaryGreenLight : null,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        '${c['code']} - ${c['name']}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          color: isSelected
+                                              ? AppColors.primaryGreenLight
+                                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(Icons.check_rounded, size: 18, color: AppColors.primaryGreenLight),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-            if (isSelected)
-              const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreenLight, size: 18),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1522,6 +1493,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 42,
@@ -1545,8 +1517,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         acc.bankName,
                         style: TextStyle(
@@ -1554,8 +1527,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           fontSize: 13.5,
                           color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (isLoan) ...[
@@ -1620,12 +1591,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             ),
           ),
           const SizedBox(width: 8),
-          // Actions
-          if (isAdded)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          // Actions: Details & Add/Added
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isAdded) ...[
                 InkWell(
                   onTap: () {
                     setState(() {
@@ -1710,33 +1681,234 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       ),
                     ),
                 ],
+              ] else ...[
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _onboardingWallets.add(acc.toWallet(
+                        currencySymbol: symbol,
+                        isDefault: _onboardingWallets.isEmpty && !isLoan,
+                      ));
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(
+                    isLoan ? '+ Add Loan' : '+ Add',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5),
+                  ),
+                ),
               ],
-            )
-          else
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _onboardingWallets.add(acc.toWallet(
-                    currencySymbol: symbol,
-                    isDefault: _onboardingWallets.isEmpty && !isLoan,
-                  ));
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isLoan ? Colors.amber : AppColors.primaryGreenLight,
-                foregroundColor: Colors.black,
-                elevation: 0,
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              const SizedBox(height: 3),
+              // Dedicated Details Button
+              InkWell(
+                onTap: () => _showDiscoveredAccountDetails(acc, symbol, isDark),
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 11,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Details',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Text(
-                isLoan ? '+ Add Loan' : '+ Add',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5),
-              ),
-            ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  void _showDiscoveredAccountDetails(DiscoveredBankAccount acc, String symbol, bool isDark) {
+    final isLoan = acc.isLoan || acc.type == WalletType.loan;
+    final dateStr = DateFormat('dd MMMM yyyy, hh:mm a').format(acc.latestDate);
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: (isLoan ? Colors.amber : AppColors.primaryGreenLight).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(acc.suggestedIcon, style: const TextStyle(fontSize: 24)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        acc.bankName,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            '•••• ${acc.accountLast4}',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: (isLoan ? Colors.amber : AppColors.primaryGreenLight).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isLoan ? 'LOAN' : 'SAVINGS / BANK',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : const Color(0xFFF7F8FA),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildDetailRow(
+                    'Available Live Balance',
+                    acc.balance != null ? '$symbol${NumberFormat('#,##0.00').format(acc.balance)}' : 'Not detected',
+                    isDark,
+                    highlightColor: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                  ),
+                  const Divider(height: 20),
+                  _buildDetailRow(
+                    'Detection Source',
+                    'SMS Banking Alerts',
+                    isDark,
+                  ),
+                  const Divider(height: 20),
+                  _buildDetailRow(
+                    'SMS Alerts Detected',
+                    '${acc.transactionCount} transactions',
+                    isDark,
+                  ),
+                  const Divider(height: 20),
+                  _buildDetailRow(
+                    'Latest SMS Timestamp',
+                    dateStr,
+                    isDark,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isLoan ? Colors.amber : AppColors.primaryGreenLight,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close Details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, bool isDark, {Color? highlightColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: highlightColor ?? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1812,6 +1984,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   _onboardingWallets[idx] = wallet.copyWith(
                     initialBalance: bal,
                     currentBalance: bal,
+                    balanceSnapshotAt: DateTime.now(),
                   );
                 });
               }
@@ -1978,6 +2151,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                             currentBalance: balance,
                             colorValue: 0xFF2E7D32,
                             isDefault: _onboardingWallets.isEmpty,
+                            balanceSnapshotAt: DateTime.now(),
                           ),
                         );
                       });
@@ -2490,58 +2664,52 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       ],
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildPresetBudgetChip(catId, 0, 'Off', currentBudget == 0, isDark),
-                          const SizedBox(width: 6),
-                          _buildPresetBudgetChip(catId, 1000, '${symbol}1k', currentBudget == 1000, isDark),
-                          const SizedBox(width: 6),
-                          _buildPresetBudgetChip(catId, 2000, '${symbol}2k', currentBudget == 2000, isDark),
-                          const SizedBox(width: 6),
-                          _buildPresetBudgetChip(catId, 5000, '${symbol}5k', currentBudget == 5000, isDark),
-                          const SizedBox(width: 6),
-                          _buildPresetBudgetChip(catId, 10000, '${symbol}10k', currentBudget == 10000, isDark),
-                          const SizedBox(width: 6),
-                          () {
-                            final isCustom = currentBudget > 0 &&
-                                currentBudget != 1000 &&
-                                currentBudget != 2000 &&
-                                currentBudget != 5000 &&
-                                currentBudget != 10000;
-                            return InkWell(
-                              onTap: () => _showCustomBudgetDialog(cat, isDark),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _buildPresetBudgetChip(catId, 0, 'Off', currentBudget == 0, isDark),
+                        _buildPresetBudgetChip(catId, 1000, '${symbol}1k', currentBudget == 1000, isDark),
+                        _buildPresetBudgetChip(catId, 2000, '${symbol}2k', currentBudget == 2000, isDark),
+                        _buildPresetBudgetChip(catId, 5000, '${symbol}5k', currentBudget == 5000, isDark),
+                        _buildPresetBudgetChip(catId, 10000, '${symbol}10k', currentBudget == 10000, isDark),
+                        () {
+                          final isCustom = currentBudget > 0 &&
+                              currentBudget != 1000 &&
+                              currentBudget != 2000 &&
+                              currentBudget != 5000 &&
+                              currentBudget != 10000;
+                          return InkWell(
+                            onTap: () => _showCustomBudgetDialog(cat, isDark),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: 38, minWidth: 44),
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isCustom
+                                    ? AppColors.primaryGreenLight
+                                    : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF)),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
                                   color: isCustom
                                       ? AppColors.primaryGreenLight
-                                      : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF)),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isCustom
-                                        ? AppColors.primaryGreenLight
-                                        : AppColors.primaryGreenLight.withValues(alpha: 0.35),
-                                    width: 1.2,
-                                  ),
-                                ),
-                                child: Text(
-                                  isCustom ? '✏️ $symbol${currentBudget.toStringAsFixed(0)}' : '✏️ Custom',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: isCustom ? Colors.black : AppColors.primaryGreenLight,
-                                  ),
+                                      : AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                                  width: 1.2,
                                 ),
                               ),
-                            );
-                          }(),
-                        ],
-                      ),
+                              child: Text(
+                                isCustom ? '✏️ $symbol${currentBudget.toStringAsFixed(0)}' : '✏️ Custom',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isCustom ? Colors.black : AppColors.primaryGreenLight,
+                                ),
+                              ),
+                            ),
+                          );
+                        }(),
+                      ],
                     ),
                   ],
                 ),
@@ -2624,9 +2792,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       },
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        constraints: const BoxConstraints(minHeight: 38, minWidth: 44),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryGreenLight

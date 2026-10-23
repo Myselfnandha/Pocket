@@ -145,6 +145,18 @@ class _TransactionsListScreenState
       double nextWalletBal;
       double nextTotal;
 
+      final targetWallet = wallets.where((w) => w.id == tx.walletId).firstOrNull;
+      final isBeforeSnapshot = targetWallet != null &&
+          targetWallet.balanceSnapshotAt != null &&
+          !tx.date.isAfter(targetWallet.balanceSnapshotAt!);
+
+      if (isBeforeSnapshot) {
+        txWalletBalanceShifts[tx.id] = (curWalletBal, curWalletBal);
+        txTotalBalanceBefore[tx.id] = runningTotal;
+        txTotalBalanceAfter[tx.id] = runningTotal;
+        continue;
+      }
+
       if (tx.type == TransactionType.income) {
         nextWalletBal = curWalletBal + tx.amount;
         nextTotal = runningTotal + tx.amount;

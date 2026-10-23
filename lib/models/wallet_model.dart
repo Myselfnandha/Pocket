@@ -32,6 +32,7 @@ class WalletModel {
   final double? spendingLimit;
   final bool isDefault;
   final String? accountNumber; // Last 4 digits e.g. "4821"
+  final DateTime? balanceSnapshotAt; // Timestamp when initialBalance was established
 
   const WalletModel({
     required this.id,
@@ -44,6 +45,7 @@ class WalletModel {
     this.spendingLimit,
     this.isDefault = false,
     this.accountNumber,
+    this.balanceSnapshotAt,
   });
 
   WalletType get type => walletType;
@@ -83,6 +85,8 @@ class WalletModel {
     double? spendingLimit,
     bool? isDefault,
     String? accountNumber,
+    DateTime? balanceSnapshotAt,
+    bool clearBalanceSnapshotAt = false,
   }) {
     return WalletModel(
       id: id ?? this.id,
@@ -95,6 +99,7 @@ class WalletModel {
       spendingLimit: spendingLimit ?? this.spendingLimit,
       isDefault: isDefault ?? this.isDefault,
       accountNumber: accountNumber ?? this.accountNumber,
+      balanceSnapshotAt: clearBalanceSnapshotAt ? null : (balanceSnapshotAt ?? this.balanceSnapshotAt),
     );
   }
 
@@ -109,6 +114,7 @@ class WalletModel {
         'spendingLimit': spendingLimit,
         'isDefault': isDefault,
         'accountNumber': accountNumber,
+        'balanceSnapshotAt': balanceSnapshotAt?.toIso8601String(),
       };
 
   factory WalletModel.fromJson(Map<String, dynamic> json) => WalletModel(
@@ -122,6 +128,9 @@ class WalletModel {
         spendingLimit: (json['spendingLimit'] as num?)?.toDouble(),
         isDefault: json['isDefault'] as bool? ?? false,
         accountNumber: json['accountNumber'] as String?,
+        balanceSnapshotAt: json['balanceSnapshotAt'] != null
+            ? DateTime.tryParse(json['balanceSnapshotAt'] as String)
+            : null,
       );
 }
 

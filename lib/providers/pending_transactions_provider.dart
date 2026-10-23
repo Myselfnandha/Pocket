@@ -4,6 +4,7 @@ import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
 import '../models/notification_model.dart';
 import '../models/wallet_model.dart';
+import '../services/bank_discovery_service.dart';
 import '../services/notification_service.dart';
 import '../services/system_widget_service.dart';
 import 'core_providers.dart';
@@ -190,6 +191,26 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     }
     await storage.removeDeletedTransactionSignature(item.signature);
 
+    // If SMS contains fresh available balance, advance wallet snapshot baseline
+    final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
+    if (extractedBal != null) {
+      final targetWallet = wallets.where((w) => w.id == effectiveWalletId).firstOrNull;
+      if (targetWallet != null) {
+        final isFresher = targetWallet.balanceSnapshotAt == null ||
+            item.date.isAfter(targetWallet.balanceSnapshotAt!) ||
+            item.date.isAtSameMomentAs(targetWallet.balanceSnapshotAt!);
+        if (isFresher) {
+          await _ref.read(walletsProvider.notifier).updateWallet(
+                targetWallet.copyWith(
+                  initialBalance: extractedBal,
+                  currentBalance: extractedBal,
+                  balanceSnapshotAt: item.date,
+                ),
+              );
+        }
+      }
+    }
+
     await _ref.read(transactionsProvider.notifier).addTransaction(
       title: (title != null && title.trim().isNotEmpty) ? title.trim() : item.merchant,
       amount: item.amount,
@@ -225,11 +246,22 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         : 'cash';
 
     int approved = 0;
+    final Map<String, (double, DateTime)> freshestBalancesPerWallet = {};
+
     for (final item in items) {
       final effectiveWalletId = (item.suggestedWalletId != null && wallets.any((w) => w.id == item.suggestedWalletId))
           ? item.suggestedWalletId!
           : fallbackWalletId;
       final effectiveCategoryId = item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
+
+      // Check for available balance in raw payload
+      final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
+      if (extractedBal != null) {
+        final existingFreshest = freshestBalancesPerWallet[effectiveWalletId];
+        if (existingFreshest == null || item.date.isAfter(existingFreshest.$2)) {
+          freshestBalancesPerWallet[effectiveWalletId] = (extractedBal, item.date);
+        }
+      }
 
       if (item.sourceMessageId != null) {
         await storage.addProcessedMessageId(item.sourceMessageId!);
@@ -258,6 +290,28 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         receiptImagePath: item.imagePath,
       );
       approved++;
+    }
+
+    if (freshestBalancesPerWallet.isNotEmpty) {
+      for (final entry in freshestBalancesPerWallet.entries) {
+        final walletId = entry.key;
+        final (newBal, snapshotDate) = entry.value;
+        final targetWallet = wallets.where((w) => w.id == walletId).firstOrNull;
+        if (targetWallet != null) {
+          final isFresher = targetWallet.balanceSnapshotAt == null ||
+              snapshotDate.isAfter(targetWallet.balanceSnapshotAt!) ||
+              snapshotDate.isAtSameMomentAs(targetWallet.balanceSnapshotAt!);
+          if (isFresher) {
+            await _ref.read(walletsProvider.notifier).updateWallet(
+                  targetWallet.copyWith(
+                    initialBalance: newBal,
+                    currentBalance: newBal,
+                    balanceSnapshotAt: snapshotDate,
+                  ),
+                );
+          }
+        }
+      }
     }
 
     state = [];

@@ -24,7 +24,6 @@ class WalletsScreen extends ConsumerStatefulWidget {
 
 class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   int _selectedAccountIndex = 0;
-  int _selectedTab = 0; // 0: Accounts, 1: Loans
   bool _isBalanceVisible = true;
 
   @override
@@ -68,109 +67,54 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
             ),
             const SizedBox(height: 22),
 
-            // 2. Tab Switch: Accounts vs Loans
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedTab = 0),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _selectedTab == 0
-                              ? (isDark ? const Color(0xFF1E1E1E) : Colors.white)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: _selectedTab == 0
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.account_balance_wallet_rounded,
-                              size: 16,
-                              color: _selectedTab == 0 ? palette.primary : Colors.grey,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Accounts (${regularWallets.length})',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: _selectedTab == 0 ? FontWeight.w800 : FontWeight.w600,
-                                color: _selectedTab == 0
-                                    ? (isDark ? Colors.white : Colors.black87)
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ],
+            if (loanWallets.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1708) : const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: isDark ? 0.35 : 0.3),
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Text('📜', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${loanWallets.length} loan accounts tracked in Debts & Loans',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedTab = 1),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _selectedTab == 1
-                              ? (isDark ? const Color(0xFF1E1E1E) : Colors.white)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: _selectedTab == 1
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('📜', style: TextStyle(fontSize: 14)),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Loans (${loanWallets.length})',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: _selectedTab == 1 ? FontWeight.w800 : FontWeight.w600,
-                                color: _selectedTab == 1 ? Colors.amber : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        foregroundColor: isDark ? Colors.amber : Colors.amber.shade800,
+                      ),
+                      onPressed: () => context.push('/debts'),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('View', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                          SizedBox(width: 2),
+                          Icon(Icons.arrow_forward_rounded, size: 13),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 22),
+            ],
 
-            if (_selectedTab == 0) ...[
-              // 2. Stacked Account Deck for Each Account
+            // 2. Stacked Account Deck for Each Account
               _buildAccountStack(context, regularWallets, activeIndex, settings, palette, isDark),
               const SizedBox(height: 16),
 
@@ -472,17 +416,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                   ],
                 ],
               ),
-            ] else ...[
-              _buildLoansSection(
-                context,
-                ref,
-                loanWallets,
-                allTxs,
-                settings,
-                palette,
-                isDark,
-              ),
-            ],
+            const SizedBox(height: 16),
 
             const SizedBox(height: 16),
           ],
@@ -2529,7 +2463,9 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                         }
 
                         final updatedWallet = currentWallet.copyWith(
-                          initialBalance: currentWallet.initialBalance + (newBalance - currentWallet.currentBalance),
+                          initialBalance: newBalance,
+                          currentBalance: newBalance,
+                          balanceSnapshotAt: DateTime.now(),
                         );
                         await ref.read(walletsProvider.notifier).updateWallet(updatedWallet);
 

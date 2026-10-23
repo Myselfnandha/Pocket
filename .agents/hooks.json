@@ -5,6 +5,11 @@
       "matcher": "run_command",
       "command": "node .agents/hooks/validate-tool-call.mjs",
       "timeout": 10
+    },
+    {
+      "matcher": "run_command|write_to_file",
+      "command": "node .agents/hooks/enforce-patterns.mjs",
+      "timeout": 10
     }
   ]
 }

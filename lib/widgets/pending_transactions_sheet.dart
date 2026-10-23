@@ -69,39 +69,45 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 14, 10, 12),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
                       color: palette.primary.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.auto_awesome_rounded, color: palette.primary, size: 20),
+                    child: Icon(Icons.auto_awesome_rounded, color: palette.primary, size: 18),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           'Detected Payments',
-                          style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                          style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${pending.length} unconfirmed transactions',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 11,
                             color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6),
                   if (pending.isNotEmpty) ...[
-                    TextButton.icon(
-                      onPressed: () async {
+                    InkWell(
+                      onTap: () async {
                         final count = await ref.read(pendingTransactionsProvider.notifier).approveAll();
                         if (context.mounted) {
                           Navigator.pop(context);
@@ -112,22 +118,41 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                           );
                         }
                       },
-                      icon: const Icon(Icons.done_all_rounded, size: 16),
-                      label: const Text('Approve All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                      style: TextButton.styleFrom(
-                        foregroundColor: palette.primary,
-                        backgroundColor: palette.primary.withValues(alpha: 0.12),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: palette.primary.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: palette.primary.withValues(alpha: 0.35),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.done_all_rounded, size: 14, color: palette.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Approve All',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: palette.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),
                   ],
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    splashRadius: 18,
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
                   ),

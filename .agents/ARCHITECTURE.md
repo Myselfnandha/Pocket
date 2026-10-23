@@ -16,7 +16,7 @@ ZeroGravity OS is a lightweight, high-performance operating framework designed n
 3. **On-Demand Intelligence & MCP**:
    - Zero active MCP servers by default. 12 verified servers in local registry, with access to 2,600+ catalog servers enabled on demand.
 4. **Persistent Mistake Immunization**:
-   - Auto-evolving memory (`anti_patterns.json`, `gotchas.md`, `decisions.md`) to prevent repeating errors across sessions.
+   - Auto-evolving memory (`patterns.json`, `gotchas.md`, `decisions.md`) with dual-layer support: shared (npm) + local (per-workspace).
 5. **AGY Staffer & Fast Pairing**:
    - Native integration with Google Antigravity CLI (`agy`) for fast research, independent reviews, and background implementation.
 6. **Ponytail YAGNI Engine**:
@@ -75,10 +75,11 @@ ZeroGravity OS is a lightweight, high-performance operating framework designed n
 │   └── ... (30 total)
 ├── memory/                   # Persistent agent memory & learning state
 │   ├── decisions.md          # Architectural decisions log
-│   ├── gotchas.md            # Platform gotchas (anti-patterns in anti_patterns.json)
-│   ├── anti_patterns.json    # Machine-readable anti-pattern database (AP-001..AP-017)
-│   ├── goals.md              # Project goals and active milestones
-│   └── session_context.md    # Session continuity state
+│   ├── gotchas.md            # Platform gotchas & immunization protocol
+│   ├── patterns.json         # Unified anti-patterns + strategies (P-001..P-025)
+│   └── goals.md              # Project goals and active milestones
+├── templates/                # Templates for per-workspace local memory
+│   └── local-memory/         # Scaffolded by `zg init-local`
 ├── mcp-registry/             # MCP server registry and catalog
 │   ├── servers.json          # 12 verified zero-default servers
 │   └── mcp_catalog.json      # 2,600+ searchable MCP servers

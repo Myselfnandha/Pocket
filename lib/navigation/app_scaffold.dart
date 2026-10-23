@@ -229,6 +229,39 @@ class _AppScaffoldState extends ConsumerState<AppScaffold> {
               },
               children: widget.children,
             ),
+            // Bottom Gradient Mask to cleanly hide scrolling content behind floating navbar
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: (MediaQuery.paddingOf(context).bottom > 0
+                      ? MediaQuery.paddingOf(context).bottom + 8
+                      : 16) + 76,
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        (isDark
+                                ? (settings.isPureBlackEnabled ? Colors.black : const Color(0xFF0D0F14))
+                                : const Color(0xFFF8F9FA))
+                            .withValues(alpha: 0.0),
+                        (isDark
+                                ? (settings.isPureBlackEnabled ? Colors.black : const Color(0xFF0D0F14))
+                                : const Color(0xFFF8F9FA))
+                            .withValues(alpha: 0.75),
+                        isDark
+                            ? (settings.isPureBlackEnabled ? Colors.black : const Color(0xFF0D0F14))
+                            : const Color(0xFFF8F9FA),
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             // Left edge swipe detector (swiping right -> previous tab)
             if (currentIndex > 0)
               Positioned(

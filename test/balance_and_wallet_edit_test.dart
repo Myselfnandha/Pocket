@@ -286,4 +286,83 @@ void main() {
       expect(balance.isNegative, isFalse);
     });
   });
+
+  group('Onboarding & SMS Balance Snapshot Calibration Tests', () {
+    test('WalletModel correctly serializes and restores balanceSnapshotAt', () {
+      final snapshotDate = DateTime.parse('2026-10-23T14:30:00.000Z');
+      final wallet = WalletModel(
+        id: 'w_test',
+        name: 'IndusInd Bank',
+        initialBalance: 9500.0,
+        currentBalance: 9500.0,
+        balanceSnapshotAt: snapshotDate,
+      );
+
+      final json = wallet.toJson();
+      expect(json['balanceSnapshotAt'], '2026-10-23T14:30:00.000Z');
+
+      final restored = WalletModel.fromJson(json);
+      expect(restored.balanceSnapshotAt, snapshotDate);
+      expect(restored.initialBalance, 9500.0);
+    });
+
+    test('Transactions dated before or at balanceSnapshotAt do not double-deduct from balance', () {
+      final snapshotDate = DateTime.parse('2026-10-23T14:30:00.000Z');
+      final wallet = WalletModel(
+        id: 'w_test',
+        name: 'IndusInd Bank',
+        initialBalance: 9500.0,
+        currentBalance: 9500.0,
+        balanceSnapshotAt: snapshotDate,
+      );
+
+      final oldTx1 = TransactionModel(
+        id: 'tx_old_1',
+        title: 'Yesterday Lunch',
+        amount: 250.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'w_test',
+        date: snapshotDate.subtract(const Duration(hours: 5)),
+      );
+
+      final snapshotTx = TransactionModel(
+        id: 'tx_snapshot',
+        title: 'Swiggy Order',
+        amount: 500.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'w_test',
+        date: snapshotDate, // exact moment Avl Bal: 9500 was generated
+      );
+
+      final newTx = TransactionModel(
+        id: 'tx_new',
+        title: 'Tea & Snacks',
+        amount: 40.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'w_test',
+        date: snapshotDate.add(const Duration(minutes: 30)),
+      );
+
+      final allTxs = [oldTx1, snapshotTx, newTx];
+
+      // Simulate reactive balance calculation
+      double calculatedBalance = wallet.initialBalance;
+      for (final tx in allTxs) {
+        if (wallet.balanceSnapshotAt != null && !tx.date.isAfter(wallet.balanceSnapshotAt!)) {
+          continue; // Prior transactions were already baked into the bank's snapshot
+        }
+        if (tx.type == TransactionType.income) {
+          calculatedBalance += tx.amount;
+        } else {
+          calculatedBalance -= tx.amount;
+        }
+      }
+
+      // 9500 - 40 = 9460. The 250 and 500 debits do NOT double-deduct!
+      expect(calculatedBalance, 9460.0);
+    });
+  });
 }

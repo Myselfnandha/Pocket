@@ -18,7 +18,7 @@ A **harness** is the complete computational and context environment around a fou
 |---|---|---|---|
 | **c1: System Prompt** | `system_prompt` | `AGENTS.md` | Core persona, execution principles, tool guidance seeds |
 | **c2: Guardrails** | `guardrails` | `.agents/rules/` | Invariant fences, safety gates (`core.md`, `effort.md`, `codebase_context.md`) |
-| **c3: Memory** | `memory` | `.agents/memory/` | Durable invariants (`decisions.md`), failure immunization (`gotchas.md`, `anti_patterns.json`) |
+| **c3: Memory** | `memory` | `.agents/memory/` | Durable invariants (`decisions.md`), failure immunization (`gotchas.md`, `patterns.json`) |
 | **c4: Tool Guidance** | `tool_guidance` | `.agents/mcp_config.json` | MCP servers, interface contracts, parameter documentation |
 | **c5: Subagents** | `subagents` | `.agents/plugins/agent-skills/agents/` | Persona specialists running in isolated sub-contexts |
 | **c6: Skills** | `skills` | `.agents/skills/` | On-demand procedural workflows, domain guides, checklists |
@@ -94,11 +94,9 @@ Test candidate harness configurations against the problem. Contrast trajectories
 Synthesize the winning elements from both candidates into the active harness. Changes follow the **omitted-is-inherited** contract: only explicitly modified components change.
 
 ### Step 4: Reflect & Record (Experience Ledger)
-Record the refinement cycle, adopted harness configuration, and key lessons in `.agents/memory/harness_ledger.json`:
-```bash
-python3 .agents/scripts/harness.py ledger summary
-python3 .agents/scripts/auto_evolve.py capture --type coding_pattern --title "Harness Refinement: <Pattern>" --content "<Lesson>"
-```
+Record the refinement cycle, adopted harness configuration, and key lessons in `.agents/memory/patterns.json`:
+- Use native `replace_file_content` to append patterns. No Python subprocesses.
+- Flag with `"universal": true` if the pattern applies across all projects.
 
 ---
 

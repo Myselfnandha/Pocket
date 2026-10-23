@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/settings_model.dart';
+import '../models/wallet_model.dart';
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
 
@@ -27,6 +28,7 @@ class _BalanceCardState extends ConsumerState<BalanceCard> {
     final monthlyStats = ref.watch(monthlyStatsProvider);
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsWithBalancesProvider);
+    final liquidWallets = wallets.where((w) => w.walletType != WalletType.loan).toList();
     final palette = ref.watch(activePaletteProvider);
     final forecast = ref.watch(monthSpendForecastProvider);
     final budgetRemaining = ref.watch(totalBudgetRemainingProvider);
@@ -202,7 +204,7 @@ class _BalanceCardState extends ConsumerState<BalanceCard> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${wallets.length} Accounts',
+                          '${liquidWallets.length} Accounts',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,

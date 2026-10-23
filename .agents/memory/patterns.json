@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "updated_at": "2026-10-23T16:05:00Z",
+  "patterns": [
+    {"id": "P-001", "type": "anti", "category": "tooling", "rule": "Never run raw npx for MCP STDIO; use mcp-npx wrapper with NO_COLOR=1 and --silent."},
+    {"id": "P-002", "type": "anti", "category": "runtime", "rule": "Always supply auth tokens via CLI flags; never let MCP servers fall back to interactive OAuth."},
+    {"id": "P-003", "type": "anti", "category": "packaging", "rule": "Exclude binary artifacts (*.tar.gz, dist/, install.sh) from codebase indexing."},
+    {"id": "P-004", "type": "anti", "category": "architecture", "rule": "Default mcp_config.json must be empty; enable servers on-demand and disable after use."},
+    {"id": "P-005", "type": "anti", "category": "agent_behavior", "rule": "Never view_file recursively across folders; use codebase_summary.md or grep_search."},
+    {"id": "P-006", "type": "anti", "category": "agent_behavior", "rule": "Never edit outside the declared scope without explicit user authorization."},
+    {"id": "P-007", "type": "anti", "category": "agent_behavior", "rule": "Never claim success without terminal evidence; zero speculative claims."},
+    {"id": "P-008", "type": "anti", "category": "agent_behavior", "rule": "Re-read files before editing if >5 tool calls elapsed or external changes occurred."},
+    {"id": "P-009", "type": "anti", "category": "agent_behavior", "rule": "Verify all library APIs via tools before using; never use hallucinated functions."},
+    {"id": "P-010", "type": "anti", "category": "agent_behavior", "rule": "Never poll or loop on task status; use reactive completion notifications."},
+    {"id": "P-011", "type": "anti", "category": "agent_behavior", "rule": "Read entire file in one view_file call; never slice into chunks."},
+    {"id": "P-012", "type": "anti", "category": "tooling", "rule": "Select the optimal tool for token/time efficiency before every action; never use generic shell when a primitive exists."},
+    {"id": "P-013", "type": "anti", "category": "workflow", "rule": "Workflows must have description-only frontmatter; global workflows dual-sync to both paths."},
+    {"id": "P-014", "type": "anti", "category": "workflow", "rule": "Auto-adopt matching domain workflows on-demand via single view_file; never preload."},
+    {"id": "P-015", "type": "anti", "category": "tooling", "rule": "Never invoke internal Python scripts for memory/context ops; use native IDE tools."},
+    {"id": "P-016", "type": "anti", "category": "agent_behavior", "rule": "Inspect matching SKILL.md before executing specialized domain tasks."},
+    {"id": "P-017", "type": "anti", "category": "environment", "rule": "Consolidate projects into multi-root workspaces; avoid multiple IDE windows."},
+    {"id": "P-018", "type": "anti", "category": "agent_behavior", "rule": "Never repeat an import, path, or build error already corrected in this conversation."},
+    {"id": "P-019", "type": "anti", "category": "agent_behavior", "rule": "Never add dependencies without checking if already installed."},
+    {"id": "P-020", "type": "anti", "category": "agent_behavior", "rule": "Never overwrite user customizations in config files; merge or append."},
+    {"id": "P-021", "type": "anti", "category": "agent_behavior", "rule": "Never generate placeholder or Lorem Ipsum content in production code."},
+    {"id": "P-022", "type": "strategy", "category": "agent_behavior", "rule": "Auto-learn + grill-me only on major executions (multi-file features, /build-feature, /ship)."},
+    {"id": "P-023", "type": "strategy", "category": "agent_behavior", "rule": "When a build/lint/test error occurs, fix root cause; never suppress or ignore."},
+    {"id": "P-024", "type": "strategy", "category": "agent_behavior", "rule": "After fixing a bug, check if the same pattern exists elsewhere in the codebase."},
+    {"id": "P-025", "type": "strategy", "category": "tooling", "rule": "Batch independent tool calls in parallel; never serialize calls with no dependencies."}
+  ]
+}

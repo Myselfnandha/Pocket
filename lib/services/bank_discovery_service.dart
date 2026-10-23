@@ -14,6 +14,7 @@ class DiscoveredBankAccount {
   final int colorValue;
   final WalletType type;
   final DateTime latestDate;
+  final DateTime? balanceDate;
   final int transactionCount;
 
   const DiscoveredBankAccount({
@@ -26,6 +27,7 @@ class DiscoveredBankAccount {
     required this.colorValue,
     required this.type,
     required this.latestDate,
+    this.balanceDate,
     required this.transactionCount,
   });
 
@@ -45,6 +47,7 @@ class DiscoveredBankAccount {
       colorValue: colorValue,
       accountNumber: accountLast4,
       isDefault: isDefault,
+      balanceSnapshotAt: hasBalance ? (balanceDate ?? latestDate) : null,
     );
   }
 }
@@ -64,6 +67,19 @@ class BankDiscoveryService {
     r'(?:avl\s*bal|available\s*balance|net\s*bal|tot\s*bal|clear\s*bal|bal|balance)\b[:\s]*(?:(?:is|in your a/c is|in a/c is)\s+)?(?:(?:rs\.?|rs:|inr|₹|usd|\$)[:\s]*)?([0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)',
     caseSensitive: false,
   );
+
+  /// Extracts available / ledger balance from transaction text or SMS payload
+  static double? extractAvailableBalance(String? text) {
+    if (text == null || text.isEmpty) return null;
+    final match = _availBalPattern.firstMatch(text);
+    if (match != null) {
+      final rawNum = match.group(1)?.replaceAll(',', '').trim();
+      if (rawNum != null) {
+        return double.tryParse(rawNum);
+      }
+    }
+    return null;
+  }
 
   /// Scans device SMS inbox and aggregates unique bank accounts & cards with real available balances
   static Future<List<DiscoveredBankAccount>> discoverFromSms(
@@ -122,14 +138,7 @@ class BankDiscoveryService {
       txCounts[key] = (txCounts[key] ?? 0) + 1;
 
       // Extract available or overdue balance if present in the message
-      double? extractedBal;
-      final balMatch = _availBalPattern.firstMatch(payload);
-      if (balMatch != null) {
-        final rawNum = balMatch.group(1)?.replaceAll(',', '').trim();
-        if (rawNum != null) {
-          extractedBal = double.tryParse(rawNum);
-        }
-      }
+      final extractedBal = extractAvailableBalance(payload);
 
       final resolvedType = bankInfo.isLoan
           ? WalletType.loan
@@ -146,6 +155,7 @@ class BankDiscoveryService {
           colorValue: bankInfo.color,
           type: resolvedType,
           latestDate: item.date,
+          balanceDate: extractedBal != null ? item.date : null,
           transactionCount: 1,
         );
       } else {
@@ -153,6 +163,7 @@ class BankDiscoveryService {
         // If newer message didn't have balance reported, but this older message does, adopt it
         final hasBal = existing.hasBalance || extractedBal != null;
         final bestBal = existing.hasBalance ? existing.currentBalance : (extractedBal ?? 0.0);
+        final bestBalDate = existing.hasBalance ? existing.balanceDate : (extractedBal != null ? item.date : null);
         discoveredMap[key] = DiscoveredBankAccount(
           id: existing.id,
           bankName: existing.bankName,
@@ -162,7 +173,8 @@ class BankDiscoveryService {
           icon: existing.icon,
           colorValue: existing.colorValue,
           type: existing.type,
-          latestDate: existing.latestDate,
+          latestDate: existing.latestDate.isAfter(item.date) ? existing.latestDate : item.date,
+          balanceDate: bestBalDate,
           transactionCount: txCounts[key] ?? (existing.transactionCount + 1),
         );
       }

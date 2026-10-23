@@ -37,9 +37,9 @@ Before modifying or creating files:
 ### 5. Memory Tree Synchronization & Auto-Learn / Quick Grill-Me
 - **Auto-run `/learn`**: Record durable learnings and invariants directly into `.agents/memory/` using integrated tools:
   - New invariants $\rightarrow$ `decisions.md` (via `replace_file_content`)
-  - Fixed quirks/workarounds $\rightarrow$ `gotchas.md` and `anti_patterns.json` (via `replace_file_content`)
+  - Fixed quirks/workarounds $\rightarrow$ `gotchas.md` and `patterns.json` (via `replace_file_content`)
   - Completed milestones $\rightarrow$ `goals.md` (via `replace_file_content`)
-  - Captured strategies $\rightarrow$ append directly to `learned_strategies.json` (via `replace_file_content`, no Python subprocesses)
+  - Project-specific patterns $\rightarrow$ append to `.agents-local/memory/patterns.json`; flag `"universal": true` if project-agnostic
 - **Quick Grill-Me**: Conclude the execution with a quick `/grill-me` via `ask_question` (1-2 targeted Socratic questions) to verify alignment, confirm architectural choices, and lock in user conventions.
 
 ---

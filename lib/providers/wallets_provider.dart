@@ -70,6 +70,12 @@ final walletsWithBalancesProvider = Provider<List<WalletModel>>((ref) {
           (wallet == primaryWallet &&
               (tx.walletId == 'default_cash' || !wallets.any((w) => w.id == tx.walletId)));
       if (matchesThisWallet) {
+        // If this wallet has a balance snapshot timestamp, only transactions occurring AFTER
+        // that snapshot should adjust the balance. Transactions dated before or at the snapshot
+        // are already reflected in the snapshot initial balance.
+        if (wallet.balanceSnapshotAt != null && !tx.date.isAfter(wallet.balanceSnapshotAt!)) {
+          continue;
+        }
         if (tx.type == TransactionType.income) {
           balance += tx.amount;
         } else {
