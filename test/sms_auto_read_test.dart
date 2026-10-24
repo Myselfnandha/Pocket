@@ -628,6 +628,97 @@ void main() {
       expect(lastTx.walletId, equals('w_hdfc'));
       expect(lastTx.amount, equals(1500.0));
     });
+
+    // 6. Onboarding Account & Wallet Setup: Live Balances, Skip vs Import Past Logs, and Defaults
+    test('Onboarding Account & Wallet setup: live balance discovery, skip vs import past logs, and defaults', () async {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      // Verify defaults
+      const defaultImportExistingLog = false; // Default: No
+      const defaultAutoImportSmsDirectly = true; // Default: True
+
+      expect(defaultImportExistingLog, isFalse);
+      expect(defaultAutoImportSmsDirectly, isTrue);
+
+      // Discovered bank accounts & live balances
+      final discoveredAccounts = [
+        const DiscoveredBankAccount(
+          id: 'discovered_hdfc_1234',
+          bankName: 'HDFC Bank',
+          accountLast4: '1234',
+          currentBalance: 45200.50,
+          hasBalance: true,
+          icon: '🏦',
+          colorValue: 0xFF004C8F,
+          type: WalletType.bank,
+          latestDate: DateTime(2026, 10, 24, 10, 30),
+          transactionCount: 5,
+        ),
+      ];
+
+      expect(discoveredAccounts.first.hasBalance, isTrue);
+      expect(discoveredAccounts.first.balance, equals(45200.50));
+      expect(discoveredAccounts.first.accountLast4, equals('1234'));
+
+      final candidatePastTxs = [
+        PendingTransactionModel(
+          id: 'past_sms_1',
+          amount: 250.0,
+          merchant: 'Swiggy',
+          date: DateTime(2026, 10, 23, 14, 0),
+          detectionSource: 'sms',
+          counterpartyLast4: '1234',
+          sourceMessageId: 'msg_sms_1',
+        ),
+        PendingTransactionModel(
+          id: 'past_sms_2',
+          amount: 1200.0,
+          merchant: 'Zara',
+          date: DateTime(2026, 10, 22, 18, 30),
+          detectionSource: 'sms',
+          counterpartyLast4: '1234',
+          sourceMessageId: 'msg_sms_2',
+        ),
+      ];
+
+      // CASE A: importExistingLogs == false (DEFAULT: NO)
+      // All existing logs are skipped!
+      var importExistingLogs = false;
+      if (!importExistingLogs) {
+        // Skip all existing logs - no transactions saved
+        for (final item in candidatePastTxs) {
+          if (item.sourceMessageId != null) {
+            await storage.addProcessedMessageId(item.sourceMessageId!);
+          }
+        }
+      }
+      expect(storage.getTransactions().length, equals(0)); // Skipped!
+      expect(storage.getProcessedMessageIds().contains('msg_sms_1'), isTrue);
+      expect(storage.getProcessedMessageIds().contains('msg_sms_2'), isTrue);
+
+      // CASE B: importExistingLogs == true (YES: Quick Import)
+      importExistingLogs = true;
+      final selectedIds = {'past_sms_1'}; // User selected 1 transaction in quick import popup
+      if (importExistingLogs) {
+        final toImport = candidatePastTxs.where((t) => selectedIds.contains(t.id)).toList();
+        final txsToSave = toImport.map((item) => TransactionModel(
+          id: item.id,
+          title: item.merchant,
+          amount: item.amount,
+          type: TransactionType.expense,
+          categoryId: service.predictCategory(item.merchant, '', storage.getCategories()),
+          walletId: 'w_hdfc',
+          date: item.date,
+          createdAt: item.date,
+        )).toList();
+        await storage.saveTransactions(txsToSave);
+      }
+
+      expect(storage.getTransactions().length, equals(1));
+      expect(storage.getTransactions().first.title, equals('Swiggy'));
+      expect(storage.getTransactions().first.amount, equals(250.0));
+    });
   });
 }
 

@@ -56,6 +56,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   final List<WalletModel> _onboardingWallets = [];
   List<DiscoveredBankAccount> _discoveredBankAccounts = [];
   List<PendingTransactionModel> _discoveredPastTransactions = [];
+  bool _importExistingLogs = false; // Default: No (skip existing logs)
+  bool _autoImportSmsDirectly = true; // Default: Yes (auto-import incoming SMS directly)
+  final Set<String> _selectedPastTransactionIds = {};
   bool _isScanningSms = false;
   bool _hasScannedSms = false;
   late List<CategoryModel> _onboardingCategories;
@@ -239,7 +242,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 notifyBudgetExceeded: _budgetExceededEnabled,
                 notifyRecurringDue: _recurringDueEnabled,
                 monthlySummaryEnabled: _monthlySummaryEnabled,
-                autoSaveSms: true,
+                autoSaveSms: _autoImportSmsDirectly,
                 autoReadSmsEnabled: true,
                 isOnboarded: true,
               ),
@@ -280,92 +283,102 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       await NotificationService().requestPermissions();
       final granted = await autoImport.requestSmsPermission();
       if (granted) {
-        await autoImport.setAutoSaveSmsPreference(true);
+        await autoImport.setAutoSaveSmsPreference(_autoImportSmsDirectly);
       }
     } catch (_) {}
 
-    // 6. Auto-log discovered past SMS transactions without requiring manual review
+    // 6. Handle existing past SMS transactions: Import if user confirmed, otherwise skip all existing logs
     try {
       final existingTxs = storage.getTransactions();
       final List<TransactionModel> txsToSave = [];
       final List<PendingTransactionModel> pendingToSave = [];
       final List<String> processedMsgIds = [];
 
-      final candidateTxs = _discoveredPastTransactions.isNotEmpty
-          ? _discoveredPastTransactions
-          : await autoImport.scanSmsInbox(daysLookback: 0);
+      if (_importExistingLogs && _discoveredPastTransactions.isNotEmpty) {
+        final candidateTxs = _selectedPastTransactionIds.isNotEmpty
+            ? _discoveredPastTransactions.where((t) => _selectedPastTransactionIds.contains(t.id)).toList()
+            : _discoveredPastTransactions;
 
-      for (final item in candidateTxs) {
-        if (item.amount <= 0) continue;
-        if (autoImport.isAlreadySaved(item, existingTxs)) continue;
+        for (final item in candidateTxs) {
+          if (item.amount <= 0) continue;
+          if (autoImport.isAlreadySaved(item, existingTxs)) continue;
 
-        // Deduplicate against items already in this batch
-        final alreadyInBatch = txsToSave.any((t) =>
-            (item.refId != null && item.refId!.isNotEmpty && t.refId == item.refId) ||
-            ((t.amount - item.amount).abs() < 0.01 &&
-                t.date.difference(item.date).inSeconds.abs() <= 90 &&
-                (t.title.toLowerCase() == item.merchant.toLowerCase())));
-        if (alreadyInBatch) continue;
+          // Deduplicate against items already in this batch
+          final alreadyInBatch = txsToSave.any((t) =>
+              (item.refId != null && item.refId!.isNotEmpty && t.refId == item.refId) ||
+              ((t.amount - item.amount).abs() < 0.01 &&
+                  t.date.difference(item.date).inSeconds.abs() <= 90 &&
+                  (t.title.toLowerCase() == item.merchant.toLowerCase())));
+          if (alreadyInBatch) continue;
 
-        final matchedWalletId = autoImport.findExplicitMatchingWallet(item, _onboardingWallets);
+          final matchedWalletId = autoImport.findExplicitMatchingWallet(item, _onboardingWallets);
 
-        final effectiveCategoryId = item.suggestedCategoryId ??
-            autoImport.predictCategory(
-              item.merchant,
-              item.rawPayload ?? '',
-              _onboardingCategories,
-              isIncome: item.isIncome,
+          final effectiveCategoryId = item.suggestedCategoryId ??
+              autoImport.predictCategory(
+                item.merchant,
+                item.rawPayload ?? '',
+                _onboardingCategories,
+                isIncome: item.isIncome,
+                appSource: item.appSource,
+                senderBank: item.senderBank,
+                detectionSource: item.detectionSource,
+              );
+
+          final effectiveNote = item.refId != null && item.refId!.isNotEmpty
+              ? 'Ref: ${item.refId}'
+              : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
+
+          if (matchedWalletId == null) {
+            pendingToSave.add(item.copyWith(suggestedCategoryId: effectiveCategoryId));
+            continue;
+          }
+
+          txsToSave.add(
+            TransactionModel(
+              id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
+              title: item.merchant.trim().isNotEmpty ? item.merchant.trim() : (item.isIncome ? 'Deposit' : 'Payment'),
+              amount: item.amount,
+              type: item.isIncome ? TransactionType.income : TransactionType.expense,
+              categoryId: effectiveCategoryId,
+              walletId: matchedWalletId,
+              date: item.date,
+              note: effectiveNote,
+              refId: item.refId,
+              counterpartyLast4: item.counterpartyLast4,
               appSource: item.appSource,
-              senderBank: item.senderBank,
-              detectionSource: item.detectionSource,
-            );
+              rawPayload: item.rawPayload,
+              createdAt: item.date,
+            ),
+          );
 
-        final effectiveNote = item.refId != null && item.refId!.isNotEmpty
-            ? 'Ref: ${item.refId}'
-            : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
-
-        if (matchedWalletId == null) {
-          pendingToSave.add(item.copyWith(suggestedCategoryId: effectiveCategoryId));
-          continue;
+          if (item.sourceMessageId != null) {
+            processedMsgIds.add(item.sourceMessageId!);
+          }
         }
 
-        txsToSave.add(
-          TransactionModel(
-            id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
-            title: item.merchant.trim().isNotEmpty ? item.merchant.trim() : (item.isIncome ? 'Deposit' : 'Payment'),
-            amount: item.amount,
-            type: item.isIncome ? TransactionType.income : TransactionType.expense,
-            categoryId: effectiveCategoryId,
-            walletId: matchedWalletId,
-            date: item.date,
-            note: effectiveNote,
-            refId: item.refId,
-            counterpartyLast4: item.counterpartyLast4,
-            appSource: item.appSource,
-            rawPayload: item.rawPayload,
-            createdAt: item.date,
-          ),
-        );
-
-        if (item.sourceMessageId != null) {
-          processedMsgIds.add(item.sourceMessageId!);
+        if (txsToSave.isNotEmpty) {
+          await storage.saveTransactions([...existingTxs, ...txsToSave]);
+          for (final msgId in processedMsgIds) {
+            await storage.addProcessedMessageId(msgId);
+          }
+          ref.invalidate(transactionsProvider);
         }
-      }
-
-      if (txsToSave.isNotEmpty) {
-        await storage.saveTransactions([...existingTxs, ...txsToSave]);
-        for (final msgId in processedMsgIds) {
-          await storage.addProcessedMessageId(msgId);
+        if (pendingToSave.isNotEmpty) {
+          final pending = autoImport.deduplicateAndAssignHeuristics([
+            ...storage.getPendingTransactions(),
+            ...pendingToSave,
+          ]);
+          await storage.savePendingTransactions(pending);
+          ref.invalidate(pendingTransactionsProvider);
         }
-        ref.invalidate(transactionsProvider);
-      }
-      if (pendingToSave.isNotEmpty) {
-        final pending = autoImport.deduplicateAndAssignHeuristics([
-          ...storage.getPendingTransactions(),
-          ...pendingToSave,
-        ]);
-        await storage.savePendingTransactions(pending);
-        ref.invalidate(pendingTransactionsProvider);
+      } else {
+        // User opted NOT to import existing logs: skip all existing logs
+        // Mark all discovered past message IDs as processed to prevent background listener from re-ingesting them
+        for (final item in _discoveredPastTransactions) {
+          if (item.sourceMessageId != null) {
+            await storage.addProcessedMessageId(item.sourceMessageId!);
+          }
+        }
       }
     } catch (_) {}
 
@@ -1053,7 +1066,395 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       }
     } catch (_) {
       if (mounted) setState(() => _isScanningSms = false);
+  }
+
+  void _showQuickImportPopup(bool isDark) {
+    if (_discoveredPastTransactions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No past SMS transactions detected to import.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
     }
+
+    final symbol = _selectedCurrencySymbol ?? '₹';
+    // If no explicit selection yet, default to all discovered transactions
+    final Set<String> tempSelected = _selectedPastTransactionIds.isNotEmpty
+        ? Set.from(_selectedPastTransactionIds)
+        : _discoveredPastTransactions.map((t) => t.id).toSet();
+
+    int selectedLookbackDays = 0; // 0 = all discovered
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final now = DateTime.now();
+          final visibleList = _discoveredPastTransactions.where((tx) {
+            if (selectedLookbackDays == 0) return true;
+            return now.difference(tx.date).inDays <= selectedLookbackDays;
+          }).toList();
+
+          final allVisibleSelected = visibleList.isNotEmpty &&
+              visibleList.every((tx) => tempSelected.contains(tx.id));
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.file_download_rounded, color: AppColors.primaryGreenLight, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Quick Import Transactions',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                            ),
+                            Text(
+                              'Select previous transactions from SMS to import',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Quick lookback filter chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    children: [
+                      {'label': 'All Time', 'days': 0},
+                      {'label': '30 Days', 'days': 30},
+                      {'label': '7 Days', 'days': 7},
+                    ].map((opt) {
+                      final isSelected = selectedLookbackDays == opt['days'];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            opt['label'] as String,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                              color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: AppColors.primaryGreenLight,
+                          backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFEEEEEE),
+                          showCheckmark: false,
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() {
+                                selectedLookbackDays = opt['days'] as int;
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                // Subheader with Select All & Found count
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${visibleList.length} Found (${tempSelected.length} Selected)',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          setSheetState(() {
+                            if (allVisibleSelected) {
+                              for (final tx in visibleList) {
+                                tempSelected.remove(tx.id);
+                              }
+                            } else {
+                              for (final tx in visibleList) {
+                                tempSelected.add(tx.id);
+                              }
+                            }
+                          });
+                        },
+                        icon: Icon(
+                          allVisibleSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+                          size: 16,
+                          color: AppColors.primaryGreenLight,
+                        ),
+                        label: Text(
+                          allVisibleSelected ? 'Deselect All' : 'Select All',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            color: AppColors.primaryGreenLight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 1),
+
+                // List of transactions
+                Expanded(
+                  child: visibleList.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No transactions found in this time range.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: visibleList.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, i) {
+                            final tx = visibleList[i];
+                            final isSelected = tempSelected.contains(tx.id);
+                            final isIncome = tx.isIncome;
+                            final amountColor = isIncome ? AppColors.primaryGreenLight : const Color(0xFFFF5252);
+
+                            return InkWell(
+                              onTap: () {
+                                setSheetState(() {
+                                  if (isSelected) {
+                                    tempSelected.remove(tx.id);
+                                  } else {
+                                    tempSelected.add(tx.id);
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF242424) : const Color(0xFFF7F7F7),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primaryGreenLight.withValues(alpha: 0.6)
+                                        : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                                    width: isSelected ? 1.4 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Checkbox(
+                                      value: isSelected,
+                                      activeColor: AppColors.primaryGreenLight,
+                                      checkColor: Colors.black,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                                      onChanged: (val) {
+                                        setSheetState(() {
+                                          if (val == true) {
+                                            tempSelected.add(tx.id);
+                                          } else {
+                                            tempSelected.remove(tx.id);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: amountColor.withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
+                                        color: amountColor,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tx.merchant.isNotEmpty ? tx.merchant : (isIncome ? 'Deposit' : 'Payment'),
+                                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                DateFormat('dd MMM, hh:mm a').format(tx.date),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: isDark ? Colors.white60 : Colors.black54,
+                                                ),
+                                              ),
+                                              if (tx.counterpartyLast4 != null) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    '•••• ${tx.counterpartyLast4}',
+                                                    style: TextStyle(
+                                                      fontSize: 9.5,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '${isIncome ? '+' : '-'}$symbol${tx.amount.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13.5,
+                                        color: amountColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+
+                // Bottom actions
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _importExistingLogs = false;
+                                _selectedPastTransactionIds.clear();
+                              });
+                              Navigator.pop(ctx);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark ? Colors.white70 : Colors.black87,
+                              side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: const Text('Skip / Don\'t Import', style: TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: tempSelected.isEmpty
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _selectedPastTransactionIds.clear();
+                                      _selectedPastTransactionIds.addAll(tempSelected);
+                                      _importExistingLogs = true;
+                                    });
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('${tempSelected.length} past transactions queued for import'),
+                                        backgroundColor: AppColors.primaryGreen,
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGreenLight,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Text(
+                              tempSelected.isEmpty ? 'Select Transactions' : 'Import (${tempSelected.length})',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // --- Slide 4: Wallet Setup ---
@@ -1252,54 +1653,210 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                   if (_discoveredPastTransactions.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.2 : 0.12),
-                            AppColors.accentCyan.withValues(alpha: isDark ? 0.08 : 0.04),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
+                        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                          color: _importExistingLogs
+                              ? AppColors.primaryGreenLight
+                              : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                          width: _importExistingLogs ? 1.4 : 1.0,
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryGreenLight.withValues(alpha: 0.25),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.bolt_rounded, size: 20, color: AppColors.primaryGreenLight),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${_discoveredPastTransactions.length} Past Transactions Discovered',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryGreenLight.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.history_rounded, size: 20, color: AppColors.primaryGreenLight),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Import Existing Transaction Log?',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13.5,
+                                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${_discoveredPastTransactions.length} past SMS alerts found across discovered accounts.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Choice Row (Default No vs Yes Quick Import)
+                          Row(
+                            children: [
+                              // No - Skip All Existing Logs (Default)
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _importExistingLogs = false;
+                                      _selectedPastTransactionIds.clear();
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: !_importExistingLogs
+                                          ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE8E8E8))
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: !_importExistingLogs
+                                            ? (isDark ? Colors.white38 : Colors.black26)
+                                            : (isDark ? Colors.white10 : Colors.black12),
+                                        width: !_importExistingLogs ? 1.4 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          !_importExistingLogs ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                                          size: 15,
+                                          color: !_importExistingLogs ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'No (Skip Logs)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12,
+                                            color: !_importExistingLogs ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Auto-categorizing based on source & logging directly to your accounts.',
-                                  style: TextStyle(
+                              ),
+                              const SizedBox(width: 8),
+                              // Yes - Quick Import (Opens Popup)
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    _showQuickImportPopup(isDark);
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: _importExistingLogs
+                                          ? AppColors.primaryGreenLight.withValues(alpha: 0.18)
+                                          : (isDark ? const Color(0xFF1E2620) : const Color(0xFFEFFBF2)),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: _importExistingLogs
+                                            ? AppColors.primaryGreenLight
+                                            : AppColors.primaryGreenLight.withValues(alpha: 0.4),
+                                        width: _importExistingLogs ? 1.4 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          _importExistingLogs ? Icons.check_circle_rounded : Icons.file_download_outlined,
+                                          size: 15,
+                                          color: AppColors.primaryGreenLight,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _importExistingLogs
+                                              ? 'Yes (${_selectedPastTransactionIds.isEmpty ? _discoveredPastTransactions.length : _selectedPastTransactionIds.length})'
+                                              : 'Yes (Quick Import)',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12,
+                                            color: AppColors.primaryGreenLight,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_importExistingLogs) ...[
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () => _showQuickImportPopup(isDark),
+                              child: Center(
+                                child: Text(
+                                  'Tap to customize ${_selectedPastTransactionIds.isEmpty ? _discoveredPastTransactions.length : _selectedPastTransactionIds.length} queued transactions',
+                                  style: const TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    color: AppColors.primaryGreenLight,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
+                          ],
+                          const SizedBox(height: 12),
+                          Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+                          const SizedBox(height: 10),
+                          // Auto-import direct toggle
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Auto-import SMS directly',
+                                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      'Incoming bank alerts are auto-logged to accounts directly',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _autoImportSmsDirectly,
+                                activeThumbColor: AppColors.primaryGreenLight,
+                                onChanged: (val) => setState(() => _autoImportSmsDirectly = val),
+                              ),
+                            ],
                           ),
                         ],
                       ),
