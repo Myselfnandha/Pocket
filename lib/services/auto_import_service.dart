@@ -672,7 +672,6 @@ class AutoImportService {
           appSource: item.appSource,
           rawPayload: item.rawPayload,
           createdAt: item.date,
-          updatedAt: DateTime.now(),
         ),
       );
 

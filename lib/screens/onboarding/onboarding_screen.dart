@@ -345,7 +345,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             appSource: item.appSource,
             rawPayload: item.rawPayload,
             createdAt: item.date,
-            updatedAt: DateTime.now(),
           ),
         );
 
