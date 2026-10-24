@@ -4,9 +4,17 @@ import sys
 import time
 import subprocess
 
-DEVICE_ID = "dc96724c1e0d"
-ARTIFACT_DIR = "/home/nandha/.gemini/antigravity-ide/brain/c630d78b-03c7-4c31-9fec-b297001d807b/screenshots"
+def get_default_device():
+    if os.environ.get("DEVICE_ID"):
+        return os.environ["DEVICE_ID"]
+    res = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
+    devs = [line.split()[0] for line in res.stdout.strip().split("\n")[1:] if "\tdevice" in line]
+    return devs[0] if devs else "dc96724c1e0d"
+
+DEVICE_ID = get_default_device()
+ARTIFACT_DIR = os.environ.get("ARTIFACT_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test_screenshots"))
 os.makedirs(ARTIFACT_DIR, exist_ok=True)
+
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)

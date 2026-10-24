@@ -18,11 +18,18 @@ import sys
 import time
 import subprocess
 import xml.etree.ElementTree as ET
-from PIL import Image
+def get_default_device():
+    if os.environ.get("DEVICE_ID"):
+        return os.environ["DEVICE_ID"]
+    res = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
+    devs = [line.split()[0] for line in res.stdout.strip().split("\n")[1:] if "\tdevice" in line]
+    return devs[0] if devs else "dc96724c1e0d"
 
-DEVICE_ID = "dc96724c1e0d"
+DEVICE_ID = get_default_device()
 PACKAGE_NAME = "com.pocket.pocket"
-ARTIFACT_DIR = "/home/nandha/.gemini/antigravity-ide/brain/034d6163-7069-49d8-8ac4-9c6b2f1cb3c7"
+ARTIFACT_DIR = os.environ.get("ARTIFACT_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_screenshots"))
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
+
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)

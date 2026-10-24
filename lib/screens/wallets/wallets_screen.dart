@@ -3334,11 +3334,11 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     return GestureDetector(
       onHorizontalDragEnd: (details) {
         if (details.primaryVelocity != null && wallets.length > 1) {
-          if (details.primaryVelocity! < -150) {
+          if (details.primaryVelocity! < -60) {
             setState(() {
               _selectedAccountIndex = (activeIndex + 1) % wallets.length;
             });
-          } else if (details.primaryVelocity! > 150) {
+          } else if (details.primaryVelocity! > 60) {
             setState(() {
               _selectedAccountIndex = (activeIndex - 1 + wallets.length) % wallets.length;
             });

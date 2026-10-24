@@ -840,7 +840,9 @@ class TransactionDetailScreen extends ConsumerWidget {
                   ref.read(transactionsProvider.notifier).insertTransactionAt(0, tx);
                 },
               );
-              context.pop();
+              if (context.mounted && context.canPop()) {
+                context.pop();
+              }
             },
             child: const Text('Delete'),
           ),

@@ -69,7 +69,9 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
 
     final now = DateTime.now();
     final monthTxs = allTxs.where((tx) {
-      return tx.date.year == now.year && tx.date.month == now.month;
+      return tx.categoryId != 'cat_transfer' &&
+          tx.date.year == now.year &&
+          tx.date.month == now.month;
     }).toList();
 
     final totalIncome = max(1.0, stats.totalIncome);

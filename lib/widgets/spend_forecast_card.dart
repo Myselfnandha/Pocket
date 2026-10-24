@@ -198,7 +198,7 @@ class SpendForecastCard extends ConsumerWidget {
           const SizedBox(height: 2),
           Text(
             sub,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 9.5,

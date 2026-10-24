@@ -73,8 +73,10 @@ object SmsParser {
     )
 
     private val MERCHANT_PATTERNS = listOf(
-        // UPI ref / info patterns: "UPI/P2P/123456789012/Receiver" or "UPI/DR/123456789012/Receiver"
-        Pattern.compile("""UPI/(?:P2P|P2M|DR|CR)/[0-9]+/([A-Za-z0-9&'._\s]{2,35})""", Pattern.CASE_INSENSITIVE),
+        // UPI ref / info patterns: "UPI/P2P/123456789012/Receiver", "UPI/P2A/...", "UPI/DR/...", "UPI/REV/..."
+        Pattern.compile("""UPI/(?:P2P|P2M|P2A|DR|CR|REV)/[0-9]+/([A-Za-z0-9&'._\s]{2,35})""", Pattern.CASE_INSENSITIVE),
+        // UPI Lite transactions: "via UPI Lite to Merchant" or "using UPI Lite to Merchant"
+        Pattern.compile("""(?:via|using)\s+upi\s+lite\s+to\s+([A-Za-z0-9&'._\s]{2,35}?)""", Pattern.CASE_INSENSITIVE),
         // "to VPA user@bank" or "to user@bank"
         Pattern.compile("""(?:to\s+vpa|to)\s+([a-zA-Z0-9.\-_]{2,35}@[a-zA-Z0-9.\-_]{2,20})""", Pattern.CASE_INSENSITIVE),
         // "trf to Maggi", "transfer to John", "transferred to Alex"
@@ -172,8 +174,17 @@ object SmsParser {
             combined.contains("yesbnk") || combined.contains("yes bank") -> "Yes Bank"
             combined.contains("paytmb") || combined.contains("paytm bank") -> "Paytm Payments Bank"
             combined.contains("airtel") -> "Airtel Payments Bank"
+            combined.contains("aubank") || combined.contains("au small finance") -> "AU Small Finance Bank"
+            combined.contains("scbl") || combined.contains("standard chartered") || combined.contains("stanchart") -> "Standard Chartered"
+            combined.contains("dbs") || combined.contains("digibank") -> "DBS Bank"
+            combined.contains("equitas") || combined.contains("eqitas") -> "Equitas Small Finance Bank"
+            combined.contains("cbin") || combined.contains("central bank") -> "Central Bank of India"
+            combined.contains("boisms") || combined.contains("bank of india") || combined.contains("boi") -> "Bank of India"
+            combined.contains("jiopay") || combined.contains("jio payments") -> "Jio Payments Bank"
+            combined.contains("slice") -> "Slice"
+            combined.contains("cred") -> "CRED"
             combined.contains("jupiter") -> "Jupiter"
-            combined.contains("fi money") -> "Fi Money"
+            combined.contains("fi money") || combined.contains("fibank") -> "Fi Money"
             else -> null
         }
     }

@@ -827,73 +827,231 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
     final noteCtrl = TextEditingController();
     String selectedWalletId = wallets.isNotEmpty ? wallets.first.id : 'cash';
     bool updateWallet = true;
+    final isLent = debt.type == DebtType.lent;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Add Payment for ${debt.personName}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Remaining: $currencySymbol${debt.remainingAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(prefixText: '$currencySymbol ', hintText: 'Payment Amount'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(hintText: 'Note (optional)'),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (ctx, setDialogState) {
+          final amtText = amountCtrl.text.trim();
+          final enteredAmt = double.tryParse(amtText) ?? 0.0;
+          final isOverLimit = enteredAmt > debt.remainingAmount;
+          final isValid = enteredAmt > 0 && !isOverLimit;
+
+          return AlertDialog(
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isLent ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                    size: 18,
+                    color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isLent ? 'Receive Payment' : 'Make Repayment',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        debt.personName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
-                    value: updateWallet,
-                    activeColor: AppColors.primaryGreenLight,
-                    onChanged: (val) => setDialogState(() => updateWallet = val ?? true),
+                  // Remaining Balance Pill Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Remaining Balance:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          '$currencySymbol${debt.remainingAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Expanded(
-                    child: Text('Update wallet balance', style: TextStyle(fontSize: 12)),
+                  const SizedBox(height: 12),
+
+                  // Quick Percentage Chips (UI Logic)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildQuickAmountChip('25%', (debt.remainingAmount * 0.25), amountCtrl, setDialogState),
+                        const SizedBox(width: 6),
+                        _buildQuickAmountChip('50%', (debt.remainingAmount * 0.50), amountCtrl, setDialogState),
+                        const SizedBox(width: 6),
+                        _buildQuickAmountChip('75%', (debt.remainingAmount * 0.75), amountCtrl, setDialogState),
+                        const SizedBox(width: 6),
+                        _buildQuickAmountChip('Full (${debt.remainingAmount.toStringAsFixed(0)})', debt.remainingAmount, amountCtrl, setDialogState),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Payment Amount',
+                      prefixText: '$currencySymbol ',
+                      errorText: isOverLimit
+                          ? 'Cannot exceed $currencySymbol${debt.remainingAmount.toStringAsFixed(2)}'
+                          : null,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: noteCtrl,
+                    decoration: const InputDecoration(labelText: 'Note (optional)'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Wallet Synchronization Option
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: updateWallet,
+                        activeColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                        onChanged: (val) => setDialogState(() => updateWallet = val ?? true),
+                      ),
+                      Expanded(
+                        child: Text(
+                          isLent ? 'Deposit payment into wallet' : 'Deduct repayment from wallet',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (updateWallet && wallets.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedWalletId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Account',
+                        isDense: true,
+                      ),
+                      items: wallets.map((w) {
+                        return DropdownMenuItem(
+                          value: w.id,
+                          child: Text('${w.icon} ${w.name} ($currencySymbol${w.currentBalance.toStringAsFixed(0)})'),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedWalletId = val);
+                      },
+                    ),
+                  ],
                 ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final amt = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
-                if (amt <= 0) return;
-
-                ref.read(debtsProvider.notifier).recordPayment(
-                      debtId: debt.id,
-                      amount: amt,
-                      note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
-                      walletId: selectedWalletId,
-                      updateWallet: updateWallet,
-                    );
-
-                Navigator.pop(ctx);
-                if (context.mounted) {
-                  TopCapsuleToast.show(
-                    context,
-                    title: 'Payment Recorded',
-                    subtitle: '$currencySymbol${amt.toStringAsFixed(2)} for ${debt.personName}',
-                    accentColor: AppColors.incomeGreen,
-                  );
-                }
-              },
-              child: const Text('Record Payment'),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  amountCtrl.dispose();
+                  noteCtrl.dispose();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isValid
+                      ? (isLent ? AppColors.incomeGreen : AppColors.expenseRed)
+                      : Colors.grey.shade400,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isValid
+                    ? () {
+                        final amt = enteredAmt;
+                        ref.read(debtsProvider.notifier).recordPayment(
+                              debtId: debt.id,
+                              amount: amt,
+                              note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+                              walletId: selectedWalletId,
+                              updateWallet: updateWallet,
+                            );
+
+                        amountCtrl.dispose();
+                        noteCtrl.dispose();
+                        Navigator.pop(ctx);
+                        if (context.mounted) {
+                          TopCapsuleToast.show(
+                            context,
+                            title: 'Payment Recorded',
+                            subtitle: '$currencySymbol${amt.toStringAsFixed(2)} for ${debt.personName}',
+                            accentColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                          );
+                        }
+                      }
+                    : null,
+                child: Text(isLent ? 'Record Received' : 'Record Repayment'),
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildQuickAmountChip(
+    String label,
+    double value,
+    TextEditingController controller,
+    StateSetter setDialogState,
+  ) {
+    return ActionChip(
+      visualDensity: VisualDensity.compact,
+      label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+      onPressed: () {
+        setDialogState(() {
+          controller.text = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2);
+        });
+      },
     );
   }
 
@@ -906,35 +1064,99 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
   ) {
     String selectedWalletId = wallets.isNotEmpty ? wallets.first.id : 'cash';
     bool updateWallet = true;
+    final isLent = debt.type == DebtType.lent;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Settle Up Completely?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Mark full remaining balance ($currencySymbol${debt.remainingAmount.toStringAsFixed(2)}) as paid?'),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Checkbox(
-                    value: updateWallet,
-                    activeColor: AppColors.primaryGreenLight,
-                    onChanged: (val) => setDialogState(() => updateWallet = val ?? true),
+          title: Text(isLent ? 'Settle Lent Balance?' : 'Settle Borrowed Debt?'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (isLent ? AppColors.incomeGreen : AppColors.expenseRed).withValues(alpha: 0.3),
+                    ),
                   ),
-                  const Expanded(
-                    child: Text('Update wallet balance', style: TextStyle(fontSize: 12)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isLent
+                            ? 'Mark full payment received from:'
+                            : 'Mark full payment settled with:',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        debt.personName,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$currencySymbol${debt.remainingAmount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: updateWallet,
+                      activeColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                      onChanged: (val) => setDialogState(() => updateWallet = val ?? true),
+                    ),
+                    Expanded(
+                      child: Text(
+                        isLent ? 'Deposit settlement into wallet' : 'Deduct settlement from wallet',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                if (updateWallet && wallets.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedWalletId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select Account',
+                      isDense: true,
+                    ),
+                    items: wallets.map((w) {
+                      return DropdownMenuItem(
+                        value: w.id,
+                        child: Text('${w.icon} ${w.name} ($currencySymbol${w.currentBalance.toStringAsFixed(0)})'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedWalletId = val);
+                    },
                   ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 ref.read(debtsProvider.notifier).settleDebt(
                       debtId: debt.id,
@@ -947,7 +1169,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> with SingleTickerProv
                     context,
                     title: 'Debt Settled',
                     subtitle: 'Settled completely with ${debt.personName}',
-                    accentColor: AppColors.incomeGreen,
+                    accentColor: isLent ? AppColors.incomeGreen : AppColors.expenseRed,
                   );
                 }
               },

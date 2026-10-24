@@ -58,10 +58,24 @@ class NlpTransactionParser {
     }
 
     // 2. Extract Amount
-    // Matches ₹1200, 1200rs, 1200.50, 1.5k, rs 1200, usd 50, $50
+    // Matches ₹1200, 1200rs, 1200.50, 1.5k, 2.5L, 3 lakh, 1 crore, rs 1200, usd 50, $50
+    final croreMultiplierRegex = RegExp(r'(?:₹|\$|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crore|crores)\b', caseSensitive: false);
+    final lakhMultiplierRegex = RegExp(r'(?:₹|\$|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:l|lac|lakh|lakhs)\b', caseSensitive: false);
     final kMultiplierRegex = RegExp(r'(?:₹|\$|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*k\b', caseSensitive: false);
+
+    final crMatch = croreMultiplierRegex.firstMatch(lower);
+    final lakhMatch = lakhMultiplierRegex.firstMatch(lower);
     final kMatch = kMultiplierRegex.firstMatch(lower);
-    if (kMatch != null) {
+
+    if (crMatch != null) {
+      final base = double.tryParse(crMatch.group(1) ?? '0') ?? 0;
+      extractedAmount = base * 10000000;
+      workingText = workingText.replaceFirst(crMatch.group(0)!, ' ');
+    } else if (lakhMatch != null) {
+      final base = double.tryParse(lakhMatch.group(1) ?? '0') ?? 0;
+      extractedAmount = base * 100000;
+      workingText = workingText.replaceFirst(lakhMatch.group(0)!, ' ');
+    } else if (kMatch != null) {
       final base = double.tryParse(kMatch.group(1) ?? '0') ?? 0;
       extractedAmount = base * 1000;
       workingText = workingText.replaceFirst(kMatch.group(0)!, ' ');

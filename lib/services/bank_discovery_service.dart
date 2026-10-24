@@ -74,7 +74,7 @@ class BankDiscoveryService {
   );
 
   static final RegExp _availBalPattern = RegExp(
-    r'(?:avl\s*bal|available\s*balance|net\s*bal|tot\s*bal|clear\s*bal|bal|balance)\b[:\s]*(?:(?:is|in your a/c is|in a/c is)\s+)?(?:(?:rs\.?|rs:|inr|₹|usd|\$)[:\s]*)?([0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)',
+    r'(?:avl\s*bal|available\s*balance|updated\s*bal(?:ance)?|effective\s*bal(?:ance)?|cur(?:rent)?\s*bal(?:ance)?|net\s*bal|tot\s*bal|total\s*balance|clear\s*bal|bal|balance|avl\s*limit|available\s*limit)\b[:\s]*(?:(?:is|in your a/c is|in a/c is|of your a/c is)\s+)?(?:(?:rs\.?|rs:|inr|₹|usd|\$)[:\s]*)?([0-9]+(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)',
     caseSensitive: false,
   );
 

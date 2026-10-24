@@ -14,10 +14,19 @@ import subprocess
 import urllib.request
 import xml.etree.ElementTree as ET
 
-DEVICE_ID = "dc96724c1e0d"
+def get_default_device():
+    if os.environ.get("DEVICE_ID"):
+        return os.environ["DEVICE_ID"]
+    res = subprocess.run("adb devices", shell=True, capture_output=True, text=True)
+    devs = [line.split()[0] for line in res.stdout.strip().split("\n")[1:] if "\tdevice" in line]
+    return devs[0] if devs else "dc96724c1e0d"
+
+DEVICE_ID = get_default_device()
 PACKAGE_NAME = "com.pocket.pocket"
-ARTIFACT_DIR = "/home/nandha/.gemini/antigravity-ide/brain/034d6163-7069-49d8-8ac4-9c6b2f1cb3c7"
-APK_TARGET = "/home/nandha/Desktop/Pocket/Pocket-v1.5.4-universal.apk"
+ARTIFACT_DIR = os.environ.get("ARTIFACT_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_screenshots"))
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
+APK_TARGET = os.environ.get("APK_PATH", "/home/nandha/Desktop/Pocket/Pocket-latest.apk")
+
 APK_URL_V154 = "https://github.com/Myselfnandha/Pocket/releases/download/v1.5.4/Pocket-v1.5.4-universal.apk"
 APK_URL_V153 = "https://github.com/Myselfnandha/Pocket/releases/download/v1.5.3/Pocket-v1.5.3-universal.apk"
 APK_URL_V152 = "https://github.com/Myselfnandha/Pocket/releases/download/v1.5.2/Pocket-v1.5.2-universal.apk"
