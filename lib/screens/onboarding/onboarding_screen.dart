@@ -1066,6 +1066,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       }
     } catch (_) {
       if (mounted) setState(() => _isScanningSms = false);
+    }
   }
 
   void _showQuickImportPopup(bool isDark) {
