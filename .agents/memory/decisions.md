@@ -49,3 +49,19 @@ This document records durable architectural decisions, system invariants, and in
 - **Decision**: Android home screen widgets isolate the balance peek trigger to a dedicated pill button container (`btn_toggle_balance` / `txt_toggle_icon`) to prevent accidental mistouches from launching `MainActivity`. A global `isWidgetCustomizationEnabled` master toggle allows users to switch between customized widget parameters and default automatic sync across all accounts.
 - **Rationale**: Android widget root click listeners intercept taps that fall outside tight text bounds; a dedicated pill container prevents unwanted app launches. The master switch allows users to revert easily to zero-configuration global balance tracking.
 
+### 12. Explicit Wallet Selection & Overpayment Bounds in Debt Settlements
+- **Decision**: All partial and full debt settlements (`_showPartialPaymentDialog`, `_showSettleUpDialog`) must provide an explicit account/wallet dropdown selector and validate that the repayment amount never exceeds `debt.remainingAmount`.
+- **Rationale**: Blindly deducting from `wallets.first` corrupts multi-account ledger accuracy when repayments occur through alternate bank accounts or cash. Overpayments break ledger parity.
+
+### 13. Indian Financial Multipliers in Natural Language Processing
+- **Decision**: In addition to `k` (thousands), the NLP parser explicitly supports Indian financial denomination suffixes: Lakh (`L`, `lac`, `lakh`, `lakhs` $\times 100,000$) and Crore (`cr`, `crore`, `crores` $\times 10,000,000$).
+- **Rationale**: Eliminates false parser drops and manual decimal typing when users input large asset purchases, business loans, or investments in native shorthand.
+
+### 14. Dynamic Macro Inflation Horizon & Baseline Neutrality
+- **Decision**: Macro purchasing power depreciation calculates time horizons dynamically relative to `DateTime.now().year`, with `_pastYear == currentYear` returning a 0.0% loss with a dedicated emerald `"🌱 100% Real Value • Present Baseline"` badge.
+- **Rationale**: Prevents hardcoded static years from going stale in future years and prevents same-year anchor calculations from displaying false purchasing power depreciation.
+
+### 15. Transfer Liquidity Exclusion in Sankey Flow Visualizations
+- **Decision**: The Sankey 3-stage cashflow diagram strictly filters out `cat_transfer` transactions from the monthly calculation set.
+- **Rationale**: Transfers between internal wallets do not represent net exogenous inflow or outflow; including them creates artificial cashflow inflation.
+
