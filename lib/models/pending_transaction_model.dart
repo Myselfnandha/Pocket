@@ -18,6 +18,7 @@ class PendingTransactionModel {
   final String? linkedContactPhone;
   final bool isIncome;
   final String? sourceMessageId;
+  final bool autoSaveDirect;
 
   const PendingTransactionModel({
     required this.id,
@@ -39,6 +40,7 @@ class PendingTransactionModel {
     this.linkedContactPhone,
     this.isIncome = false,
     this.sourceMessageId,
+    this.autoSaveDirect = false,
   });
 
   /// Stable deterministic signature for idempotency and tombstone checks
@@ -69,6 +71,7 @@ class PendingTransactionModel {
     String? linkedContactPhone,
     bool? isIncome,
     String? sourceMessageId,
+    bool? autoSaveDirect,
   }) {
     return PendingTransactionModel(
       id: id ?? this.id,
@@ -90,6 +93,7 @@ class PendingTransactionModel {
       linkedContactPhone: linkedContactPhone ?? this.linkedContactPhone,
       isIncome: isIncome ?? this.isIncome,
       sourceMessageId: sourceMessageId ?? this.sourceMessageId,
+      autoSaveDirect: autoSaveDirect ?? this.autoSaveDirect,
     );
   }
 
@@ -113,6 +117,7 @@ class PendingTransactionModel {
         'linkedContactPhone': linkedContactPhone,
         'isIncome': isIncome,
         'sourceMessageId': sourceMessageId,
+        'autoSaveDirect': autoSaveDirect,
       };
 
   factory PendingTransactionModel.fromJson(Map<String, dynamic> json) {
@@ -156,6 +161,7 @@ class PendingTransactionModel {
       linkedContactPhone: json['linkedContactPhone'] as String?,
       isIncome: json['isIncome'] == true,
       sourceMessageId: json['sourceMessageId'] as String?,
+      autoSaveDirect: json['autoSaveDirect'] == true || json['auto_save_direct'] == true,
     );
   }
 }

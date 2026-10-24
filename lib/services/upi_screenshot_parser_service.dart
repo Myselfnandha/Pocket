@@ -326,13 +326,80 @@ class UpiScreenshotParserService {
     return const {'completed', 'successful', 'upi', 'banking', 'account', 'ref', 'details', 'transfer', 'payment', 'rupees', 'rs'}.contains(lower);
   }
 
-  /// Matches merchant keywords to default categories
-  static String predictCategory(String merchant, String rawText, {bool isIncome = false}) {
-    final combined = '$merchant $rawText'.toLowerCase();
+  /// Matches merchant, raw text, and source keywords to default categories
+  static String predictCategory(
+    String merchant,
+    String rawText, {
+    bool isIncome = false,
+    String? source,
+    String? senderBank,
+  }) {
+    final src = '${source ?? ''} ${senderBank ?? ''}'.toLowerCase();
+    final combined = '$merchant $rawText $src'.toLowerCase();
 
-    // Income Categories
+    // 1. Source / Sender Bank Header Matching
+    if (src.isNotEmpty) {
+      if (RegExp(r'\b(zerodh|groww|upstox|angelb|camson|kfinte|nseind|bseind|kuvera|5paisa|dhan|motosl)\b').hasMatch(src)) {
+        return 'cat_investments';
+      }
+      if (RegExp(r'\b(cred|onecrd|slice|sbicrd|hdfccc|bobcrd|icicic|uni|jioinf|airtel|vilnot|bescom|tnebpr|cescom|mahads|adanie|igasl|torrnt|tatapw|bsesdl|igl)\b').hasMatch(src)) {
+        return 'cat_bills';
+      }
+      if (RegExp(r'\b(irctc|redtxn|makemy|goibib|yatrad|indigo|airind|spicej|vistar|akasa)\b').hasMatch(src)) {
+        return 'cat_travel';
+      }
+      if (RegExp(r'\b(uberin|olacab|rapido|fastag|netc|ihmcl|hpcl|bpcl|ioc)\b').hasMatch(src)) {
+        return 'cat_transport';
+      }
+      if (RegExp(r'\b(zomato|swiggy|domino|mcdonl|kfcind|pizahu|dunzo)\b').hasMatch(src)) {
+        return 'cat_food';
+      }
+      if (RegExp(r'\b(blinkt|zepto|bigbsk|dmart|jinsta|otipy)\b').hasMatch(src)) {
+        return 'cat_groceries';
+      }
+      if (RegExp(r'\b(amazon|flpkrt|myntra|ajio|meesho|nykaa|tataqq)\b').hasMatch(src)) {
+        return 'cat_shopping';
+      }
+      if (RegExp(r'\b(bmshow|netflx|spotfy|hotstr|sonyliv|zee5)\b').hasMatch(src)) {
+        return 'cat_entertainment';
+      }
+      if (RegExp(r'\b(apollo|medpls|pharme|netmed|tata1m|cultft)\b').hasMatch(src)) {
+        return 'cat_health';
+      }
+    }
+
+    // 2. UPI VPA Handles (@handle)
+    if (RegExp(r'@(?:swiggy|zomato|rebel|freshmenu|eatsure|faasos)\b').hasMatch(combined)) {
+      return 'cat_food';
+    }
+    if (RegExp(r'@(?:blinkit|zepto|bigbasket|instamart|dmart)\b').hasMatch(combined)) {
+      return 'cat_groceries';
+    }
+    if (RegExp(r'@(?:uber|ola|rapido|fastag|iocl|hpcl|bpcl)\b').hasMatch(combined)) {
+      return 'cat_transport';
+    }
+    if (RegExp(r'@(?:irctc|makemytrip|goibibo|yatra|cleartrip|indigo)\b').hasMatch(combined)) {
+      return 'cat_travel';
+    }
+    if (RegExp(r'@(?:amazonpay|flipkart|myntra|ajio|meesho|nykaa)\b').hasMatch(combined)) {
+      return 'cat_shopping';
+    }
+    if (RegExp(r'@(?:netflix|spotify|bookmyshow|disney|hotstar|apple)\b').hasMatch(combined)) {
+      return 'cat_entertainment';
+    }
+    if (RegExp(r'@(?:bescom|tneb|tatapower|airtel|jio|cred)\b').hasMatch(combined)) {
+      return 'cat_bills';
+    }
+    if (RegExp(r'@(?:apollo|medplus|pharmeasy|cultfit)\b').hasMatch(combined)) {
+      return 'cat_health';
+    }
+    if (RegExp(r'@(?:zerodha|groww|upstox|angelbroking)\b').hasMatch(combined)) {
+      return 'cat_investments';
+    }
+
+    // 3. Income Categories
     if (isIncome) {
-      if (RegExp(r'\b(salary|payroll|stipend|wages|employer|direct dep|direct deposit|pension)\b')
+      if (RegExp(r'\b(salary|payroll|stipend|wages|employer|direct dep|direct deposit|pension|remuneration)\b')
           .hasMatch(combined)) {
         return 'cat_salary';
       }
@@ -340,61 +407,80 @@ class UpiScreenshotParserService {
           .hasMatch(combined)) {
         return 'cat_freelance';
       }
-      if (RegExp(r'\b(dividend|interest|groww|zerodha|upstox|mutual fund|stock|shares|returns|investment)\b')
+      if (RegExp(r'\b(dividend|interest|groww|zerodha|upstox|mutual fund|stock|shares|returns|investment|capital gain|sgb|gold)\b')
           .hasMatch(combined)) {
         return 'cat_investments';
       }
-      if (RegExp(r'\b(gift|reward|cashback|bonus|prize|cash back)\b')
+      if (RegExp(r'\b(gift|reward|cashback|bonus|prize|cash back|reward point|referral)\b')
           .hasMatch(combined)) {
         return 'cat_gifts';
       }
-      if (RegExp(r'\b(refund|reversal|reimbursement|return|cred)\b')
+      if (RegExp(r'\b(refund|reversal|reimbursement|return|cred reward|reversal credit)\b')
           .hasMatch(combined)) {
         return 'cat_other_inc';
       }
       return 'cat_salary';
     }
 
+    // 4. Expense Categories
     // Food & Dining
-    if (RegExp(r'\b(zomato|swiggy|mcdonalds|dominos|kfc|starbucks|burger|restaurant|cafe|bakery|dhabha|food|dining|pizza|tea|coffee|biryani|subway)\b')
+    if (RegExp(r'\b(zomato|swiggy|mcdonalds|mcdonald|dominos|domino|kfc|starbucks|burger|restaurant|cafe|bakery|dhabha|food|dining|pizza|tea|coffee|biryani|subway|canteen|mess|sweets|juice|shawarma|waffle|snacks|pub|lounge|bar|chai)\b')
         .hasMatch(combined)) {
       return 'cat_food';
     }
 
     // Groceries
-    if (RegExp(r'\b(blinkit|zepto|instamart|bigbasket|supermarket|kirana|vegetable|fruits|grocery|groceries|mart|store|dmart|spencer)\b')
+    if (RegExp(r'\b(blinkit|zepto|instamart|bigbasket|supermarket|kirana|vegetable|fruits|grocery|groceries|mart|store|dmart|spencer|nature basket|provision|sabzi|mandi|milk|dairy|amul|nandini|country delight|more retail|bazaar)\b')
         .hasMatch(combined)) {
       return 'cat_groceries';
     }
 
     // Transport & Fuel
-    if (RegExp(r'\b(uber|ola|rapido|metro|petrol|diesel|fuel|hpcl|bpcl|ioc|indian oil|auto|cab|toll|fastag|parking)\b')
+    if (RegExp(r'\b(uber|ola|rapido|metro|petrol|diesel|fuel|hpcl|bpcl|ioc|indian oil|auto|cab|toll|fastag|parking|garage|mechanic|shell|nayara|bike service|car service|namma metro|delhi metro)\b')
         .hasMatch(combined)) {
       return 'cat_transport';
     }
 
+    // Travel & Lodging
+    if (RegExp(r'\b(irctc|makemytrip|goibibo|easemytrip|yatra|cleartrip|redbus|abhibus|flight|train|airline|indigo|air india|spicejet|vistara|akasa|airasia|airport|hotel|resort|airbnb|booking\.com|agoda|oyo|trip|vacation|tour)\b')
+        .hasMatch(combined)) {
+      return 'cat_travel';
+    }
+
     // Shopping & E-Commerce
-    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|shopping|cloth|apparel|retail|mall)\b')
+    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|shopping|cloth|apparel|retail|mall|zara|h&m|uniqlo|max fashion|trends|westside|pantaloons|reliance digital|croma|vijay sales|decathlon|lenskart|titan|tanishq|shoes|footwear|electronics|tata cliq|snapdeal)\b')
         .hasMatch(combined)) {
       return 'cat_shopping';
     }
 
     // Entertainment & Subscriptions
-    if (RegExp(r'\b(netflix|spotify|hotstar|prime|youtube|cinema|movie|pvr|inox|bookmyshow|steam|playstation)\b')
+    if (RegExp(r'\b(netflix|spotify|hotstar|prime|youtube|cinema|movie|pvr|inox|bookmyshow|steam|playstation|cinepolis|theater|concert|music|sonyliv|zee5|apple music|game|gaming|bgmi|google play)\b')
         .hasMatch(combined)) {
       return 'cat_entertainment';
     }
 
     // Utilities & Bills
-    if (RegExp(r'\b(electricity|bescom|water|gas|broadband|wifi|jio|airtel|vi|recharge|bill|cylinder|postpaid)\b')
+    if (RegExp(r'\b(electricity|bescom|water|gas|broadband|wifi|jio|airtel|vi|recharge|bill|cylinder|postpaid|tneb|wbse|tata power|adani|torrent|bses|piped gas|lpg|indane|bharat gas|hp gas|fiber|act fiber|hathway|dth|tata play|sun direct|cred|card bill|credit card bill|credit card|loan emi|emi|insurance|lic|premium|bbps)\b')
         .hasMatch(combined)) {
       return 'cat_bills';
     }
 
     // Health & Fitness
-    if (RegExp(r'\b(pharmacy|apollo|medplus|pharmeasy|hospital|clinic|doctor|gym|fitness|cult|medicine)\b')
+    if (RegExp(r'\b(pharmacy|apollo|medplus|pharmeasy|hospital|clinic|doctor|gym|fitness|cult|medicine|1mg|netmeds|tata 1mg|chemist|prescription|dental|dentist|eye|diagnostics|lab|blood test|yoga|protein|supplements)\b')
         .hasMatch(combined)) {
       return 'cat_health';
+    }
+
+    // Rent & Housing
+    if (RegExp(r'\b(rent|house rent|flat rent|room rent|society maintenance|apartment|landlord|nobroker|nestaway|housing)\b')
+        .hasMatch(combined)) {
+      return 'cat_rent';
+    }
+
+    // Education
+    if (RegExp(r'\b(school|college|university|fees|tuition|coursera|udemy|edx|coaching|books|unacademy|physics wallah|allen|exam|library|stationery)\b')
+        .hasMatch(combined)) {
+      return 'cat_education';
     }
 
     return 'cat_others';

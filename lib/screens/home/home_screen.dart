@@ -85,12 +85,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         }
         if (granted) {
           ref.read(pendingTransactionsProvider.notifier).fetchPendingTransactions();
+          final currentTxs = ref.read(transactionsProvider);
+          if (currentTxs.isEmpty) {
+            await autoImport.autoLogPastSmsTransactions(daysLookback: 0);
+            ref.invalidate(transactionsProvider);
+            ref.invalidate(walletsProvider);
+          } else {
+            ref.read(pendingTransactionsProvider.notifier).syncRecentSmsInbox(daysLookback: 7);
+          }
         }
       } else {
         if (mounted) {
           setState(() {
             _smsPermissionMissing = !perms.isSmsListenerEnabled && settings.autoReadSmsEnabled;
           });
+        }
+        if (perms.isSmsListenerEnabled) {
+          final currentTxs = ref.read(transactionsProvider);
+          if (currentTxs.isEmpty) {
+            await autoImport.autoLogPastSmsTransactions(daysLookback: 0);
+            ref.invalidate(transactionsProvider);
+            ref.invalidate(walletsProvider);
+          }
         }
       }
     } catch (_) {}

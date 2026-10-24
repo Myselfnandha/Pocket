@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import '../models/pending_transaction_model.dart';
 import '../models/category_model.dart';
 import '../models/wallet_model.dart';
 import '../models/transaction_model.dart';
 import 'storage_service.dart';
 import 'upi_screenshot_parser_service.dart';
+import 'bank_discovery_service.dart';
 
 class AutoImportPermissions {
   final bool isNotificationListenerEnabled;
@@ -232,7 +234,15 @@ class AutoImportService {
 
       // Assign suggested category and wallet
       final suggestedCat = item.suggestedCategoryId ??
-          _predictCategory(item.merchant, item.rawPayload ?? '', categories, isIncome: item.isIncome);
+          _predictCategory(
+            item.merchant,
+            item.rawPayload ?? '',
+            categories,
+            isIncome: item.isIncome,
+            appSource: item.appSource,
+            senderBank: item.senderBank,
+            detectionSource: item.detectionSource,
+          );
       final suggestedWallet = _matchWallet(item, wallets);
 
       result.add(item.copyWith(
@@ -249,26 +259,54 @@ class AutoImportService {
     String rawPayload,
     List<CategoryModel> categories, {
     bool isIncome = false,
+    String? appSource,
+    String? senderBank,
+    String? detectionSource,
   }) {
-    final pred = UpiScreenshotParserService.predictCategory(merchant, rawPayload, isIncome: isIncome);
+    final pred = UpiScreenshotParserService.predictCategory(
+      merchant,
+      rawPayload,
+      isIncome: isIncome,
+      source: appSource,
+      senderBank: senderBank,
+    );
     final normalized = pred.replaceFirst('cat_', '');
 
-    // 1. First try matching categories matching transaction type
+    // Map common aliases to default category IDs
+    final aliasMap = {
+      'bills': 'utilities',
+      'bill': 'utilities',
+      'investment': 'investments',
+      'others': isIncome ? 'other_inc' : 'other_exp',
+      'other': isIncome ? 'other_inc' : 'other_exp',
+    };
+    final targetId = aliasMap[normalized] ?? normalized;
+
+    // 1. First try matching categories matching transaction type by ID
     for (final c in categories) {
       if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
-          (c.id == normalized || c.id == pred || c.name.toLowerCase().contains(normalized))) {
+          (c.id == targetId || c.id == normalized || c.id == pred)) {
         return c.id;
       }
     }
 
-    // 2. Fallback search across all categories
+    // 2. Next try matching category name matching transaction type
     for (final c in categories) {
-      if (c.id == normalized || c.id == pred || c.name.toLowerCase().contains(normalized)) {
+      if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
+          (c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized))) {
         return c.id;
       }
     }
 
-    // 3. Direction-aware defaults
+    // 3. Fallback search across all categories by ID or Name
+    for (final c in categories) {
+      if (c.id == targetId || c.id == normalized || c.id == pred ||
+          c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized)) {
+        return c.id;
+      }
+    }
+
+    // 4. Direction-aware defaults
     if (isIncome) {
       final incomeCats = categories.where((c) => c.type == TransactionType.income).toList();
       return incomeCats.isNotEmpty ? incomeCats.first.id : 'salary';
@@ -535,5 +573,151 @@ class AutoImportService {
     }
 
     return null;
+  }
+
+  /// Public category prediction helper with source-based and UPI VPA heuristics
+  String predictCategory(
+    String merchant,
+    String rawPayload,
+    List<CategoryModel> categories, {
+    bool isIncome = false,
+    String? appSource,
+    String? senderBank,
+    String? detectionSource,
+  }) =>
+      _predictCategory(
+        merchant,
+        rawPayload,
+        categories,
+        isIncome: isIncome,
+        appSource: appSource,
+        senderBank: senderBank,
+        detectionSource: detectionSource,
+      );
+
+  /// Public wallet matching helper
+  String matchWallet(PendingTransactionModel item, List<WalletModel> wallets) =>
+      _matchWallet(item, wallets);
+
+  /// Scans device SMS inbox for bank transactions, applies source-based auto-categorization
+  /// and wallet matching, and saves them directly into the database without requiring manual review.
+  /// Returns the number of successfully logged transactions.
+  Future<int> autoLogPastSmsTransactions({int daysLookback = 0}) async {
+    final perms = await checkPermissions();
+    if (!perms.isSmsListenerEnabled) {
+      final granted = await requestSmsPermission();
+      if (!granted) return 0;
+    }
+
+    final rawPast = await scanSmsInbox(daysLookback: daysLookback);
+    if (rawPast.isEmpty) return 0;
+
+    final existingTxs = _storage.getTransactions();
+    final categories = _storage.getCategories();
+    final wallets = _storage.getWallets();
+
+    final List<TransactionModel> txsToSave = [];
+    final List<String> processedMsgIds = [];
+    final fallbackWalletId = wallets.isNotEmpty
+        ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
+        : 'cash';
+
+    final Map<String, ({double balance, DateTime date})> latestWalletBalances = {};
+
+    for (final item in rawPast) {
+      if (item.amount <= 0) continue;
+      if (isAlreadySaved(item, existingTxs)) continue;
+
+      // Deduplicate against items already in this batch
+      final alreadyInBatch = txsToSave.any((t) =>
+          (item.refId != null && item.refId!.isNotEmpty && t.refId == item.refId) ||
+          ((t.amount - item.amount).abs() < 0.01 &&
+              t.date.difference(item.date).inSeconds.abs() <= 90 &&
+              (t.title.toLowerCase() == item.merchant.toLowerCase())));
+      if (alreadyInBatch) continue;
+
+      final matchedWalletId = findExplicitMatchingWallet(item, wallets) ??
+          _matchWallet(item, wallets);
+      final effectiveWalletId = wallets.any((w) => w.id == matchedWalletId)
+          ? matchedWalletId
+          : fallbackWalletId;
+
+      final effectiveCategoryId = item.suggestedCategoryId ??
+          _predictCategory(
+            item.merchant,
+            item.rawPayload ?? '',
+            categories,
+            isIncome: item.isIncome,
+            appSource: item.appSource,
+            senderBank: item.senderBank,
+            detectionSource: item.detectionSource,
+          );
+
+      final effectiveNote = item.refId != null && item.refId!.isNotEmpty
+          ? 'Ref: ${item.refId}'
+          : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
+
+      txsToSave.add(
+        TransactionModel(
+          id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
+          title: item.merchant.trim().isNotEmpty ? item.merchant.trim() : (item.isIncome ? 'Deposit' : 'Payment'),
+          amount: item.amount,
+          type: item.isIncome ? TransactionType.income : TransactionType.expense,
+          categoryId: effectiveCategoryId,
+          walletId: effectiveWalletId,
+          date: item.date,
+          note: effectiveNote,
+          refId: item.refId,
+          counterpartyLast4: item.counterpartyLast4,
+          appSource: item.appSource,
+          rawPayload: item.rawPayload,
+          createdAt: item.date,
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      if (item.sourceMessageId != null) {
+        processedMsgIds.add(item.sourceMessageId!);
+      }
+
+      // Track available balance if reported in the message
+      final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
+      if (extractedBal != null) {
+        final currentLatest = latestWalletBalances[effectiveWalletId];
+        if (currentLatest == null || item.date.isAfter(currentLatest.date)) {
+          latestWalletBalances[effectiveWalletId] = (balance: extractedBal, date: item.date);
+        }
+      }
+    }
+
+    if (txsToSave.isNotEmpty) {
+      await _storage.saveTransactions([...existingTxs, ...txsToSave]);
+      for (final msgId in processedMsgIds) {
+        await _storage.addProcessedMessageId(msgId);
+      }
+
+      // Update wallet balances with fresh SMS balances if available
+      if (latestWalletBalances.isNotEmpty && wallets.isNotEmpty) {
+        final updatedWallets = wallets.map((w) {
+          final latestBal = latestWalletBalances[w.id];
+          if (latestBal != null) {
+            final isFresher = w.balanceSnapshotAt == null ||
+                latestBal.date.isAfter(w.balanceSnapshotAt!) ||
+                latestBal.date.isAtSameMomentAs(w.balanceSnapshotAt!);
+            if (isFresher) {
+              return w.copyWith(
+                initialBalance: latestBal.balance,
+                currentBalance: latestBal.balance,
+                balanceSnapshotAt: latestBal.date,
+              );
+            }
+          }
+          return w;
+        }).toList();
+        await _storage.saveWallets(updatedWallets);
+      }
+    }
+
+    return txsToSave.length;
   }
 }

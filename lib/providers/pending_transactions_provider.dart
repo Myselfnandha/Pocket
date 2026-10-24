@@ -54,16 +54,18 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       for (final item in merged) {
         final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
             (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
-        final isAutoDirect = item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true');
+        final isAutoDirect = item.autoSaveDirect ||
+            (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true'));
+        final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
 
-        if (isPaytm || (isAutoDirect && settings.autoSaveSms)) {
+        if (isPaytm || (isSms && settings.autoSaveSms) || (isAutoDirect && settings.autoSaveSms)) {
           var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
           if (matchedWalletId == null && wallets.isNotEmpty) {
             final upiOrPaytm = wallets.where((w) =>
                 w.walletType == WalletType.upi ||
                 w.name.toLowerCase().contains('paytm') ||
                 w.name.toLowerCase().contains('upi')).firstOrNull;
-            matchedWalletId = upiOrPaytm?.id ?? wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id;
+            matchedWalletId = upiOrPaytm?.id ?? service.matchWallet(item, wallets);
           }
           if (matchedWalletId != null) {
             autoCommitItems.add(MapEntry(item, matchedWalletId));
@@ -150,6 +152,14 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...newItems]);
       state = merged;
+
+      // Auto-commit newly synced SMS directly to database without manual review when autoSaveSms is enabled
+      final settings = _ref.read(settingsProvider);
+      if (settings.autoSaveSms) {
+        for (final item in newItems) {
+          await approve(item.id);
+        }
+      }
     } catch (_) {
       // Defensive handling
     } finally {

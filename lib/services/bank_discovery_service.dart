@@ -52,6 +52,16 @@ class DiscoveredBankAccount {
   }
 }
 
+class BankDiscoveryResult {
+  final List<DiscoveredBankAccount> accounts;
+  final List<PendingTransactionModel> transactions;
+
+  const BankDiscoveryResult({
+    required this.accounts,
+    required this.transactions,
+  });
+}
+
 class BankDiscoveryService {
   static final RegExp _maskedAccountPattern = RegExp(
     r'(?:a/c|ac|account|card|acct|loan\s*a/c|loan\s*no\.?)\s*(?:no\.?|num\.?)?\s*(?:ending(?:\s+in|\s+with)?)?\s*[:\s]*[0-9]*[*xX.-]+([0-9]{3,6})\b',
@@ -81,14 +91,32 @@ class BankDiscoveryService {
     return null;
   }
 
+  /// Scans device SMS inbox and aggregates unique bank accounts & cards with real available balances,
+  /// as well as all discovered past transactions.
+  static Future<BankDiscoveryResult> discoverDetailedFromSms(
+    AutoImportService autoImportService, {
+    int daysLookback = 0,
+  }) async {
+    final smsList = await autoImportService.scanSmsInbox(daysLookback: daysLookback);
+    if (smsList.isEmpty) {
+      return const BankDiscoveryResult(accounts: [], transactions: []);
+    }
+
+    final accounts = _aggregateAccounts(smsList);
+    final validTxs = smsList.where((item) => item.amount > 0.0).toList();
+    return BankDiscoveryResult(accounts: accounts, transactions: validTxs);
+  }
+
   /// Scans device SMS inbox and aggregates unique bank accounts & cards with real available balances
   static Future<List<DiscoveredBankAccount>> discoverFromSms(
     AutoImportService autoImportService, {
     int daysLookback = 0,
   }) async {
-    final smsList = await autoImportService.scanSmsInbox(daysLookback: daysLookback);
-    if (smsList.isEmpty) return [];
+    final detailed = await discoverDetailedFromSms(autoImportService, daysLookback: daysLookback);
+    return detailed.accounts;
+  }
 
+  static List<DiscoveredBankAccount> _aggregateAccounts(List<PendingTransactionModel> smsList) {
     // Map key: "bankName_last4" -> DiscoveredBankAccount
     final Map<String, DiscoveredBankAccount> discoveredMap = {};
     final Map<String, int> txCounts = {};

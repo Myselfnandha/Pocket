@@ -8,9 +8,12 @@ import '../../models/budget_model.dart';
 import '../../models/category_model.dart';
 import '../../models/wallet_model.dart';
 import '../../models/settings_model.dart';
+import '../../models/transaction_model.dart';
+import '../../models/pending_transaction_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
 import '../../services/bank_discovery_service.dart';
+import '../../services/system_widget_service.dart';
 import '../../theme/app_theme.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -52,6 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
   final List<WalletModel> _onboardingWallets = [];
   List<DiscoveredBankAccount> _discoveredBankAccounts = [];
+  List<PendingTransactionModel> _discoveredPastTransactions = [];
   bool _isScanningSms = false;
   bool _hasScannedSms = false;
   late List<CategoryModel> _onboardingCategories;
@@ -218,7 +222,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     final currencySymbol = _selectedCurrencySymbol ?? '₹';
     final currencyCode = _selectedCurrencyCode ?? 'INR';
 
-    // 1. Save all settings & preferences
+    // 1. Save all settings & preferences (with autoSaveSms enabled for direct auto-logging without manual review)
     await ref.read(settingsProvider.notifier).updateSettings(
           ref.read(settingsProvider).copyWith(
                 userName: name,
@@ -235,6 +239,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 notifyBudgetExceeded: _budgetExceededEnabled,
                 notifyRecurringDue: _recurringDueEnabled,
                 monthlySummaryEnabled: _monthlySummaryEnabled,
+                autoSaveSms: true,
+                autoReadSmsEnabled: true,
                 isOnboarded: true,
               ),
         );
@@ -268,10 +274,97 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     await storage.saveCategoryBudgets(budgetsToSave);
     ref.invalidate(categoryBudgetsProvider);
 
-    // 5. Request Notification & SMS Permissions
+    // 5. Request Notification & SMS Permissions and persist autoSaveSms preference
+    final autoImport = ref.read(autoImportServiceProvider);
     try {
       await NotificationService().requestPermissions();
-      await ref.read(autoImportServiceProvider).requestSmsPermission();
+      final granted = await autoImport.requestSmsPermission();
+      if (granted) {
+        await autoImport.setAutoSaveSmsPreference(true);
+      }
+    } catch (_) {}
+
+    // 6. Auto-log discovered past SMS transactions without requiring manual review
+    try {
+      final existingTxs = storage.getTransactions();
+      final List<TransactionModel> txsToSave = [];
+      final List<String> processedMsgIds = [];
+      final fallbackWalletId = _onboardingWallets.isNotEmpty
+          ? (_onboardingWallets.firstWhere((w) => w.isDefault, orElse: () => _onboardingWallets.first).id)
+          : 'cash';
+
+      final candidateTxs = _discoveredPastTransactions.isNotEmpty
+          ? _discoveredPastTransactions
+          : await autoImport.scanSmsInbox(daysLookback: 0);
+
+      for (final item in candidateTxs) {
+        if (item.amount <= 0) continue;
+        if (autoImport.isAlreadySaved(item, existingTxs)) continue;
+
+        // Deduplicate against items already in this batch
+        final alreadyInBatch = txsToSave.any((t) =>
+            (item.refId != null && item.refId!.isNotEmpty && t.refId == item.refId) ||
+            ((t.amount - item.amount).abs() < 0.01 &&
+                t.date.difference(item.date).inSeconds.abs() <= 90 &&
+                (t.title.toLowerCase() == item.merchant.toLowerCase())));
+        if (alreadyInBatch) continue;
+
+        final matchedWalletId = autoImport.findExplicitMatchingWallet(item, _onboardingWallets) ??
+            autoImport.matchWallet(item, _onboardingWallets);
+        final effectiveWalletId = _onboardingWallets.any((w) => w.id == matchedWalletId)
+            ? matchedWalletId
+            : fallbackWalletId;
+
+        final effectiveCategoryId = item.suggestedCategoryId ??
+            autoImport.predictCategory(
+              item.merchant,
+              item.rawPayload ?? '',
+              _onboardingCategories,
+              isIncome: item.isIncome,
+              appSource: item.appSource,
+              senderBank: item.senderBank,
+              detectionSource: item.detectionSource,
+            );
+
+        final effectiveNote = item.refId != null && item.refId!.isNotEmpty
+            ? 'Ref: ${item.refId}'
+            : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
+
+        txsToSave.add(
+          TransactionModel(
+            id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
+            title: item.merchant.trim().isNotEmpty ? item.merchant.trim() : (item.isIncome ? 'Deposit' : 'Payment'),
+            amount: item.amount,
+            type: item.isIncome ? TransactionType.income : TransactionType.expense,
+            categoryId: effectiveCategoryId,
+            walletId: effectiveWalletId,
+            date: item.date,
+            note: effectiveNote,
+            refId: item.refId,
+            counterpartyLast4: item.counterpartyLast4,
+            appSource: item.appSource,
+            rawPayload: item.rawPayload,
+            createdAt: item.date,
+            updatedAt: DateTime.now(),
+          ),
+        );
+
+        if (item.sourceMessageId != null) {
+          processedMsgIds.add(item.sourceMessageId!);
+        }
+      }
+
+      if (txsToSave.isNotEmpty) {
+        await storage.saveTransactions([...existingTxs, ...txsToSave]);
+        for (final msgId in processedMsgIds) {
+          await storage.addProcessedMessageId(msgId);
+        }
+        ref.invalidate(transactionsProvider);
+      }
+    } catch (_) {}
+
+    try {
+      await SystemWidgetService.syncFromStorage(storage);
     } catch (_) {}
 
     if (!mounted) return;
@@ -925,11 +1018,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
         }
       }
 
-      final detected = await BankDiscoveryService.discoverFromSms(autoImport, daysLookback: 0);
+      final result = await BankDiscoveryService.discoverDetailedFromSms(autoImport, daysLookback: 0);
+      final detected = result.accounts;
       if (mounted) {
         final symbol = _selectedCurrencySymbol ?? '₹';
         setState(() {
           _discoveredBankAccounts = detected;
+          _discoveredPastTransactions = result.transactions;
           _hasScannedSms = true;
           _isScanningSms = false;
 
@@ -1148,6 +1243,61 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_discoveredPastTransactions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primaryGreenLight.withValues(alpha: isDark ? 0.2 : 0.12),
+                            AppColors.accentCyan.withValues(alpha: isDark ? 0.08 : 0.04),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: AppColors.primaryGreenLight.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreenLight.withValues(alpha: 0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.bolt_rounded, size: 20, color: AppColors.primaryGreenLight),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_discoveredPastTransactions.length} Past Transactions Discovered',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Auto-categorizing based on source & logging directly to your accounts.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (regularDiscovered.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),

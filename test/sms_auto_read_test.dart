@@ -48,32 +48,35 @@ class FakeStorageService extends Fake implements StorageService {
       ];
 
   @override
-  List<CategoryModel> getCategories() => [];
+  List<CategoryModel> getCategories() => defaultCategories;
 
   @override
   List<TransactionModel> getTransactions() => [];
+
+  @override
+  UserSettingsModel getSettings() => const UserSettingsModel();
 }
 
 void main() {
   group('SMS Auto-Read & Auto-Log Tests', () {
     test('UserSettingsModel serializes autoSaveSms and autoReadSmsEnabled', () {
       const defaultSettings = UserSettingsModel();
-      expect(defaultSettings.autoSaveSms, isFalse);
+      expect(defaultSettings.autoSaveSms, isTrue);
       expect(defaultSettings.autoReadSmsEnabled, isTrue);
 
       final updated = defaultSettings.copyWith(
-        autoSaveSms: true,
+        autoSaveSms: false,
         autoReadSmsEnabled: false,
       );
-      expect(updated.autoSaveSms, isTrue);
+      expect(updated.autoSaveSms, isFalse);
       expect(updated.autoReadSmsEnabled, isFalse);
 
       final json = updated.toJson();
-      expect(json['autoSaveSms'], isTrue);
+      expect(json['autoSaveSms'], isFalse);
       expect(json['autoReadSmsEnabled'], isFalse);
 
       final reconstructed = UserSettingsModel.fromJson(json);
-      expect(reconstructed.autoSaveSms, isTrue);
+      expect(reconstructed.autoSaveSms, isFalse);
       expect(reconstructed.autoReadSmsEnabled, isFalse);
     });
 
@@ -323,5 +326,49 @@ void main() {
       expect(processed.firstWhere((p) => p.id == 'sms_ind_1').suggestedWalletId, 'w_ind');
       expect(processed.firstWhere((p) => p.id == 'sms_indus_1').suggestedWalletId, 'w_indusind');
     });
+
+    test('Source-based categorization maps SMS sender headers and UPI handles accurately', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      // 1. DLT Sender Headers
+      expect(service.predictCategory('Bill Pay', 'Recharge done', appSource: 'AX-JIOINF'), 'utilities');
+      expect(service.predictCategory('Credit Card', 'Bill payment received', appSource: 'VK-CRED'), 'utilities');
+      expect(service.predictCategory('Order Placed', 'Shares bought', appSource: 'BP-ZERODH'), 'investments');
+      expect(service.predictCategory('Ticket Booked', 'Booking confirmed', appSource: 'VM-IRCTC'), 'travel');
+      expect(service.predictCategory('Food Delivery', 'Order confirmed', appSource: 'AD-ZOMATO'), 'food');
+      expect(service.predictCategory('Quick Commerce', 'Delivered in 10 mins', appSource: 'BZ-BLINKT'), 'groceries');
+      expect(service.predictCategory('Shopping Order', 'Order dispatched', appSource: 'BW-AMAZON'), 'shopping');
+      expect(service.predictCategory('Movie Tickets', 'Seats confirmed', appSource: 'VK-BMSHOW'), 'entertainment');
+      expect(service.predictCategory('Pharmacy', 'Medicine ordered', appSource: 'BZ-APOLLO'), 'health');
+
+      // 2. UPI VPA handles
+      expect(service.predictCategory('UPI Transaction', 'Paid to swiggy@okaxis for lunch'), 'food');
+      expect(service.predictCategory('UPI Transaction', 'Paid to irctc@hdfcbank for ticket'), 'travel');
+      expect(service.predictCategory('UPI Transaction', 'Paid to zerodha@icici for funds add'), 'investments');
+      expect(service.predictCategory('UPI Transaction', 'Paid to bescom@sbi for electricity'), 'utilities');
+      expect(service.predictCategory('UPI Transaction', 'Paid to blinkit@yesbank for grocery'), 'groceries');
+    });
+
+    test('PendingTransactionModel serializes and deserializes autoSaveDirect properly', () {
+      final item = PendingTransactionModel(
+        id: 'pending_auto_1',
+        amount: 890.0,
+        merchant: 'Uber',
+        date: DateTime(2026, 10, 24, 12, 0),
+        detectionSource: 'sms',
+        autoSaveDirect: true,
+      );
+
+      final json = item.toJson();
+      expect(json['autoSaveDirect'], isTrue);
+
+      final reconstructed = PendingTransactionModel.fromJson(json);
+      expect(reconstructed.autoSaveDirect, isTrue);
+
+      final toggled = reconstructed.copyWith(autoSaveDirect: false);
+      expect(toggled.autoSaveDirect, isFalse);
+    });
   });
 }
+
