@@ -5,6 +5,7 @@ import '../models/category_model.dart';
 import '../models/pending_transaction_model.dart';
 import '../providers/pending_transactions_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/core_providers.dart';
 import '../providers/wallets_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/currency_formatter.dart';
