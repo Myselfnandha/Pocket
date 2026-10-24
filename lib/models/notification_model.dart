@@ -8,6 +8,7 @@ enum NotificationType {
   dailyReminder,
   monthlySummary,
   system,
+  autoLogged,
 }
 
 extension NotificationTypeExt on NotificationType {
@@ -27,6 +28,8 @@ extension NotificationTypeExt on NotificationType {
         return 'Monthly Financial Summary';
       case NotificationType.system:
         return 'Pocket System Notice';
+      case NotificationType.autoLogged:
+        return 'Auto-Logged Transaction';
     }
   }
 
@@ -46,6 +49,8 @@ extension NotificationTypeExt on NotificationType {
         return Icons.assessment_outlined;
       case NotificationType.system:
         return Icons.info_outline_rounded;
+      case NotificationType.autoLogged:
+        return Icons.bolt_rounded;
     }
   }
 
@@ -65,6 +70,8 @@ extension NotificationTypeExt on NotificationType {
         return const Color(0xFF4CAF50);
       case NotificationType.system:
         return const Color(0xFF2E7D32);
+      case NotificationType.autoLogged:
+        return const Color(0xFF00E676);
     }
   }
 }

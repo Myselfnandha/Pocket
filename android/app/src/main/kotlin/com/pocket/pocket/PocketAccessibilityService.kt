@@ -65,6 +65,9 @@ class PocketAccessibilityService : AccessibilityService() {
                 else -> "UPI App"
             }
 
+            val prefs = applicationContext.getSharedPreferences(PocketNotificationListener.PREFS_NAME, Context.MODE_PRIVATE)
+            val autoSaveUpi = prefs.getBoolean("auto_save_upi", true)
+
             val txJson = JSONObject().apply {
                 put("id", UUID.randomUUID().toString())
                 put("amount", amount)
@@ -75,6 +78,20 @@ class PocketAccessibilityService : AccessibilityService() {
                 put("detectionSource", "screen_reader")
                 put("rawPayload", combined.take(200))
                 put("isIncome", false)
+                if (autoSaveUpi) {
+                    put("autoSaveDirect", true)
+                    put("notificationShown", true)
+                }
+            }
+
+            if (autoSaveUpi) {
+                AutoLogNotificationHelper.showAutoLogNotification(
+                    context = applicationContext,
+                    merchant = merchant,
+                    amount = amount,
+                    isIncome = false,
+                    source = appSource
+                )
             }
 
             PocketNotificationListener.savePendingTransaction(applicationContext, txJson)

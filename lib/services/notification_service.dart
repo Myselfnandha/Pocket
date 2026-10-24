@@ -85,6 +85,7 @@ class NotificationService {
     required String currencySymbol,
     required bool isIncome,
     String? walletName,
+    String? customHeader,
   }) async {
     final prefix = isIncome ? '+' : '-';
     final formattedAmount = '$prefix$currencySymbol${amount.toStringAsFixed(2)}';
@@ -112,7 +113,7 @@ class NotificationService {
       final notifId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _flutterLocalNotificationsPlugin.show(
         notifId,
-        '⚡ Transaction Logged',
+        customHeader ?? '⚡ Transaction Logged',
         body,
         notificationDetails,
       );

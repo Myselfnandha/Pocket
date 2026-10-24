@@ -84,16 +84,18 @@ object SmsParser {
         Pattern.compile("""(?:via|using)\s+upi\s+lite\s+to\s+([A-Za-z0-9&'._\s]{2,35}?)""", Pattern.CASE_INSENSITIVE),
         // "to VPA user@bank" or "to user@bank"
         Pattern.compile("""(?:to\s+vpa|to)\s+([a-zA-Z0-9.\-_]{2,35}@[a-zA-Z0-9.\-_]{2,20})""", Pattern.CASE_INSENSITIVE),
+        // "Info: Amazon Shopping. Avail Bal: INR 18,750.00" or "Desc: Uber Rides"
+        Pattern.compile("""(?:info|desc|description)[:\s]+([A-Za-z0-9&'._\s]{2,35}?)(?:\s+(?:ref|refno|upi|via|on|avl|bal|avail|available|\.|$)|\$)""", Pattern.CASE_INSENSITIVE),
         // "trf to Maggi", "transfer to John", "transferred to Alex"
-        Pattern.compile("(?:trf\\s+to|transfer\\s+to|transferred\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|refno|upi|via|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:trf\\s+to|transfer\\s+to|transferred\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|refno|upi|via|on|avl|bal|avail|available|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "paid to Zomato", "payment to Swiggy", "sent to Blinkit", "paid towards Swiggy", "debited towards Flipkart"
-        Pattern.compile("(?:paid\\s+(?:to|towards)|payment\\s+(?:to|towards)|sent\\s+(?:to|towards)|debited\\s+(?:for|towards)|spent\\s+(?:on|towards))\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:paid\\s+(?:to|towards)|payment\\s+(?:to|towards)|sent\\s+(?:to|towards)|debited\\s+(?:for|towards)|spent\\s+(?:on|towards))\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|avl|bal|avail|available|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "towards AMAZON PAY", "towards: STARBUCKS", "for NETFLIX"
-        Pattern.compile("(?:towards|for)[:\\s]+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:towards|for)[:\\s]+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|avl|bal|avail|available|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "at RELIANCE RETAIL", "at STARBUCKS"
-        Pattern.compile("(?:\\bat\\s+)([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:on|via|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:\\bat\\s+)([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:on|via|ref|upi|avl|bal|avail|available|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "credited by transfer from TECHCORP"
-        Pattern.compile("(?:from|by\\s+transfer\\s+from)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|upi|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:from|by\\s+transfer\\s+from)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|upi|on|avl|bal|avail|available|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
     )
 
     fun parse(sender: String, body: String, timestamp: Long, smsId: String? = null): ParsedSmsTransaction? {
@@ -311,9 +313,10 @@ object SmsParser {
 
     private fun cleanMerchantName(name: String): String {
         return name
-            .replace(Regex("(?i)\\b(ltd|pvt|limited|india|store|upi|payment|pos|ecom|vpa)\\b"), "")
+            .replace(Regex("(?i)\\b(ltd|pvt|limited|india|store|upi|payment|pos|ecom|vpa|avail|bal|balance)\\b"), "")
             .replace(Regex("[^a-zA-Z0-9&'._\\s-]"), "")
             .trim()
+            .trim('.', '-', '_', ' ')
             .take(30)
             .ifEmpty { "Payment" }
     }

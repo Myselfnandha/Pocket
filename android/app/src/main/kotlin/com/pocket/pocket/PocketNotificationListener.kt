@@ -262,12 +262,22 @@ class PocketNotificationListener : NotificationListenerService() {
             }
         }
 
-        savePendingTransaction(applicationContext, txJson)
-
-        // Automatically update home screen widgets without foreground app running!
-        if (isPaytm || isAutoSaveEnabled(applicationContext)) {
+        val autoSave = isPaytm || isAutoSaveEnabled(applicationContext)
+        if (autoSave) {
+            txJson.put("autoSaveDirect", true)
+            txJson.put("notificationShown", true)
+            AutoLogNotificationHelper.showAutoLogNotification(
+                context = applicationContext,
+                merchant = merchant,
+                amount = amount,
+                isIncome = isIncome,
+                source = appSource,
+                last4 = last4
+            )
             updateWidgetDirectly(applicationContext, amount, isIncome, merchant)
         }
+
+        savePendingTransaction(applicationContext, txJson)
     }
 
     private fun isAutoSaveEnabled(context: Context): Boolean {

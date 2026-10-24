@@ -406,16 +406,20 @@ void main() {
         date: DateTime(2026, 10, 24, 12, 0),
         detectionSource: 'sms',
         autoSaveDirect: true,
+        notificationShown: true,
       );
 
       final json = item.toJson();
       expect(json['autoSaveDirect'], isTrue);
+      expect(json['notificationShown'], isTrue);
 
       final reconstructed = PendingTransactionModel.fromJson(json);
       expect(reconstructed.autoSaveDirect, isTrue);
+      expect(reconstructed.notificationShown, isTrue);
 
-      final toggled = reconstructed.copyWith(autoSaveDirect: false);
+      final toggled = reconstructed.copyWith(autoSaveDirect: false, notificationShown: false);
       expect(toggled.autoSaveDirect, isFalse);
+      expect(toggled.notificationShown, isFalse);
     });
 
     // 1. Counterparty / Merchant Detection with "towards"

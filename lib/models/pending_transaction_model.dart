@@ -19,6 +19,7 @@ class PendingTransactionModel {
   final bool isIncome;
   final String? sourceMessageId;
   final bool autoSaveDirect;
+  final bool notificationShown;
 
   const PendingTransactionModel({
     required this.id,
@@ -41,6 +42,7 @@ class PendingTransactionModel {
     this.isIncome = false,
     this.sourceMessageId,
     this.autoSaveDirect = false,
+    this.notificationShown = false,
   });
 
   /// Stable deterministic signature for idempotency and tombstone checks
@@ -72,6 +74,7 @@ class PendingTransactionModel {
     bool? isIncome,
     String? sourceMessageId,
     bool? autoSaveDirect,
+    bool? notificationShown,
   }) {
     return PendingTransactionModel(
       id: id ?? this.id,
@@ -94,6 +97,7 @@ class PendingTransactionModel {
       isIncome: isIncome ?? this.isIncome,
       sourceMessageId: sourceMessageId ?? this.sourceMessageId,
       autoSaveDirect: autoSaveDirect ?? this.autoSaveDirect,
+      notificationShown: notificationShown ?? this.notificationShown,
     );
   }
 
@@ -118,6 +122,7 @@ class PendingTransactionModel {
         'isIncome': isIncome,
         'sourceMessageId': sourceMessageId,
         'autoSaveDirect': autoSaveDirect,
+        'notificationShown': notificationShown,
       };
 
   factory PendingTransactionModel.fromJson(Map<String, dynamic> json) {
@@ -162,6 +167,7 @@ class PendingTransactionModel {
       isIncome: json['isIncome'] == true,
       sourceMessageId: json['sourceMessageId'] as String?,
       autoSaveDirect: json['autoSaveDirect'] == true || json['auto_save_direct'] == true,
+      notificationShown: json['notificationShown'] == true,
     );
   }
 }

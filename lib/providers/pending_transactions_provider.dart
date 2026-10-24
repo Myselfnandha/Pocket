@@ -105,7 +105,14 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
         final isPaytm = item.appSource.toLowerCase().contains('paytm') ||
             (item.rawPayload != null && item.rawPayload!.toLowerCase().contains('paytm'));
-        final title = isPaytm ? '📱 Paytm Auto-Logged' : (isSms ? '💬 SMS Auto-Logged' : '📸 Receipt Auto-Logged');
+        final isAccessibility = item.detectionSource == 'accessibility' ||
+            item.detectionSource == 'screen_reader' ||
+            item.appSource.toLowerCase().contains('upi');
+        final title = isPaytm
+            ? '📱 Paytm Auto-Logged'
+            : (isSms
+                ? '💬 SMS Auto-Logged'
+                : (isAccessibility ? '⚡ UPI Auto-Logged' : '📸 Receipt Auto-Logged'));
         final matchedWallet = wallets.where((w) => w.id == targetWalletId).firstOrNull;
         final walletLabel = matchedWallet != null ? ' to ${matchedWallet.displayName}' : '';
 
@@ -114,7 +121,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             id: const Uuid().v4(),
             title: title,
             message: '${item.merchant}: ${settings.currencySymbol}${item.amount.toStringAsFixed(2)} was automatically logged$walletLabel.',
-            type: NotificationType.system,
+            type: NotificationType.autoLogged,
             createdAt: DateTime.now(),
             actionData: {
               'amount': item.amount,
@@ -126,14 +133,19 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           ),
         );
 
-        // Heads-up instant Android notification
-        NotificationService().showTransactionLoggedNotification(
-          title: item.merchant,
-          amount: item.amount,
-          currencySymbol: settings.currencySymbol,
-          isIncome: item.isIncome,
-          walletName: matchedWallet?.name,
-        );
+        // Heads-up instant Android notification (only if not already shown natively by Android service)
+        if (!item.notificationShown) {
+          final prefix = item.isIncome ? '+' : '-';
+          final formattedAmount = '$prefix${settings.currencySymbol}${item.amount.toStringAsFixed(2)}';
+          NotificationService().showTransactionLoggedNotification(
+            title: item.merchant,
+            amount: item.amount,
+            currencySymbol: settings.currencySymbol,
+            isIncome: item.isIncome,
+            walletName: matchedWallet?.name,
+            customHeader: '⚡ Auto-Logged: $formattedAmount',
+          );
+        }
       }
 
       if (autoCommitItems.isNotEmpty) {
@@ -189,6 +201,39 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           final effectiveWalletId = matchedWalletId ?? item.suggestedWalletId ?? defaultWallet.id;
           await approve(item.id, walletId: effectiveWalletId);
 
+          final matchedWallet = wallets.where((w) => w.id == effectiveWalletId).firstOrNull ?? defaultWallet;
+          final walletLabel = ' to ${matchedWallet.displayName}';
+
+          await _ref.read(notificationsProvider.notifier).addNotification(
+            AppNotificationModel(
+              id: const Uuid().v4(),
+              title: '💬 SMS Auto-Logged',
+              message: '${item.merchant}: ${settings.currencySymbol}${item.amount.toStringAsFixed(2)} was automatically logged$walletLabel.',
+              type: NotificationType.autoLogged,
+              createdAt: DateTime.now(),
+              actionData: {
+                'amount': item.amount,
+                'merchant': item.merchant,
+                'refId': item.refId,
+                'imagePath': item.imagePath,
+                'walletId': effectiveWalletId,
+              },
+            ),
+          );
+
+          if (!item.notificationShown) {
+            final prefix = item.isIncome ? '+' : '-';
+            final formattedAmount = '$prefix${settings.currencySymbol}${item.amount.toStringAsFixed(2)}';
+            NotificationService().showTransactionLoggedNotification(
+              title: item.merchant,
+              amount: item.amount,
+              currencySymbol: settings.currencySymbol,
+              isIncome: item.isIncome,
+              walletName: matchedWallet.name,
+              customHeader: '⚡ Auto-Logged: $formattedAmount',
+            );
+          }
+
           if (matchedWalletId == null && (item.counterpartyLast4 != null || item.senderBank != null)) {
             final missedKey = '${item.senderBank ?? ''}_${item.counterpartyLast4 ?? ''}'.trim();
             if (missedKey.isNotEmpty && !storage.hasAskedToAddMissedAccount(missedKey)) {
@@ -214,6 +259,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             }
           }
         }
+        await SystemWidgetService.syncFromStorage(storage);
       }
     } catch (_) {
       // Defensive handling
