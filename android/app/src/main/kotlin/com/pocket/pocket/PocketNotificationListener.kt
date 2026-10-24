@@ -118,6 +118,7 @@ class PocketNotificationListener : NotificationListenerService() {
             return null
         }
 
+        fun extractMerchant(title: String, content: String): String {
             // "Paid to [Merchant]", "Payment to [Merchant]", "Paid towards [Merchant]"
             val toPattern = Pattern.compile("(?:paid\\s+(?:to|towards)|payment\\s+(?:to|towards)|transferred\\s+(?:to|towards)|sent\\s+(?:to|towards)|towards|at)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE)
             val toMatcher = toPattern.matcher(content)
