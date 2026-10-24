@@ -719,6 +719,42 @@ void main() {
       expect(storage.getTransactions().first.title, equals('Swiggy'));
       expect(storage.getTransactions().first.amount, equals(250.0));
     });
+
+    test('Onboarding Discovery: allowZeroAmount preserves bank balance alerts for account aggregation', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final discoveryAlerts = [
+        PendingTransactionModel(
+          id: 'alert_bal_1',
+          merchant: 'HDFCBK',
+          amount: 0.0,
+          date: DateTime.now(),
+          appSource: 'SMS (HDFCBK)',
+          counterpartyLast4: '4321',
+          rawPayload: 'Your A/c ending 4321 Avl Bal is Rs. 42,500.00 on 24-Oct-26',
+        ),
+        PendingTransactionModel(
+          id: 'tx_1',
+          merchant: 'Zomato',
+          amount: 320.0,
+          date: DateTime.now(),
+          appSource: 'SMS (HDFCBK)',
+          counterpartyLast4: '4321',
+          rawPayload: 'Rs 320 debited from A/c 4321 for Zomato',
+        ),
+      ];
+
+      // Default (non-discovery): zero amount items dropped
+      final regular = service.deduplicateAndAssignHeuristics(discoveryAlerts, allowZeroAmount: false);
+      expect(regular.length, equals(1));
+      expect(regular.first.amount, equals(320.0));
+
+      // Onboarding discovery: zero amount items preserved for BankDiscoveryService
+      final discovery = service.deduplicateAndAssignHeuristics(discoveryAlerts, allowZeroAmount: true);
+      expect(discovery.length, equals(2));
+      expect(discovery.any((t) => t.amount == 0.0 && t.counterpartyLast4 == '4321'), isTrue);
+    });
   });
 }
 

@@ -135,14 +135,14 @@ class MainActivity : FlutterActivity() {
                             "notificationListener" to isNotificationListenerEnabled(),
                             "accessibility" to isAccessibilityServiceEnabled(),
                             "screenshotWatcher" to (screenshotObserver != null),
-                            "smsListener" to (hasReceiveSms && hasReadSms)
+                            "smsListener" to hasReadSms
                         )
                         result.success(map)
                     }
                     "requestSmsPermission" -> {
                         val hasReceiveSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
                         val hasReadSms = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                        if (hasReceiveSms && hasReadSms) {
+                        if (hasReadSms) {
                             result.success(true)
                         } else {
                             if (pendingSmsResult != null) {
@@ -151,7 +151,7 @@ class MainActivity : FlutterActivity() {
                                 pendingSmsResult = result
                                 ActivityCompat.requestPermissions(
                                     this@MainActivity,
-                                    arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS),
+                                    arrayOf(android.Manifest.permission.READ_SMS, android.Manifest.permission.RECEIVE_SMS),
                                     REQUEST_CODE_SMS_PERMISSION
                                 )
                             }
@@ -395,7 +395,8 @@ class MainActivity : FlutterActivity() {
             val result = pendingSmsResult ?: return
             pendingSmsResult = null
             
-            val granted = grantResults.isNotEmpty() && grantResults.all { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
+            val hasRead = ContextCompat.checkSelfPermission(this@MainActivity, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val granted = hasRead || (grantResults.isNotEmpty() && grantResults.any { it == android.content.pm.PackageManager.PERMISSION_GRANTED })
             if (granted) {
                 val prefs = applicationContext.getSharedPreferences(PocketNotificationListener.PREFS_NAME, android.content.Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("auto_save_sms", true).apply()

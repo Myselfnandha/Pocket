@@ -442,7 +442,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 onPageChanged: (page) {
                   setState(() => _currentPage = page);
                   if (page == 2 && !_hasScannedSms && !_isScanningSms) {
-                    _detectBankAccountsFromSms();
+                    Future.delayed(const Duration(milliseconds: 350), () {
+                      if (mounted && _currentPage == 2 && !_hasScannedSms && !_isScanningSms) {
+                        _detectBankAccountsFromSms();
+                      }
+                    });
                   }
                 },
                 children: [
@@ -1025,6 +1029,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   }
 
   Future<void> _detectBankAccountsFromSms() async {
+    if (_isScanningSms) return;
     setState(() => _isScanningSms = true);
     try {
       final autoImport = ref.read(autoImportServiceProvider);
@@ -1032,7 +1037,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       if (!perms.isSmsListenerEnabled) {
         final granted = await autoImport.requestSmsPermission();
         if (!granted) {
-          if (mounted) setState(() => _isScanningSms = false);
+          if (mounted) {
+            setState(() {
+              _isScanningSms = false;
+              _hasScannedSms = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('SMS permission is required to automatically detect bank accounts.'),
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'Settings',
+                  onPressed: () => autoImport.openAppSettings(),
+                ),
+              ),
+            );
+          }
           return;
         }
       }
@@ -1063,9 +1083,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             }
           }
         });
+
+        if (detected.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No bank SMS alerts found in inbox. You can add accounts manually below.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() => _isScanningSms = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isScanningSms = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed reading SMS: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

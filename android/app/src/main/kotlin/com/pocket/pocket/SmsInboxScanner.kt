@@ -18,80 +18,100 @@ object SmsInboxScanner {
             0L
         }
 
-        val inboxUri = Uri.parse("content://sms/inbox")
-        val projection = arrayOf("address", "body", "date", "_id")
+        // Try both content://sms/inbox and fallback to canonical content://sms
+        val urisToScan = listOf(
+            Uri.parse("content://sms/inbox"),
+            Uri.parse("content://sms")
+        )
 
-        val selection = if (cutoff > 0) "date >= ?" else null
-        val selectionArgs = if (cutoff > 0) arrayOf(cutoff.toString()) else null
-        val sortOrder = "date DESC"
+        var totalProcessed = 0
+        val maxLimit = if (daysLookback <= 0) 10000 else 600
+        val seenSmsIds = HashSet<String>()
 
-        try {
-            resolver.query(
-                inboxUri,
-                projection,
-                selection,
-                selectionArgs,
-                sortOrder
-            )?.use { cursor ->
-                val idIdx = cursor.getColumnIndex("_id")
-                val addressIdx = cursor.getColumnIndex("address")
-                val bodyIdx = cursor.getColumnIndex("body")
-                val dateIdx = cursor.getColumnIndex("date")
+        for (targetUri in urisToScan) {
+            if (totalProcessed > 0) {
+                // If primary inbox returned items, do not duplicate from secondary URI
+                break
+            }
 
-                var count = 0
-                val maxLimit = if (daysLookback <= 0) 10000 else 600
+            val selection = if (cutoff > 0) {
+                if (targetUri.toString() == "content://sms") "type = 1 AND date >= ?" else "date >= ?"
+            } else {
+                if (targetUri.toString() == "content://sms") "type = 1" else null
+            }
+            val selectionArgs = if (cutoff > 0) arrayOf(cutoff.toString()) else null
+            val sortOrder = "date DESC"
 
-                while (cursor.moveToNext() && count < maxLimit) {
-                    val smsId = if (idIdx >= 0) cursor.getString(idIdx) ?: "" else ""
-                    val sender = if (addressIdx >= 0) cursor.getString(addressIdx) ?: "" else ""
-                    val body = if (bodyIdx >= 0) cursor.getString(bodyIdx) ?: "" else ""
-                    val date = if (dateIdx >= 0) cursor.getLong(dateIdx) else 0L
+            try {
+                resolver.query(
+                    targetUri,
+                    arrayOf("address", "body", "date", "_id"),
+                    selection,
+                    selectionArgs,
+                    sortOrder
+                )?.use { cursor ->
+                    val idIdx = cursor.getColumnIndex("_id")
+                    val addressIdx = cursor.getColumnIndex("address")
+                    val bodyIdx = cursor.getColumnIndex("body")
+                    val dateIdx = cursor.getColumnIndex("date")
 
-                    if (body.isBlank()) continue
+                    while (cursor.moveToNext() && totalProcessed < maxLimit) {
+                        val smsId = if (idIdx >= 0) cursor.getString(idIdx) ?: "" else ""
+                        if (smsId.isNotBlank() && seenSmsIds.contains(smsId)) continue
 
-                    val lower = body.lowercase()
-                    val hasCurrency = lower.contains("₹") || lower.contains("rs") || lower.contains("inr") || lower.contains("$")
-                    val isBankOrAccount = lower.contains("a/c") || lower.contains("acct") || lower.contains("account") ||
-                            lower.contains("card ending") || lower.contains("bal") || lower.contains("balance")
+                        val sender = if (addressIdx >= 0) cursor.getString(addressIdx) ?: "" else ""
+                        val body = if (bodyIdx >= 0) cursor.getString(bodyIdx) ?: "" else ""
+                        val date = if (dateIdx >= 0) cursor.getLong(dateIdx) else 0L
 
-                    // Reject personal non-financial chats
-                    if (!hasCurrency && !isBankOrAccount) {
-                        continue
-                    }
+                        if (body.isBlank()) continue
 
-                    val parsed = SmsParser.parse(sender, body, date, smsId)
-                    if (parsed != null && parsed.amount > 0.0) {
-                        resultList.put(parsed.toJson())
-                        count++
-                    } else if (daysLookback <= 0 && isBankOrAccount) {
-                        // For onboarding/full discovery, capture bank balance alerts or notices
-                        val last4 = SmsParser.extractAccountLast4(body)
-                        if (last4 != null || lower.contains("bal")) {
-                            val cleanSender = cleanSenderAddress(sender)
-                            val stableAlertId = if (smsId.isNotBlank()) "sms_$smsId" else "sms_${Math.abs((sender + "_" + body + "_" + date).hashCode())}"
-                            val obj = JSONObject().apply {
-                                put("id", stableAlertId)
-                                put("sourceMessageId", smsId.ifBlank { stableAlertId })
-                                put("amount", 0.0)
-                                put("merchant", cleanSender.ifEmpty { "Bank Alert" })
-                                put("appSource", "SMS ($cleanSender)")
-                                put("refId", "")
-                                put("date", if (date > 0) date else System.currentTimeMillis())
-                                put("detectionSource", "sms")
-                                put("rawPayload", body)
-                                put("isIncome", false)
-                                if (last4 != null) {
-                                    put("counterpartyLast4", last4)
+                        val lower = body.lowercase()
+                        val hasCurrency = lower.contains("₹") || lower.contains("rs") || lower.contains("inr") || lower.contains("$")
+                        val isBankOrAccount = lower.contains("a/c") || lower.contains("acct") || lower.contains("account") ||
+                                lower.contains("card ending") || lower.contains("bal") || lower.contains("balance") ||
+                                lower.contains("credit card") || lower.contains("bank") || lower.contains("upi")
+
+                        // Reject personal non-financial chats
+                        if (!hasCurrency && !isBankOrAccount) {
+                            continue
+                        }
+
+                        val parsed = SmsParser.parse(sender, body, date, smsId)
+                        if (parsed != null && parsed.amount > 0.0) {
+                            if (smsId.isNotBlank()) seenSmsIds.add(smsId)
+                            resultList.put(parsed.toJson())
+                            totalProcessed++
+                        } else if (daysLookback <= 0 && isBankOrAccount) {
+                            // For onboarding/full discovery, capture bank balance alerts or notices
+                            val last4 = SmsParser.extractAccountLast4(body)
+                            if (last4 != null || lower.contains("bal") || lower.contains("balance") || lower.contains("bank")) {
+                                if (smsId.isNotBlank()) seenSmsIds.add(smsId)
+                                val cleanSender = cleanSenderAddress(sender)
+                                val stableAlertId = if (smsId.isNotBlank()) "sms_$smsId" else "sms_${Math.abs((sender + "_" + body + "_" + date).hashCode())}"
+                                val obj = JSONObject().apply {
+                                    put("id", stableAlertId)
+                                    put("sourceMessageId", smsId.ifBlank { stableAlertId })
+                                    put("amount", 0.0)
+                                    put("merchant", cleanSender.ifEmpty { "Bank Alert" })
+                                    put("appSource", "SMS ($cleanSender)")
+                                    put("refId", "")
+                                    put("date", if (date > 0) date else System.currentTimeMillis())
+                                    put("detectionSource", "sms")
+                                    put("rawPayload", body)
+                                    put("isIncome", false)
+                                    if (last4 != null) {
+                                        put("counterpartyLast4", last4)
+                                    }
                                 }
+                                resultList.put(obj)
+                                totalProcessed++
                             }
-                            resultList.put(obj)
-                            count++
                         }
                     }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
 
         return resultList.toString()

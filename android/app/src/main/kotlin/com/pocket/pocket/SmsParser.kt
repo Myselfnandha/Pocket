@@ -63,7 +63,12 @@ object SmsParser {
     )
 
     private val ACCOUNT_LAST4_PATTERN = Pattern.compile(
-        "(?:a/c|ac|account|card|acct)\\s*(?:no\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[*xX.-]*([0-9]{3,4})\\b",
+        "(?:a/c|ac|account|card|acct|loan\\s*a/c|loan\\s*no\\.?)\\s*(?:no\\.?|num\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[:\\s]*[0-9]*[*xX.-]+([0-9]{3,6})\\b",
+        Pattern.CASE_INSENSITIVE
+    )
+
+    private val SECONDARY_ACCOUNT_PATTERN = Pattern.compile(
+        "(?:a/c|ac|account|card|acct|loan\\s*a/c|loan\\s*no\\.?)\\s*(?:no\\.?|num\\.?)?\\s*(?:ending(?:\\s+in|\\s+with)?)?\\s*[:\\s]*[*xX.-]*([0-9]{3,6})\\b",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -200,8 +205,14 @@ object SmsParser {
                 lower.contains("transferred to")
         val hasCurrency = Regex("""(?i)(?:₹|rs\.?|inr|usd|\$)""").containsMatchIn(lower)
         val isOtp = lower.contains("otp") || lower.contains("verification code") || lower.contains("one time password")
-        val isFailed = lower.contains("request") || lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
-        return hasDebitKeyword && hasCurrency && !isOtp && !isFailed
+        val isExplicitFailure = lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
+        val isPendingRequestOnly = lower.contains("request") &&
+                !lower.contains("debited") &&
+                !lower.contains("spent") &&
+                !lower.contains("paid") &&
+                !lower.contains("transferred") &&
+                !lower.contains("successful")
+        return hasDebitKeyword && hasCurrency && !isOtp && !isExplicitFailure && !isPendingRequestOnly
     }
 
     private fun isCreditText(lower: String): Boolean {
@@ -215,8 +226,13 @@ object SmsParser {
                 lower.contains("payment received")
         val hasCurrency = Regex("""(?i)(?:₹|rs\.?|inr|usd|\$)""").containsMatchIn(lower)
         val isOtp = lower.contains("otp") || lower.contains("verification code") || lower.contains("one time password")
-        val isFailed = lower.contains("request") || lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
-        return hasCreditKeyword && hasCurrency && !lower.contains("debited") && !isOtp && !isFailed
+        val isExplicitFailure = lower.contains("failed") || lower.contains("declined") || lower.contains("unsuccessful")
+        val isPendingRequestOnly = lower.contains("request") &&
+                !lower.contains("credited") &&
+                !lower.contains("deposited") &&
+                !lower.contains("received") &&
+                !lower.contains("successful")
+        return hasCreditKeyword && hasCurrency && !lower.contains("debited") && !isOtp && !isExplicitFailure && !isPendingRequestOnly
     }
 
     fun extractAmount(text: String): Double? {
@@ -278,7 +294,17 @@ object SmsParser {
     fun extractAccountLast4(text: String): String? {
         val matcher = ACCOUNT_LAST4_PATTERN.matcher(text)
         if (matcher.find()) {
-            return matcher.group(1)?.trim()
+            val candidate = matcher.group(1)?.trim()
+            if (!candidate.isNullOrEmpty()) {
+                return if (candidate.length > 4) candidate.substring(candidate.length - 4) else candidate
+            }
+        }
+        val secMatcher = SECONDARY_ACCOUNT_PATTERN.matcher(text)
+        if (secMatcher.find()) {
+            val candidate = secMatcher.group(1)?.trim()
+            if (!candidate.isNullOrEmpty()) {
+                return if (candidate.length > 4) candidate.substring(candidate.length - 4) else candidate
+            }
         }
         return null
     }

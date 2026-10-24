@@ -125,7 +125,7 @@ class AutoImportService {
         final incoming = list
             .map((e) => PendingTransactionModel.fromJson(e as Map<String, dynamic>))
             .toList();
-        return deduplicateAndAssignHeuristics(incoming);
+        return deduplicateAndAssignHeuristics(incoming, allowZeroAmount: daysLookback <= 0);
       }
     } catch (_) {
       // Safe fallback on platform error or non-Android
@@ -209,8 +209,9 @@ class AutoImportService {
 
   /// Deduplicates incoming items against both each other and the existing transaction database
   List<PendingTransactionModel> deduplicateAndAssignHeuristics(
-    List<PendingTransactionModel> incoming,
-  ) {
+    List<PendingTransactionModel> incoming, {
+    bool allowZeroAmount = false,
+  }) {
     final existingTxs = _storage.getTransactions();
     final categories = _storage.getCategories();
     final wallets = _storage.getWallets();
@@ -218,10 +219,10 @@ class AutoImportService {
     final List<PendingTransactionModel> result = [];
 
     for (final item in incoming) {
-      if (item.amount <= 0) continue;
+      if (!allowZeroAmount && item.amount <= 0) continue;
 
       // Check against existing database transactions
-      if (_isAlreadySaved(item, existingTxs)) {
+      if (item.amount > 0 && _isAlreadySaved(item, existingTxs)) {
         continue;
       }
 
