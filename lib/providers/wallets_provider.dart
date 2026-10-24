@@ -27,10 +27,17 @@ class WalletsNotifier extends StateNotifier<List<WalletModel>> {
     unawaited(SystemWidgetService.syncFromStorage(_storage));
   }
 
-  Future<void> deleteWallet(String id) async {
+  Future<bool> deleteWallet(String id) async {
+    if (_storage.getTransactions().any((tx) => tx.walletId == id)) return false;
+    final wallet = state.where((w) => w.id == id).firstOrNull;
+    if (wallet == null || state.length <= 1) return false;
     state = state.where((w) => w.id != id).toList();
+    if (wallet.isDefault && state.isNotEmpty && !state.any((w) => w.isDefault)) {
+      state = [state.first.copyWith(isDefault: true), ...state.skip(1)];
+    }
     await _storage.saveWallets(state);
     unawaited(SystemWidgetService.syncFromStorage(_storage));
+    return true;
   }
 
   Future<void> setDefaultWallet(String id) async {

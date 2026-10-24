@@ -61,7 +61,7 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
     final stats = ref.watch(monthlyStatsProvider);
     final spendingMap = ref.watch(currentMonthCategorySpendingProvider);
     final categories = ref.watch(categoriesProvider);
-    final wallets = ref.watch(walletsProvider);
+    final wallets = ref.watch(walletsWithBalancesProvider);
     final allTxs = ref.watch(transactionsProvider);
     final settings = ref.watch(settingsProvider);
     final palette = ref.watch(activePaletteProvider);
@@ -143,12 +143,19 @@ class _SankeyFlowDiagramState extends ConsumerState<SankeyFlowDiagram> with Sing
     final activeWallets = wallets.isNotEmpty ? wallets.take(3).toList() : [];
     if (activeWallets.isNotEmpty) {
       for (final w in activeWallets) {
+        final monthFlow = monthTxs
+            .where((tx) =>
+                tx.walletId == w.id ||
+                (w.isDefault &&
+                    (tx.walletId == 'default_cash' || !wallets.any((wl) => wl.id == tx.walletId))))
+            .fold(0.0, (sum, tx) => sum + tx.amount);
+        final displayAmount = monthFlow > 0 ? monthFlow : max(1.0, w.currentBalance.abs());
         stage2Nodes.add(
           SankeyNode(
             id: 'hub_${w.id}',
             title: w.displayName,
             icon: w.icon,
-            amount: max(1.0, w.currentBalance.abs()),
+            amount: displayAmount,
             color: palette.primary,
             stage: SankeyStage.hub,
           ),

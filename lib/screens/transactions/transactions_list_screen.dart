@@ -29,10 +29,19 @@ class _TransactionsListScreenState
   DateTimeRange? _dateRange;
   TransactionSortOption _sortOption = TransactionSortOption.newest;
 
+  late final TextEditingController _searchController;
+
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     _walletFilter = widget.initialWalletId;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -214,6 +223,7 @@ class _TransactionsListScreenState
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: TextField(
+              controller: _searchController,
               onChanged: (val) => setState(() => _searchQuery = val.trim()),
               decoration: InputDecoration(
                 hintText: 'Search title, merchant, note, ref ID, or account...',
@@ -227,7 +237,10 @@ class _TransactionsListScreenState
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () => setState(() => _searchQuery = ''),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
                       )
                     : null,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),

@@ -288,10 +288,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     try {
       final existingTxs = storage.getTransactions();
       final List<TransactionModel> txsToSave = [];
+      final List<PendingTransactionModel> pendingToSave = [];
       final List<String> processedMsgIds = [];
-      final fallbackWalletId = _onboardingWallets.isNotEmpty
-          ? (_onboardingWallets.firstWhere((w) => w.isDefault, orElse: () => _onboardingWallets.first).id)
-          : 'cash';
 
       final candidateTxs = _discoveredPastTransactions.isNotEmpty
           ? _discoveredPastTransactions
@@ -309,11 +307,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 (t.title.toLowerCase() == item.merchant.toLowerCase())));
         if (alreadyInBatch) continue;
 
-        final matchedWalletId = autoImport.findExplicitMatchingWallet(item, _onboardingWallets) ??
-            autoImport.matchWallet(item, _onboardingWallets);
-        final effectiveWalletId = _onboardingWallets.any((w) => w.id == matchedWalletId)
-            ? matchedWalletId
-            : fallbackWalletId;
+        final matchedWalletId = autoImport.findExplicitMatchingWallet(item, _onboardingWallets);
 
         final effectiveCategoryId = item.suggestedCategoryId ??
             autoImport.predictCategory(
@@ -330,6 +324,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             ? 'Ref: ${item.refId}'
             : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
 
+        if (matchedWalletId == null) {
+          pendingToSave.add(item.copyWith(suggestedCategoryId: effectiveCategoryId));
+          continue;
+        }
+
         txsToSave.add(
           TransactionModel(
             id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
@@ -337,7 +336,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             amount: item.amount,
             type: item.isIncome ? TransactionType.income : TransactionType.expense,
             categoryId: effectiveCategoryId,
-            walletId: effectiveWalletId,
+            walletId: matchedWalletId,
             date: item.date,
             note: effectiveNote,
             refId: item.refId,
@@ -359,6 +358,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           await storage.addProcessedMessageId(msgId);
         }
         ref.invalidate(transactionsProvider);
+      }
+      if (pendingToSave.isNotEmpty) {
+        final pending = autoImport.deduplicateAndAssignHeuristics([
+          ...storage.getPendingTransactions(),
+          ...pendingToSave,
+        ]);
+        await storage.savePendingTransactions(pending);
+        ref.invalidate(pendingTransactionsProvider);
       }
     } catch (_) {}
 

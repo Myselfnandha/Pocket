@@ -251,7 +251,7 @@ class UpiScreenshotParserService {
 
     for (int i = 0; i < lines.length; i++) {
       final l = lines[i].toLowerCase();
-      if (l == 'paid to' || l == 'to:' || l == 'to' || l == 'payment to' || l == 'sent to' || l == 'transfer to') {
+      if (l == 'paid to' || l == 'to:' || l == 'to' || l == 'payment to' || l == 'sent to' || l == 'transfer to' || l == 'towards' || l == 'towards:' || l == 'paid towards' || l == 'payment towards') {
         if (i + 1 < lines.length) {
           final candidate = cleanMerchantCandidate(lines[i + 1]);
           if (candidate.isNotEmpty && !isTechnicalKeyword(candidate)) {
@@ -262,7 +262,7 @@ class UpiScreenshotParserService {
     }
 
     final patterns = [
-      RegExp(r'(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
+      RegExp(r'(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:|Towards:?|Paid towards|Payment towards)\s+([A-Za-z0-9\s&.\-_]{2,35})', caseSensitive: false),
     ];
     for (final p in patterns) {
       final m = p.firstMatch(text);

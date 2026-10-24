@@ -13,6 +13,7 @@ import '../models/notification_model.dart';
 import '../models/debt_model.dart';
 import '../models/budget_model.dart';
 import '../models/goal_model.dart';
+import '../models/pending_transaction_model.dart';
 
 class StorageService {
   static const _kTransactions = 'pocket_transactions';
@@ -24,9 +25,9 @@ class StorageService {
   static const _kDebts = 'pocket_debts';
   static const _kBudgets = 'pocket_category_budgets';
   static const _kGoals = 'pocket_goals';
+  static const _kPendingTransactions = 'pocket_pending_transactions';
   static const _kEncryptionKeyName = 'pocket_storage_aes_key_v1';
   static const _kIsOnboardedFastFlag = 'pocket_is_onboarded_flag';
-  static const _kEncryptionKeyBackup = 'pocket_storage_aes_key_v1_backup';
 
   final SharedPreferences _prefs;
   final enc.Encrypter? _encrypter;
@@ -41,6 +42,7 @@ class StorageService {
   List<DebtModel>? _cachedDebts;
   List<CategoryBudgetModel>? _cachedBudgets;
   List<GoalModel>? _cachedGoals;
+  List<PendingTransactionModel>? _cachedPendingTransactions;
 
   StorageService(this._prefs, [FlutterSecureStorage? secureStorage, this._encrypter]);
 
@@ -59,20 +61,21 @@ class StorageService {
     try {
       String? keyBase64 = await effectiveSecureStorage.read(key: _kEncryptionKeyName);
       if (keyBase64 == null || keyBase64.isEmpty) {
-        keyBase64 = effectivePrefs.getString(_kEncryptionKeyBackup);
+        // Migrate the legacy plaintext key once, then remove the weak copy.
+        keyBase64 = effectivePrefs.getString('pocket_storage_aes_key_v1_backup');
       }
       if (keyBase64 == null || keyBase64.isEmpty) {
         final newKey = enc.Key.fromSecureRandom(32);
         keyBase64 = newKey.base64;
         await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
-        await effectivePrefs.setString(_kEncryptionKeyBackup, keyBase64);
       } else {
-        await effectivePrefs.setString(_kEncryptionKeyBackup, keyBase64);
+        await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
       }
+      await effectivePrefs.remove('pocket_storage_aes_key_v1_backup');
       final key = enc.Key.fromBase64(keyBase64);
       encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
     } catch (e) {
-      debugPrint('Storage encryption init notice (fallback mode): $e');
+      throw StateError('Secure storage initialization failed; refusing to store financial data in plaintext: $e');
     }
 
     final service = StorageService(effectivePrefs, effectiveSecureStorage, encrypter);
@@ -96,6 +99,29 @@ class StorageService {
     _cachedDebts = null;
     _cachedBudgets = null;
     _cachedGoals = null;
+    _cachedPendingTransactions = null;
+  }
+
+  List<PendingTransactionModel> getPendingTransactions() {
+    if (_cachedPendingTransactions != null) return _cachedPendingTransactions!;
+    final raw = _decryptString(_prefs.getString(_kPendingTransactions));
+    if (raw == null) return _cachedPendingTransactions = [];
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return _cachedPendingTransactions = decoded
+          .map((e) => PendingTransactionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return _cachedPendingTransactions = [];
+    }
+  }
+
+  Future<void> savePendingTransactions(List<PendingTransactionModel> items) async {
+    _cachedPendingTransactions = List.unmodifiable(items);
+    await _prefs.setString(
+      _kPendingTransactions,
+      _encryptString(jsonEncode(items.map((e) => e.toJson()).toList())),
+    );
   }
 
   // --- Encryption Helpers ---
@@ -108,8 +134,7 @@ class StorageService {
       final encrypted = encrypter.encrypt(plaintext, iv: iv);
       return 'enc:v1:${iv.base64}:${encrypted.base64}';
     } catch (e) {
-      debugPrint('Encryption error: $e');
-      return plaintext;
+      throw StateError('Financial data encryption failed: $e');
     }
   }
 
@@ -141,6 +166,7 @@ class StorageService {
       _kDebts,
       _kBudgets,
       _kGoals,
+      _kPendingTransactions,
     ];
 
     for (final key in keys) {
@@ -295,6 +321,19 @@ class StorageService {
   Future<void> setLastSmsScanTimestamp(int timestamp) async {
     final current = getSettings();
     await saveSettings(current.copyWith(lastSmsScanTimestamp: timestamp));
+  }
+
+  bool hasAskedToAddMissedAccount(String accountKey) {
+    if (accountKey.trim().isEmpty) return false;
+    final asked = _prefs.getStringList('asked_missed_accounts') ?? [];
+    return asked.contains(accountKey);
+  }
+
+  Future<void> markMissedAccountAsked(String accountKey) async {
+    if (accountKey.trim().isEmpty) return;
+    final asked = (_prefs.getStringList('asked_missed_accounts') ?? []).toSet();
+    asked.add(accountKey);
+    await _prefs.setStringList('asked_missed_accounts', asked.toList());
   }
 
   // --- Recurring Rules ---

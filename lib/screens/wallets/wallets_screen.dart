@@ -1625,7 +1625,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Transactions linked to this wallet will remain in history.',
+                  'Keep at least one wallet. Reassign linked transactions before deleting this wallet.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -1649,13 +1649,15 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ref.read(walletsProvider.notifier).deleteWallet(wallet.id);
+                    onPressed: () async {
+                      final deleted = await ref.read(walletsProvider.notifier).deleteWallet(wallet.id);
                       Navigator.pop(ctx);
                       TopCapsuleToast.show(
                         context,
-                        message: 'Deleted "${wallet.displayName}"',
-                        isSuccess: false,
+                        message: deleted
+                            ? 'Deleted "${wallet.displayName}"'
+                            : 'This wallet still has transactions and cannot be deleted.',
+                        isSuccess: deleted,
                       );
                     },
                     style: ElevatedButton.styleFrom(

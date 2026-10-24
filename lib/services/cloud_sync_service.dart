@@ -19,7 +19,6 @@ class CloudSyncService {
   static const _kLastSyncTime = 'pocket_google_last_sync';
   static const _kCloudUserEmail = 'pocket_google_user_email';
   static const _kCloudUserId = 'pocket_google_user_id';
-  static const _kLocalCloudCache = 'pocket_google_cloud_cache';
   static const _kManualAccessToken = 'pocket_google_access_token';
 
   static final CloudSyncService _instance = CloudSyncService._internal();
@@ -217,19 +216,26 @@ class CloudSyncService {
         }
       }
 
-      // Save sync timestamp locally
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kLastSyncTime, now);
-      await prefs.setString(_kLocalCloudCache, jsonRaw);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        // Remove data written by older versions as plaintext local backup cache.
+        await prefs.remove('pocket_google_cloud_cache');
+        await prefs.setString(_kLastSyncTime, now);
+      } catch (cacheError) {
+        debugPrint('Could not save cloud sync timestamp: $cacheError');
+      }
 
       return true;
     } catch (e) {
       debugPrint('Cloud backup upload error: $e');
-      // If network is offline or token expired, save local cache
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kLocalCloudCache, jsonRaw);
-      await prefs.setString(_kLastSyncTime, now);
-      return true;
+      // Never cache this plaintext snapshot locally or report it as a cloud sync.
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('pocket_google_cloud_cache');
+      } catch (cacheError) {
+        debugPrint('Local cloud backup cache error: $cacheError');
+      }
+      return false;
     }
   }
 
@@ -260,15 +266,6 @@ class CloudSyncService {
       }
     } catch (e) {
       debugPrint('Cloud download network error: $e');
-    }
-
-    // Fallback to local cloud cache if network unavailable
-    final prefs = await SharedPreferences.getInstance();
-    final cached = prefs.getString(_kLocalCloudCache);
-    if (cached != null && cached.isNotEmpty) {
-      try {
-        return jsonDecode(cached) as Map<String, dynamic>;
-      } catch (_) {}
     }
 
     return null;

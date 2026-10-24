@@ -7,54 +7,102 @@ import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/services/auto_import_service.dart';
 import 'package:pocket/services/storage_service.dart';
 
+import 'package:pocket/services/upi_screenshot_parser_service.dart';
+
 class FakeStorageService extends Fake implements StorageService {
-  @override
-  List<WalletModel> getWallets() => [
-        WalletModel(
-          id: 'w_hdfc',
-          name: 'HDFC Salary A/C',
-          icon: 'account_balance',
-          colorValue: 0xFF2196F3,
-          walletType: WalletType.bank,
-          currentBalance: 50000.0,
-          accountNumber: '•••• 1234',
-        ),
-        WalletModel(
-          id: 'w_ind',
-          name: 'Indian Bank',
-          icon: 'account_balance',
-          colorValue: 0xFF4CAF50,
-          walletType: WalletType.bank,
-          currentBalance: 15000.0,
-          accountNumber: '•••• 0511',
-        ),
-        WalletModel(
-          id: 'w_indusind',
-          name: 'IndusInd Bank',
-          icon: 'account_balance',
-          colorValue: 0xFF800000,
-          walletType: WalletType.bank,
-          currentBalance: 25000.0,
-          accountNumber: '•••• 9876',
-        ),
-        WalletModel(
-          id: 'w_cash',
-          name: 'Cash in Wallet',
-          icon: 'payments',
-          colorValue: 0xFFFF9800,
-          walletType: WalletType.cash,
-          currentBalance: 2000.0,
-        ),
-      ];
+  List<WalletModel> wallets = [
+    const WalletModel(
+      id: 'w_hdfc',
+      name: 'HDFC Salary A/C',
+      icon: 'account_balance',
+      colorValue: 0xFF2196F3,
+      walletType: WalletType.bank,
+      currentBalance: 50000.0,
+      accountNumber: '•••• 1234',
+      isDefault: true,
+    ),
+    const WalletModel(
+      id: 'w_ind',
+      name: 'Indian Bank',
+      icon: 'account_balance',
+      colorValue: 0xFF4CAF50,
+      walletType: WalletType.bank,
+      currentBalance: 15000.0,
+      accountNumber: '•••• 0511',
+    ),
+    const WalletModel(
+      id: 'w_indusind',
+      name: 'IndusInd Bank',
+      icon: 'account_balance',
+      colorValue: 0xFF800000,
+      walletType: WalletType.bank,
+      currentBalance: 25000.0,
+      accountNumber: '•••• 9876',
+    ),
+    const WalletModel(
+      id: 'w_cash',
+      name: 'Cash in Wallet',
+      icon: 'payments',
+      colorValue: 0xFFFF9800,
+      walletType: WalletType.cash,
+      currentBalance: 2000.0,
+    ),
+  ];
+
+  List<CategoryModel> categories = List.from(defaultCategories);
+  List<TransactionModel> transactions = [];
+  List<PendingTransactionModel> pendingTransactions = [];
+  final Set<String> askedMissedAccounts = {};
+  UserSettingsModel settings = const UserSettingsModel();
 
   @override
-  List<CategoryModel> getCategories() => defaultCategories;
+  List<WalletModel> getWallets() => wallets;
 
   @override
-  List<TransactionModel> getTransactions() => [];
+  Future<void> saveWallets(List<WalletModel> list) async {
+    wallets = List.from(list);
+  }
 
   @override
-  UserSettingsModel getSettings() => const UserSettingsModel();
+  List<CategoryModel> getCategories() => categories;
+
+  @override
+  Future<void> saveCategories(List<CategoryModel> list) async {
+    categories = List.from(list);
+  }
+
+  @override
+  List<TransactionModel> getTransactions() => transactions;
+
+  @override
+  Future<void> saveTransactions(List<TransactionModel> list) async {
+    transactions = List.from(list);
+  }
+
+  @override
+  List<PendingTransactionModel> getPendingTransactions() => pendingTransactions;
+
+  @override
+  Future<void> savePendingTransactions(List<PendingTransactionModel> list) async {
+    pendingTransactions = List.from(list);
+  }
+
+  @override
+  UserSettingsModel getSettings() => settings;
+
+  @override
+  bool isTransactionDeleted(String signature) => false;
+
+  @override
+  bool isMessageProcessed(String messageId) => false;
+
+  @override
+  bool hasAskedToAddMissedAccount(String accountKey) => askedMissedAccounts.contains(accountKey);
+
+  @override
+  Future<void> markMissedAccountAsked(String accountKey) async {
+    askedMissedAccounts.add(accountKey);
+  }
 }
 
 void main() {
@@ -368,6 +416,217 @@ void main() {
 
       final toggled = reconstructed.copyWith(autoSaveDirect: false);
       expect(toggled.autoSaveDirect, isFalse);
+    });
+
+    // 1. Counterparty / Merchant Detection with "towards"
+    test('Counterparty / Merchant Detection includes string: "towards"', () {
+      final res1 = UpiScreenshotParserService.extractReceiver('Rs 450 debited towards Swiggy on 24-Oct-26');
+      expect(res1, equals('Swiggy'));
+
+      final res2 = UpiScreenshotParserService.extractReceiver('Payment towards: Netflix Ref: 9876543210');
+      expect(res2, equals('Netflix'));
+
+      final res3 = UpiScreenshotParserService.extractReceiver('Total Paid: INR 1200\nTowards\nStarbucks Coffee');
+      expect(res3, equals('Starbucks Coffee'));
+
+      final res4 = UpiScreenshotParserService.extractReceiver('Paid towards Zara Fashion on 24-Oct');
+      expect(res4, equals('Zara Fashion'));
+    });
+
+    // 2. Mandatory Sliding Time-Window Fuzzy Matching
+    test('Mandatory Sliding Time-Window Fuzzy Matching deduplicates identical amount within time window', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final baseTime = DateTime(2026, 10, 24, 18, 0, 0);
+      final existingTx = TransactionModel(
+        id: 'tx_existing_1',
+        title: 'Swiggy',
+        amount: 340.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'w_hdfc',
+        date: baseTime,
+        createdAt: baseTime,
+      );
+
+      // Same amount within 45s sliding window with same or generic merchant -> Duplicate
+      final incomingDuplicate = PendingTransactionModel(
+        id: 'sms_fuzzy_dup',
+        amount: 340.0,
+        merchant: 'Swiggy',
+        date: baseTime.add(const Duration(seconds: 45)),
+        detectionSource: 'sms',
+      );
+      expect(service.isAlreadySaved(incomingDuplicate, [existingTx]), isTrue);
+
+      // Generic merchant indicator like "UPI Payment" within sliding window -> Duplicate
+      final genericDuplicate = PendingTransactionModel(
+        id: 'sms_generic_dup',
+        amount: 340.0,
+        merchant: 'UPI Payment',
+        date: baseTime.add(const Duration(seconds: 30)),
+        detectionSource: 'sms',
+      );
+      expect(service.isAlreadySaved(genericDuplicate, [existingTx]), isTrue);
+
+      // Outside sliding window (> 90s default) -> Not duplicate
+      final incomingOutsideWindow = PendingTransactionModel(
+        id: 'sms_outside_window',
+        amount: 340.0,
+        merchant: 'Swiggy',
+        date: baseTime.add(const Duration(seconds: 300)),
+        detectionSource: 'sms',
+      );
+      expect(service.isAlreadySaved(incomingOutsideWindow, [existingTx]), isFalse);
+    });
+
+    // 3. Smart Auto-Categorization & Dynamically Create Category Once
+    test('Smart Auto-Categorization matches keywords and creates category once if unmatched', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      // Default & custom keyword mappings
+      // Swiggy, Zomato, Starbucks, McDonald's -> Food & Dining (cat_food)
+      expect(service.predictCategory('Swiggy', 'Order paid', storage.getCategories()), equals('food'));
+      expect(service.predictCategory('Zomato', 'Delivered lunch', storage.getCategories()), equals('food'));
+      expect(service.predictCategory('Starbucks', 'Coffee purchase', storage.getCategories()), equals('food'));
+      expect(service.predictCategory('McDonalds', 'Meal', storage.getCategories()), equals('food'));
+
+      // Uber, Ola, Rapido, Shell, Metro -> Transport / Fuel (cat_transport)
+      expect(service.predictCategory('Uber', 'Ride payment', storage.getCategories()), equals('transport'));
+      expect(service.predictCategory('Ola Cabs', 'Cab fare', storage.getCategories()), equals('transport'));
+      expect(service.predictCategory('Rapido', 'Bike taxi', storage.getCategories()), equals('transport'));
+      expect(service.predictCategory('Shell Petrol Pump', 'Fuel', storage.getCategories()), equals('transport'));
+      expect(service.predictCategory('Namma Metro', 'Metro smartcard recharge', storage.getCategories()), equals('transport'));
+
+      // Amazon, Flipkart, Zara -> Shopping (cat_shopping)
+      expect(service.predictCategory('Amazon', 'Order payment', storage.getCategories()), equals('shopping'));
+      expect(service.predictCategory('Flipkart', 'Shopping', storage.getCategories()), equals('shopping'));
+      expect(service.predictCategory('Zara', 'Clothing purchase', storage.getCategories()), equals('shopping'));
+
+      // Salary, Payroll -> Salary (Income)
+      expect(service.predictCategory('Infosys Payroll', 'Salary credit', storage.getCategories(), isIncome: true), equals('salary'));
+      expect(service.predictCategory('Acme Corp', 'Monthly Salary', storage.getCategories(), isIncome: true), equals('salary'));
+
+      // Unmatched merchant creates new category ONCE
+      final initialCount = storage.getCategories().length;
+      final newCatId = service.predictCategory('Decathlon Sports', 'Purchased camping tent', storage.getCategories());
+      expect(newCatId, contains('decathlon'));
+      expect(storage.getCategories().length, equals(initialCount + 1));
+      final createdCat = storage.getCategories().firstWhere((c) => c.id == newCatId);
+      expect(createdCat.name, equals('Decathlon Sports'));
+      expect(createdCat.isDefault, isFalse);
+
+      // Calling again for same merchant reuses the created category once without creating duplicate
+      final secondCatId = service.predictCategory('Decathlon Sports', 'Shoes', storage.getCategories());
+      expect(secondCatId, equals(newCatId));
+      expect(storage.getCategories().length, equals(initialCount + 1));
+    });
+
+    // 4. Wallet / Account Mapping: Default Primary Fallback + Ask Once for Missed Account
+    test('Wallet Mapping assigns default primary wallet and tracks missed account prompt once', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      // When account digits do not match any known wallet
+      final missedAccountItem = PendingTransactionModel(
+        id: 'sms_missed_acct',
+        amount: 850.0,
+        merchant: 'Flipkart',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+        senderBank: 'Axis Bank',
+        counterpartyLast4: '5566',
+      );
+
+      // Explicit match is null
+      final explicit = service.findExplicitMatchingWallet(missedAccountItem, storage.getWallets());
+      expect(explicit, isNull);
+
+      // Fallback assigns default primary wallet (w_hdfc)
+      final matchedWallet = service.matchWallet(missedAccountItem, storage.getWallets());
+      expect(matchedWallet, equals('w_hdfc'));
+
+      // Tracking asked missed accounts once
+      const missedKey = 'Axis Bank_5566';
+      expect(storage.hasAskedToAddMissedAccount(missedKey), isFalse);
+
+      // Mark asked
+      storage.markMissedAccountAsked(missedKey);
+      expect(storage.hasAskedToAddMissedAccount(missedKey), isTrue);
+    });
+
+    // 5. Auto-Log Execution (autoSaveSms toggle)
+    test('Auto-Log Execution: autoSaveSms toggle controls direct save vs pending review queue', () async {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final item = PendingTransactionModel(
+        id: 'sms_test_item_1',
+        amount: 600.0,
+        merchant: 'Swiggy',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+        counterpartyLast4: '1234', // Explicit match to w_hdfc
+      );
+
+      // When autoSaveSms == false: Item remains in Pending Review Queue
+      final pendingProcessed = service.deduplicateAndAssignHeuristics([item]);
+      await storage.savePendingTransactions(pendingProcessed);
+
+      expect(storage.getPendingTransactions().length, equals(1));
+      expect(storage.getTransactions().length, equals(0)); // NOT auto-saved yet
+      expect(storage.getPendingTransactions().first.merchant, equals('Swiggy'));
+
+      // User manual approve from Pending Review Queue:
+      final toApprove = storage.getPendingTransactions().first;
+      final approvedTx = TransactionModel(
+        id: toApprove.id,
+        title: toApprove.merchant,
+        amount: toApprove.amount,
+        type: TransactionType.expense,
+        categoryId: toApprove.suggestedCategoryId ?? 'food',
+        walletId: toApprove.suggestedWalletId ?? 'w_hdfc',
+        date: toApprove.date,
+        createdAt: DateTime.now(),
+      );
+      await storage.saveTransactions([approvedTx]);
+      await storage.savePendingTransactions([]); // cleared from pending queue
+
+      expect(storage.getTransactions().length, equals(1));
+      expect(storage.getPendingTransactions().isEmpty, isTrue);
+
+      // When autoSaveSms == true: Item is written directly to StorageService transactions
+      final autoSaveItem = PendingTransactionModel(
+        id: 'sms_test_item_2',
+        amount: 1500.0,
+        merchant: 'Zara',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+        counterpartyLast4: '1234',
+      );
+
+      final autoLoggedTx = TransactionModel(
+        id: autoSaveItem.id,
+        title: autoSaveItem.merchant,
+        amount: autoSaveItem.amount,
+        type: TransactionType.expense,
+        categoryId: service.predictCategory(autoSaveItem.merchant, '', storage.getCategories()),
+        walletId: service.matchWallet(autoSaveItem, storage.getWallets()),
+        date: autoSaveItem.date,
+        createdAt: DateTime.now(),
+      );
+
+      await storage.saveTransactions([...storage.getTransactions(), autoLoggedTx]);
+
+      // Direct storage commit verified
+      expect(storage.getTransactions().length, equals(2));
+      final lastTx = storage.getTransactions().last;
+      expect(lastTx.title, equals('Zara'));
+      expect(lastTx.categoryId, equals('shopping'));
+      expect(lastTx.walletId, equals('w_hdfc'));
+      expect(lastTx.amount, equals(1500.0));
     });
   });
 }

@@ -133,8 +133,9 @@ class AutoImportService {
     return [];
   }
 
-  /// Fetches pending transactions from native buffer, runs smart deduplication,
-  /// resolves screenshot OCR if needed, and clears the native queue buffer.
+  /// Fetches pending transactions from native buffer, persists them, then clears
+  /// the native queue. Keeping persistence before acknowledgement avoids loss if
+  /// the app is killed while processing the import.
   Future<List<PendingTransactionModel>> fetchAndDrainPendingTransactions() async {
     List<PendingTransactionModel> incoming = [];
 
@@ -146,8 +147,6 @@ class AutoImportService {
             .map((e) => PendingTransactionModel.fromJson(e as Map<String, dynamic>))
             .toList();
 
-        // Clear native buffer after successful retrieval
-        await _channel.invokeMethod('clearPendingTransactions');
       }
     } catch (_) {
       // Safe fallback on platform error or non-Android
@@ -171,7 +170,16 @@ class AutoImportService {
     }
 
     // Apply Smart Multi-Key Deduplication
-    return deduplicateAndAssignHeuristics(enriched);
+    final result = deduplicateAndAssignHeuristics(enriched);
+    final durable = deduplicateAndAssignHeuristics([
+      ..._storage.getPendingTransactions(),
+      ...result,
+    ]);
+    await _storage.savePendingTransactions(durable);
+    if (incoming.isNotEmpty) {
+      await _channel.invokeMethod('clearPendingTransactions');
+    }
+    return result;
   }
 
   /// OCR enrichment fallback for screenshot watcher events
@@ -298,7 +306,19 @@ class AutoImportService {
       }
     }
 
-    // 3. Fallback search across all categories by ID or Name
+    // 3. Match against merchant name directly in existing categories
+    final cleanMerchant = _cleanCategoryName(merchant);
+    for (final c in categories) {
+      if (c.name.toLowerCase() == cleanMerchant.toLowerCase() ||
+          c.name.toLowerCase().contains(cleanMerchant.toLowerCase()) ||
+          cleanMerchant.toLowerCase().contains(c.name.toLowerCase())) {
+        if (cleanMerchant.length >= 3 && !_isGenericMerchant(cleanMerchant)) {
+          return c.id;
+        }
+      }
+    }
+
+    // 4. Fallback search across all categories by ID or Name
     for (final c in categories) {
       if (c.id == targetId || c.id == normalized || c.id == pred ||
           c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized)) {
@@ -306,7 +326,30 @@ class AutoImportService {
       }
     }
 
-    // 4. Direction-aware defaults
+    // 5. Intelligent Category Auto-Creation: If not matched in existing categories, create once
+    if (cleanMerchant.length >= 2 && !_isGenericMerchant(cleanMerchant)) {
+      final newId = 'cat_${cleanMerchant.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
+      final currentCats = _storage.getCategories();
+      final existing = currentCats.where((c) => c.id == newId || c.name.toLowerCase() == cleanMerchant.toLowerCase()).firstOrNull;
+      if (existing != null) {
+        return existing.id;
+      }
+
+      final newCat = CategoryModel(
+        id: newId,
+        name: cleanMerchant,
+        icon: _pickCategoryIcon(cleanMerchant, isIncome),
+        colorValue: _generateColorForCategory(cleanMerchant),
+        type: isIncome ? TransactionType.income : TransactionType.expense,
+        isDefault: false,
+      );
+
+      final updated = [...currentCats, newCat];
+      _storage.saveCategories(updated);
+      return newCat.id;
+    }
+
+    // 6. Direction-aware defaults
     if (isIncome) {
       final incomeCats = categories.where((c) => c.type == TransactionType.income).toList();
       return incomeCats.isNotEmpty ? incomeCats.first.id : 'salary';
@@ -314,6 +357,63 @@ class AutoImportService {
 
     final expenseCats = categories.where((c) => c.type == TransactionType.expense).toList();
     return expenseCats.isNotEmpty ? expenseCats.first.id : 'food';
+  }
+
+  static bool _isGenericMerchant(String name) {
+    final lower = name.toLowerCase().trim();
+    return lower.isEmpty ||
+        lower == 'payment' ||
+        lower == 'upi payment' ||
+        lower == 'payment received' ||
+        lower == 'debit' ||
+        lower == 'credit' ||
+        lower == 'transfer' ||
+        lower == 'deposit' ||
+        lower == 'bank transfer';
+  }
+
+  static String _cleanCategoryName(String raw) {
+    var cleaned = raw
+        .replaceAll(RegExp(r'(?i)\b(ltd|pvt|limited|india|store|pos|ecom|vpa|bank|a/c|acct)\b'), '')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9\s&-]'), '')
+        .trim();
+    if (cleaned.isEmpty) return 'Other';
+    return cleaned.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) {
+      return w[0].toUpperCase() + (w.length > 1 ? w.substring(1).toLowerCase() : '');
+    }).join(' ');
+  }
+
+  static String _pickCategoryIcon(String name, bool isIncome) {
+    if (isIncome) return '💰';
+    final lower = name.toLowerCase();
+    if (lower.contains('gym') || lower.contains('fitness') || lower.contains('cult')) return '🏋️';
+    if (lower.contains('steam') || lower.contains('game') || lower.contains('play')) return '🎮';
+    if (lower.contains('book') || lower.contains('edu') || lower.contains('class')) return '📚';
+    if (lower.contains('pet') || lower.contains('vet')) return '🐾';
+    if (lower.contains('spa') || lower.contains('salon') || lower.contains('barber')) return '💇';
+    if (lower.contains('fuel') || lower.contains('petrol') || lower.contains('diesel') || lower.contains('shell')) return '⛽';
+    if (lower.contains('coffee') || lower.contains('tea') || lower.contains('cafe') || lower.contains('starbucks')) return '☕';
+    if (lower.contains('food') || lower.contains('dine') || lower.contains('swiggy') || lower.contains('zomato') || lower.contains('mcdonald')) return '🍔';
+    if (lower.contains('uber') || lower.contains('ola') || lower.contains('rapido') || lower.contains('metro')) return '🚗';
+    if (lower.contains('amazon') || lower.contains('flipkart') || lower.contains('zara') || lower.contains('shop')) return '🛍️';
+    if (lower.contains('hotel') || lower.contains('resort') || lower.contains('stay') || lower.contains('travel')) return '✈️';
+    if (lower.contains('hospital') || lower.contains('clinic') || lower.contains('doctor') || lower.contains('pharmacy')) return '🏥';
+    return '🏷️';
+  }
+
+  static int _generateColorForCategory(String name) {
+    const palette = [
+      0xFF3F51B5, // Indigo
+      0xFF009688, // Teal
+      0xFF673AB7, // Deep Purple
+      0xFFE91E63, // Pink
+      0xFF00BCD4, // Cyan
+      0xFFFF5722, // Deep Orange
+      0xFF607D8B, // Blue Grey
+      0xFF8BC34A, // Light Green
+    ];
+    final hash = name.codeUnits.fold<int>(0, (prev, elem) => prev + elem);
+    return palette[hash % palette.length];
   }
 
   /// Checks if an incoming item matches an already-saved transaction and enriches it
@@ -353,8 +453,8 @@ class AutoImportService {
 
         // 3. Enrich bank wallet if item has bank SMS details
         if (item.appSource.contains('SMS') || item.detectionSource == 'sms') {
-          final matchedWallet = _matchWallet(item, wallets);
-          if (matchedWallet != newWallet) {
+          final matchedWallet = findExplicitMatchingWallet(item, wallets);
+          if (matchedWallet != null && matchedWallet != newWallet) {
             newWallet = matchedWallet;
             changed = true;
           }
@@ -413,7 +513,9 @@ class AutoImportService {
       }
     }
 
-    // 3. Fuzzy match fallback when refId is missing
+    // 3. MANDATORY Sliding Time-Window Fuzzy Matching for SMS & pending transactions
+    // When refId is absent or across differing sources, deduplicate via floating point amount tolerance
+    // and configured sliding time window.
     final window = windowSeconds ?? _storage.getSettings().duplicateDetectionWindowSeconds;
     final itemMerchant = item.merchant.toLowerCase().trim();
     for (final tx in saved) {
@@ -421,7 +523,9 @@ class AutoImportService {
         final txTitle = tx.title.toLowerCase().trim();
         final isTitleMatch = txTitle == itemMerchant ||
             txTitle.contains(itemMerchant) ||
-            itemMerchant.contains(txTitle);
+            itemMerchant.contains(txTitle) ||
+            _isGenericMerchant(txTitle) ||
+            _isGenericMerchant(itemMerchant);
 
         final timeDiff = tx.date.difference(item.date).inSeconds.abs();
         if (isTitleMatch && timeDiff <= window) {
@@ -445,12 +549,18 @@ class AutoImportService {
       return true;
     }
 
-    // 2. Composite match fallback when refId is missing
+    // 2. Mandatory Sliding Time-Window Fuzzy Matching
     final window = _storage.getSettings().duplicateDetectionWindowSeconds;
     if ((a.amount - b.amount).abs() < 0.01) {
       final aMerch = a.merchant.toLowerCase().trim();
       final bMerch = b.merchant.toLowerCase().trim();
-      if (aMerch == bMerch || aMerch.contains(bMerch) || bMerch.contains(aMerch)) {
+      final isTitleMatch = aMerch == bMerch ||
+          aMerch.contains(bMerch) ||
+          bMerch.contains(aMerch) ||
+          _isGenericMerchant(aMerch) ||
+          _isGenericMerchant(bMerch);
+
+      if (isTitleMatch) {
         final timeDiff = a.date.difference(b.date).inSeconds.abs();
         if (timeDiff <= window) {
           return true;
@@ -470,9 +580,15 @@ class AutoImportService {
       return explicitMatch;
     }
 
+    // 2. If no wallet matches, assign the default primary wallet
+    final defaultWallet = wallets.where((w) => w.isDefault).firstOrNull;
+    if (defaultWallet != null) {
+      return defaultWallet.id;
+    }
+
     final text = '${item.appSource} ${item.rawPayload ?? ''}'.toLowerCase();
 
-    // 2. If it's a UPI transaction, match a dedicated UPI wallet if present
+    // 3. If it's a UPI transaction, match a dedicated UPI wallet if present
     if (text.contains('upi') || text.contains('gpay') || text.contains('phonepe') || text.contains('paytm')) {
       final upiWallet = wallets.where((w) =>
           w.walletType == WalletType.upi ||
@@ -482,12 +598,6 @@ class AutoImportService {
       if (upiWallet != null) {
         return upiWallet.id;
       }
-    }
-
-    // 3. Fallback to user's default wallet if set
-    final defaultWallet = wallets.where((w) => w.isDefault).firstOrNull;
-    if (defaultWallet != null) {
-      return defaultWallet.id;
     }
 
     // 4. Fallback to first non-cash wallet, or first available wallet
@@ -599,8 +709,8 @@ class AutoImportService {
   String matchWallet(PendingTransactionModel item, List<WalletModel> wallets) =>
       _matchWallet(item, wallets);
 
-  /// Scans device SMS inbox for bank transactions, applies source-based auto-categorization
-  /// and wallet matching, and saves them directly into the database without requiring manual review.
+  /// Scans device SMS inbox and saves only items with an explicit account match.
+  /// Unmatched items remain in the durable review queue.
   /// Returns the number of successfully logged transactions.
   Future<int> autoLogPastSmsTransactions({int daysLookback = 0}) async {
     final perms = await checkPermissions();
@@ -617,10 +727,8 @@ class AutoImportService {
     final wallets = _storage.getWallets();
 
     final List<TransactionModel> txsToSave = [];
+    final List<PendingTransactionModel> unmatchedItems = [];
     final List<String> processedMsgIds = [];
-    final fallbackWalletId = wallets.isNotEmpty
-        ? (wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.first).id)
-        : 'cash';
 
     final Map<String, ({double balance, DateTime date})> latestWalletBalances = {};
 
@@ -636,11 +744,7 @@ class AutoImportService {
               (t.title.toLowerCase() == item.merchant.toLowerCase())));
       if (alreadyInBatch) continue;
 
-      final matchedWalletId = findExplicitMatchingWallet(item, wallets) ??
-          _matchWallet(item, wallets);
-      final effectiveWalletId = wallets.any((w) => w.id == matchedWalletId)
-          ? matchedWalletId
-          : fallbackWalletId;
+      final matchedWalletId = findExplicitMatchingWallet(item, wallets);
 
       final effectiveCategoryId = item.suggestedCategoryId ??
           _predictCategory(
@@ -657,6 +761,11 @@ class AutoImportService {
           ? 'Ref: ${item.refId}'
           : (item.appSource.isNotEmpty ? 'Auto-Logged via ${item.appSource}' : null);
 
+      if (matchedWalletId == null) {
+        unmatchedItems.add(item.copyWith(suggestedCategoryId: effectiveCategoryId));
+        continue;
+      }
+
       txsToSave.add(
         TransactionModel(
           id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
@@ -664,7 +773,7 @@ class AutoImportService {
           amount: item.amount,
           type: item.isIncome ? TransactionType.income : TransactionType.expense,
           categoryId: effectiveCategoryId,
-          walletId: effectiveWalletId,
+          walletId: matchedWalletId,
           date: item.date,
           note: effectiveNote,
           refId: item.refId,
@@ -682,9 +791,9 @@ class AutoImportService {
       // Track available balance if reported in the message
       final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
       if (extractedBal != null) {
-        final currentLatest = latestWalletBalances[effectiveWalletId];
+        final currentLatest = latestWalletBalances[matchedWalletId];
         if (currentLatest == null || item.date.isAfter(currentLatest.date)) {
-          latestWalletBalances[effectiveWalletId] = (balance: extractedBal, date: item.date);
+          latestWalletBalances[matchedWalletId] = (balance: extractedBal, date: item.date);
         }
       }
     }
@@ -715,6 +824,13 @@ class AutoImportService {
         }).toList();
         await _storage.saveWallets(updatedWallets);
       }
+    }
+
+    if (unmatchedItems.isNotEmpty) {
+      await _storage.savePendingTransactions(deduplicateAndAssignHeuristics([
+        ..._storage.getPendingTransactions(),
+        ...unmatchedItems,
+      ]));
     }
 
     return txsToSave.length;

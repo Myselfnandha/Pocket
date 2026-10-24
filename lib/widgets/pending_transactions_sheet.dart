@@ -243,6 +243,53 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                             ),
                           ],
 
+                          // Missed Account Prompt Banner: If no wallet matched explicitly
+                          if ((item.counterpartyLast4 != null || item.senderBank != null) &&
+                              ref.read(autoImportServiceProvider).findExplicitMatchingWallet(item, wallets) == null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: palette.accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: palette.accent.withValues(alpha: 0.3),
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.account_balance_outlined, size: 14, color: palette.accent),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Missed account (${item.senderBank ?? 'Bank'}${item.counterpartyLast4 != null ? ' ..${item.counterpartyLast4}' : ''}) assigned to ${currentWallet.name}.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.grey.shade300 : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => _pickWallet(context, item, wallets),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Text(
+                                        'Change',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: palette.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           const SizedBox(height: 10),
 
                           // Interactive Category & Wallet Selector Pills

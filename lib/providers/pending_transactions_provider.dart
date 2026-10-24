@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/category_model.dart';
@@ -22,7 +23,8 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
   final Ref _ref;
   bool _isSyncingSms = false;
 
-  PendingTransactionsNotifier(this._ref) : super([]) {
+  PendingTransactionsNotifier(this._ref)
+      : super(_ref.read(storageServiceProvider).getPendingTransactions()) {
     fetchPendingTransactions();
   }
 
@@ -46,6 +48,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...fetched]);
       state = merged;
+      await _ref.read(storageServiceProvider).savePendingTransactions(state);
 
       // Auto-commit live incoming items directly to database when explicitly configured
       final settings = _ref.read(settingsProvider);
@@ -58,17 +61,37 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true'));
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
 
-        if (isPaytm || (isSms && settings.autoSaveSms) || (isAutoDirect && settings.autoSaveSms)) {
-          var matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
-          if (matchedWalletId == null && wallets.isNotEmpty) {
-            final upiOrPaytm = wallets.where((w) =>
-                w.walletType == WalletType.upi ||
-                w.name.toLowerCase().contains('paytm') ||
-                w.name.toLowerCase().contains('upi')).firstOrNull;
-            matchedWalletId = upiOrPaytm?.id ?? service.matchWallet(item, wallets);
-          }
-          if (matchedWalletId != null) {
-            autoCommitItems.add(MapEntry(item, matchedWalletId));
+        if ((isSms || isPaytm || isAutoDirect) && settings.autoSaveSms) {
+          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          final defaultWallet = wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.firstOrNull ?? defaultWallets.first);
+          final effectiveWalletId = matchedWalletId ?? item.suggestedWalletId ?? defaultWallet.id;
+          autoCommitItems.add(MapEntry(item, effectiveWalletId));
+
+          // If no wallet matches, it assigns the default primary wallet - ask user once to add the missed account
+          if (matchedWalletId == null && (item.counterpartyLast4 != null || item.senderBank != null)) {
+            final missedKey = '${item.senderBank ?? ''}_${item.counterpartyLast4 ?? ''}'.trim();
+            final storage = _ref.read(storageServiceProvider);
+            if (missedKey.isNotEmpty && !storage.hasAskedToAddMissedAccount(missedKey)) {
+              unawaited(storage.markMissedAccountAsked(missedKey));
+              final acctLabel = item.counterpartyLast4 != null ? ' (..${item.counterpartyLast4})' : '';
+              final bankName = item.senderBank ?? 'Bank Account';
+              unawaited(_ref.read(notificationsProvider.notifier).addNotification(
+                AppNotificationModel(
+                  id: const Uuid().v4(),
+                  title: '🏦 Missed Account Detected: $bankName$acctLabel',
+                  message: 'Transaction was auto-logged to ${defaultWallet.name}. Would you like to add this bank account to Pocket?',
+                  type: NotificationType.system,
+                  createdAt: DateTime.now(),
+                  actionData: {
+                    'type': 'add_missed_account',
+                    'senderBank': item.senderBank,
+                    'counterpartyLast4': item.counterpartyLast4,
+                    'defaultWalletId': defaultWallet.id,
+                    'transactionId': item.id,
+                  },
+                ),
+              ));
+            }
           }
         } else if (item.detectionSource == 'screenshot' && settings.autoSaveScreenshots) {
           autoCommitItems.add(MapEntry(item, item.suggestedWalletId));
@@ -117,6 +140,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
         final storage = _ref.read(storageServiceProvider);
         await SystemWidgetService.syncFromStorage(storage);
       }
+      await _ref.read(storageServiceProvider).savePendingTransactions(state);
     } catch (_) {
       // Non-blocking defensive catch
     }
@@ -126,6 +150,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
   void addPending(PendingTransactionModel item) {
     final service = _ref.read(autoImportServiceProvider);
     state = service.deduplicateAndAssignHeuristics([...state, item]);
+    unawaited(_ref.read(storageServiceProvider).savePendingTransactions(state));
   }
 
   /// Actively queries recent SMS from Android SMS provider to catch up on any messages
@@ -152,12 +177,42 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       final current = List<PendingTransactionModel>.from(state);
       final merged = service.deduplicateAndAssignHeuristics([...current, ...newItems]);
       state = merged;
+      await storage.savePendingTransactions(state);
 
       // Auto-commit newly synced SMS directly to database without manual review when autoSaveSms is enabled
       final settings = _ref.read(settingsProvider);
       if (settings.autoSaveSms) {
+        final wallets = _ref.read(walletsProvider);
+        final defaultWallet = wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.firstOrNull ?? defaultWallets.first);
         for (final item in newItems) {
-          await approve(item.id);
+          final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
+          final effectiveWalletId = matchedWalletId ?? item.suggestedWalletId ?? defaultWallet.id;
+          await approve(item.id, walletId: effectiveWalletId);
+
+          if (matchedWalletId == null && (item.counterpartyLast4 != null || item.senderBank != null)) {
+            final missedKey = '${item.senderBank ?? ''}_${item.counterpartyLast4 ?? ''}'.trim();
+            if (missedKey.isNotEmpty && !storage.hasAskedToAddMissedAccount(missedKey)) {
+              await storage.markMissedAccountAsked(missedKey);
+              final acctLabel = item.counterpartyLast4 != null ? ' (..${item.counterpartyLast4})' : '';
+              final bankName = item.senderBank ?? 'Bank Account';
+              await _ref.read(notificationsProvider.notifier).addNotification(
+                AppNotificationModel(
+                  id: const Uuid().v4(),
+                  title: '🏦 Missed Account Detected: $bankName$acctLabel',
+                  message: 'Transaction was auto-logged to ${defaultWallet.name}. Would you like to add this bank account to Pocket?',
+                  type: NotificationType.system,
+                  createdAt: DateTime.now(),
+                  actionData: {
+                    'type': 'add_missed_account',
+                    'senderBank': item.senderBank,
+                    'counterpartyLast4': item.counterpartyLast4,
+                    'defaultWalletId': defaultWallet.id,
+                    'transactionId': item.id,
+                  },
+                ),
+              );
+            }
+          }
         }
       }
     } catch (_) {
@@ -242,6 +297,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     );
 
     state = state.where((p) => p.id != id).toList();
+    await storage.savePendingTransactions(state);
   }
 
   /// Batch-commits all currently pending transactions into the database
@@ -325,6 +381,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     }
 
     state = [];
+    await storage.savePendingTransactions(state);
     return approved;
   }
 
@@ -339,6 +396,7 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       }
     }
     state = state.where((p) => p.id != id).toList();
+    await _ref.read(storageServiceProvider).savePendingTransactions(state);
   }
 
   /// Dismisses all pending transactions and records tombstones
@@ -351,5 +409,6 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
       }
     }
     state = [];
+    await storage.savePendingTransactions(state);
   }
 }

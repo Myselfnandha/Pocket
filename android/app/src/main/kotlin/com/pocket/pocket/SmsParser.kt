@@ -81,10 +81,10 @@ object SmsParser {
         Pattern.compile("""(?:to\s+vpa|to)\s+([a-zA-Z0-9.\-_]{2,35}@[a-zA-Z0-9.\-_]{2,20})""", Pattern.CASE_INSENSITIVE),
         // "trf to Maggi", "transfer to John", "transferred to Alex"
         Pattern.compile("(?:trf\\s+to|transfer\\s+to|transferred\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|refno|upi|via|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
-        // "paid to Zomato", "payment to Swiggy", "sent to Blinkit"
-        Pattern.compile("(?:paid\\s+to|payment\\s+to|sent\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
-        // "towards AMAZON PAY", "for NETFLIX"
-        Pattern.compile("(?:towards|for)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "paid to Zomato", "payment to Swiggy", "sent to Blinkit", "paid towards Swiggy", "debited towards Flipkart"
+        Pattern.compile("(?:paid\\s+(?:to|towards)|payment\\s+(?:to|towards)|sent\\s+(?:to|towards)|debited\\s+(?:for|towards)|spent\\s+(?:on|towards))\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|for|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
+        // "towards AMAZON PAY", "towards: STARBUCKS", "for NETFLIX"
+        Pattern.compile("(?:towards|for)[:\\s]+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:via|using|on|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "at RELIANCE RETAIL", "at STARBUCKS"
         Pattern.compile("(?:\\bat\\s+)([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:on|via|ref|upi|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "credited by transfer from TECHCORP"

@@ -326,9 +326,9 @@ class ShareReceiverActivity : Activity() {
             }
         }
 
-        // Fallback inline regex for single-line format: "Paid to Swiggy" or "To: Ramesh"
+        // Fallback inline regex for single-line format: "Paid to Swiggy", "To: Ramesh", "Towards: Netflix"
         if (receiverName.isEmpty()) {
-            val toMatcher = Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:)\s+([A-Za-z0-9\s&.\-_]{2,35})""", Pattern.CASE_INSENSITIVE).matcher(text)
+            val toMatcher = Pattern.compile("""(?:Paid to|To:|Sent to|Transfer to|Payment to|Payee:|Towards:?|Paid towards|Payment towards)\s+([A-Za-z0-9\s&.\-_]{2,35})""", Pattern.CASE_INSENSITIVE).matcher(text)
             if (toMatcher.find()) {
                 val found = cleanMerchantCandidate(toMatcher.group(1) ?: "")
                 if (found.isNotEmpty() && !isTechnicalKeyword(found)) {
