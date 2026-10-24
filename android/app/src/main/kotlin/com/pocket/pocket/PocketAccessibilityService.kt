@@ -1,6 +1,7 @@
 package com.pocket.pocket
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONObject
