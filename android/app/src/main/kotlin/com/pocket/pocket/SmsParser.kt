@@ -73,6 +73,10 @@ object SmsParser {
     )
 
     private val MERCHANT_PATTERNS = listOf(
+        // UPI ref / info patterns: "UPI/P2P/123456789012/Receiver" or "UPI/DR/123456789012/Receiver"
+        Pattern.compile("""UPI/(?:P2P|P2M|DR|CR)/[0-9]+/([A-Za-z0-9&'._\s]{2,35})""", Pattern.CASE_INSENSITIVE),
+        // "to VPA user@bank" or "to user@bank"
+        Pattern.compile("""(?:to\s+vpa|to)\s+([a-zA-Z0-9.\-_]{2,35}@[a-zA-Z0-9.\-_]{2,20})""", Pattern.CASE_INSENSITIVE),
         // "trf to Maggi", "transfer to John", "transferred to Alex"
         Pattern.compile("(?:trf\\s+to|transfer\\s+to|transferred\\s+to)\\s+([A-Za-z0-9&'._\\s]{2,35}?)(?:\\s+(?:ref|refno|upi|via|on|avl|bal|\\.|$)|\$)", Pattern.CASE_INSENSITIVE),
         // "paid to Zomato", "payment to Swiggy", "sent to Blinkit"
@@ -109,13 +113,20 @@ object SmsParser {
         // 5. Extract Account Last 4
         val accountLast4 = extractAccountLast4(body)
 
-        // 6. Extract Bank & Parties
-        val senderBank = extractSenderBank(sender, body)
-        val senderName = if (isCredit) merchant else null
-        val receiverName = if (!isCredit) merchant else null
-
         // Clean sender display
         val cleanSender = cleanSenderAddress(sender)
+
+        // 6. Extract Bank & Parties
+        val senderBank = extractSenderBank(sender, body)
+
+        val isGenericMerchant = merchant.equals("Payment", ignoreCase = true) ||
+                merchant.equals("UPI Payment", ignoreCase = true) ||
+                merchant.equals("Payment Received", ignoreCase = true) ||
+                merchant.equals(cleanSender, ignoreCase = true) ||
+                (senderBank != null && merchant.equals(senderBank, ignoreCase = true))
+
+        val senderName = if (isCredit && !isGenericMerchant) merchant else null
+        val receiverName = if (!isCredit && !isGenericMerchant) merchant else null
 
         val stableId = if (!smsId.isNullOrBlank()) {
             "sms_$smsId"
@@ -149,11 +160,12 @@ object SmsParser {
             combined.contains("icicib") || combined.contains("icici") -> "ICICI Bank"
             combined.contains("axisbk") || combined.contains("axis") -> "Axis Bank"
             combined.contains("kotakb") || combined.contains("kotak") -> "Kotak Mahindra Bank"
-            combined.contains("indbnk") || combined.contains("indusind") || combined.contains("indusb") -> "IndusInd Bank"
+            combined.contains("indusind") || combined.contains("indusb") -> "IndusInd Bank"
+            combined.contains("indian bank") || combined.contains("indbnk") -> "Indian Bank"
             combined.contains("pnbsms") || combined.contains("punjab national") || combined.contains("pnb") -> "Punjab National Bank"
             combined.contains("bobsms") || combined.contains("bank of baroda") || combined.contains("bob") -> "Bank of Baroda"
             combined.contains("canbnk") || combined.contains("canara") -> "Canara Bank"
-            combined.contains("unionb") || combined.contains("ubin") || combined.contains("union bank") -> "Union Bank of India"
+            combined.contains("unionb") || combined.contains("ubin") || combined.contains("uboi") || combined.contains("union bank") -> "Union Bank of India"
             combined.contains("idfcfb") || combined.contains("idfc") -> "IDFC FIRST Bank"
             combined.contains("fedbnk") || combined.contains("federal bank") -> "Federal Bank"
             combined.contains("rblbnk") || combined.contains("rbl") -> "RBL Bank"
@@ -237,10 +249,8 @@ object SmsParser {
             return "Payment Received"
         }
 
-        // Bank sender address fallback if clean
-        val cleanSender = cleanSenderAddress(sender)
-        if (cleanSender.isNotEmpty() && !cleanSender.contains("OTP", true)) {
-            return cleanSender
+        if (body.contains("upi", ignoreCase = true)) {
+            return "UPI Payment"
         }
 
         return "Payment"

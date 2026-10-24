@@ -426,36 +426,33 @@ class AutoImportService {
   String _matchWallet(PendingTransactionModel item, List<WalletModel> wallets) {
     if (wallets.isEmpty) return 'cash';
 
-    // 1. Direct match by counterparty account last 4 digits
-    if (item.counterpartyLast4 != null && item.counterpartyLast4!.isNotEmpty) {
-      for (final w in wallets) {
-        if (w.accountNumber != null && w.accountNumber!.contains(item.counterpartyLast4!)) {
-          return w.id;
-        }
-      }
+    // 1. First attempt explicit matching (by account digits, sender bank, or bank keywords)
+    final explicitMatch = findExplicitMatchingWallet(item, wallets);
+    if (explicitMatch != null) {
+      return explicitMatch;
     }
 
     final text = '${item.appSource} ${item.rawPayload ?? ''}'.toLowerCase();
 
-    // 2. Match by account number last 4 in raw text
-    for (final w in wallets) {
-      if (w.accountNumber != null && w.accountNumber!.length >= 4) {
-        final last4 = w.accountNumber!.substring(w.accountNumber!.length - 4);
-        if (text.contains(last4)) {
-          return w.id;
-        }
+    // 2. If it's a UPI transaction, match a dedicated UPI wallet if present
+    if (text.contains('upi') || text.contains('gpay') || text.contains('phonepe') || text.contains('paytm')) {
+      final upiWallet = wallets.where((w) =>
+          w.walletType == WalletType.upi ||
+          w.name.toLowerCase().contains('upi') ||
+          w.name.toLowerCase().contains('paytm')
+      ).firstOrNull;
+      if (upiWallet != null) {
+        return upiWallet.id;
       }
     }
 
-    // Match by bank/wallet keywords
-    for (final w in wallets) {
-      final name = w.name.toLowerCase();
-      if (text.contains(name) || name.contains('upi') || name.contains('online')) {
-        return w.id;
-      }
+    // 3. Fallback to user's default wallet if set
+    final defaultWallet = wallets.where((w) => w.isDefault).firstOrNull;
+    if (defaultWallet != null) {
+      return defaultWallet.id;
     }
 
-    // Prefer first bank or UPI wallet over Cash
+    // 4. Fallback to first non-cash wallet, or first available wallet
     final nonCash = wallets.firstWhere(
       (w) => !w.name.toLowerCase().contains('cash'),
       orElse: () => wallets.first,
@@ -464,7 +461,8 @@ class AutoImportService {
     return nonCash.id;
   }
 
-  /// Explicitly matches an incoming transaction against user accounts by last-4 account digits or bank name.
+  /// Explicitly matches an incoming transaction against user accounts by last-4 account digits,
+  /// sender bank name, or bank acronym keywords.
   /// Returns null if no explicit matching account can be safely identified.
   String? findExplicitMatchingWallet(PendingTransactionModel item, List<WalletModel> wallets) {
     if (wallets.isEmpty) return null;
@@ -493,7 +491,20 @@ class AutoImportService {
       }
     }
 
-    // 3. Match by bank name keywords (e.g. HDFC, SBI, ICICI, Axis, Kotak, Chase, Amex)
+    // 3. Match by explicit senderBank if present
+    if (item.senderBank != null && item.senderBank!.trim().isNotEmpty) {
+      final senderBank = item.senderBank!.toLowerCase().trim();
+      for (final w in wallets) {
+        final name = w.name.toLowerCase().trim();
+        if (name.isNotEmpty && name != 'cash' && name != 'wallet') {
+          if (name.contains(senderBank) || senderBank.contains(name)) {
+            return w.id;
+          }
+        }
+      }
+    }
+
+    // 4. Match by bank name keywords (e.g. HDFC, SBI, ICICI, Axis, Kotak, Indian Bank, IndusInd)
     for (final w in wallets) {
       final name = w.name.toLowerCase().trim();
       if (name.isNotEmpty && name != 'cash' && name != 'wallet' && name != 'main account') {
@@ -501,6 +512,26 @@ class AutoImportService {
           return w.id;
         }
       }
+    }
+
+    // 5. Match by bank SMS acronyms / gateway headers against wallet names
+    for (final w in wallets) {
+      final name = w.name.toLowerCase();
+      if ((text.contains('indusb') || text.contains('indusind')) && name.contains('indusind')) return w.id;
+      if ((text.contains('indbnk') || text.contains('indian bank')) && name.contains('indian')) return w.id;
+      if (text.contains('hdfc') && name.contains('hdfc')) return w.id;
+      if ((text.contains('sbi') || text.contains('state bank')) && (name.contains('sbi') || name.contains('state bank'))) return w.id;
+      if (text.contains('icici') && name.contains('icici')) return w.id;
+      if (text.contains('axis') && name.contains('axis')) return w.id;
+      if (text.contains('kotak') && name.contains('kotak')) return w.id;
+      if ((text.contains('pnb') || text.contains('punjab national')) && (name.contains('pnb') || name.contains('punjab'))) return w.id;
+      if ((text.contains('bob') || text.contains('bank of baroda')) && (name.contains('bob') || name.contains('baroda'))) return w.id;
+      if (text.contains('canara') && name.contains('canara')) return w.id;
+      if ((text.contains('union') || text.contains('ubin') || text.contains('uboi')) && name.contains('union')) return w.id;
+      if (text.contains('idfc') && name.contains('idfc')) return w.id;
+      if (text.contains('federal') && name.contains('federal')) return w.id;
+      if (text.contains('rbl') && name.contains('rbl')) return w.id;
+      if (text.contains('yes bank') && name.contains('yes')) return w.id;
     }
 
     return null;

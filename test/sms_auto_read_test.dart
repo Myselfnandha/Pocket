@@ -29,6 +29,15 @@ class FakeStorageService extends Fake implements StorageService {
           accountNumber: '•••• 0511',
         ),
         WalletModel(
+          id: 'w_indusind',
+          name: 'IndusInd Bank',
+          icon: 'account_balance',
+          colorValue: 0xFF800000,
+          walletType: WalletType.bank,
+          currentBalance: 25000.0,
+          accountNumber: '•••• 9876',
+        ),
+        WalletModel(
           id: 'w_cash',
           name: 'Cash in Wallet',
           icon: 'payments',
@@ -281,6 +290,38 @@ void main() {
       }
 
       expect(externalExpense, 1200.0);
+    });
+
+    test('AutoImportService accurately separates Indian Bank (INDBNK) and IndusInd Bank (INDUSB)', () {
+      final storage = FakeStorageService();
+      final service = AutoImportService(storage);
+
+      final indBankItem = PendingTransactionModel(
+        id: 'sms_ind_1',
+        amount: 300.0,
+        merchant: 'UPI Payment',
+        appSource: 'SMS (VK-INDBNK)',
+        senderBank: 'Indian Bank',
+        counterpartyLast4: '0511',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+      );
+
+      final indusindItem = PendingTransactionModel(
+        id: 'sms_indus_1',
+        amount: 850.0,
+        merchant: 'Amazon',
+        appSource: 'SMS (VM-INDUSB)',
+        senderBank: 'IndusInd Bank',
+        counterpartyLast4: '9876',
+        date: DateTime.now(),
+        detectionSource: 'sms',
+      );
+
+      final processed = service.deduplicateAndAssignHeuristics([indBankItem, indusindItem]);
+      expect(processed.length, 2);
+      expect(processed.firstWhere((p) => p.id == 'sms_ind_1').suggestedWalletId, 'w_ind');
+      expect(processed.firstWhere((p) => p.id == 'sms_indus_1').suggestedWalletId, 'w_indusind');
     });
   });
 }

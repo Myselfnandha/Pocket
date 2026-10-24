@@ -225,7 +225,14 @@ class TransactionDetailScreen extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ],
-                    if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty) ...[
+                    final showSender = currentTx.senderName != null &&
+                        currentTx.senderName!.isNotEmpty &&
+                        !_isGenericOrBankIdentifier(currentTx.senderName, currentTx.senderBank, currentTx.appSource);
+                    final showReceiver = currentTx.receiverName != null &&
+                        currentTx.receiverName!.isNotEmpty &&
+                        !_isGenericOrBankIdentifier(currentTx.receiverName, currentTx.senderBank, currentTx.appSource);
+
+                    if (showSender) ...[
                       if (currentTx.senderBank != null || (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty)) _buildDivider(isDark),
                       _buildDetailRow(
                         context,
@@ -235,8 +242,8 @@ class TransactionDetailScreen extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ],
-                    if (currentTx.receiverName != null && currentTx.receiverName!.isNotEmpty) ...[
-                      if (currentTx.senderName != null && currentTx.senderName!.isNotEmpty || currentTx.senderBank != null) _buildDivider(isDark),
+                    if (showReceiver) ...[
+                      if (showSender || currentTx.senderBank != null || (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty)) _buildDivider(isDark),
                       _buildDetailRow(
                         context,
                         icon: Icons.person_pin_circle_outlined,
@@ -1067,7 +1074,11 @@ class TransactionDetailScreen extends ConsumerWidget {
   }
 
   void _showManualAssignDialog(BuildContext context, WidgetRef ref, TransactionModel tx) {
-    final nameCtrl = TextEditingController(text: tx.linkedContactName ?? tx.senderName ?? tx.receiverName ?? '');
+    final suggestedName = tx.linkedContactName ??
+        (!_isGenericOrBankIdentifier(tx.senderName, tx.senderBank, tx.appSource) ? tx.senderName : null) ??
+        (!_isGenericOrBankIdentifier(tx.receiverName, tx.senderBank, tx.appSource) ? tx.receiverName : null) ??
+        '';
+    final nameCtrl = TextEditingController(text: suggestedName);
     final phoneCtrl = TextEditingController(text: tx.linkedContactPhone ?? '');
     final bankCtrl = TextEditingController(text: tx.senderBank ?? '');
 
@@ -1137,5 +1148,24 @@ class TransactionDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  bool _isGenericOrBankIdentifier(String? name, String? senderBank, String? appSource) {
+    if (name == null || name.trim().isEmpty) return true;
+    final clean = name.trim().toLowerCase();
+    if (clean == 'payment' || clean == 'upi payment' || clean == 'payment received' || clean == 'salary' || clean == 'refund' || clean == 'cashback') {
+      return true;
+    }
+    if (senderBank != null && (clean == senderBank.trim().toLowerCase() || senderBank.toLowerCase().contains(clean))) {
+      return true;
+    }
+    if (appSource != null && appSource.toLowerCase().contains(clean)) {
+      return true;
+    }
+    const bankCodes = {
+      'indusb', 'indbnk', 'hdfcbk', 'sbiinb', 'icicib', 'axisbk', 'kotakb',
+      'pnbsms', 'bobsms', 'canbnk', 'unionb', 'idfcfb', 'fedbnk', 'rblbnk', 'yesbnk'
+    };
+    return bankCodes.contains(clean);
   }
 }

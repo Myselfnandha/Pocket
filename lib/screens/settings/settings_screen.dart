@@ -15,6 +15,7 @@ import '../../widgets/blurred_dialog_utils.dart';
 import '../../widgets/user_avatar_widget.dart';
 
 class SettingsScreen extends ConsumerWidget {
+  static const String appVersion = 'v1.5.28';
   const SettingsScreen({super.key});
 
   @override
@@ -242,7 +243,7 @@ class SettingsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                'v1.5.24',
+                appVersion,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -2222,7 +2223,7 @@ class DataSystemSubPage extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.info_outline_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Pocket', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('v1.5.24 • Clean Architecture & Universal Design'),
+                subtitle: Text('${SettingsScreen.appVersion} • Clean Architecture & Universal Design'),
               ),
               Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
               const ListTile(

@@ -66,6 +66,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     }
   }
 
+  Future<void> _pickMonthYear(BuildContext context, DateTime minDate, DateTime maxDate) async {
+    HapticFeedback.selectionClick();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _currentMonth,
+      firstDate: minDate,
+      lastDate: maxDate,
+      initialDatePickerMode: DatePickerMode.year,
+      helpText: 'Select Analytics Month',
+    );
+    if (picked != null) {
+      setState(() {
+        _currentMonth = DateTime(picked.year, picked.month);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final allTxs = ref.watch(transactionsProvider);
@@ -75,8 +92,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final now = DateTime.now();
-    DateTime minDate = DateTime(now.year, now.month);
-    DateTime maxDate = DateTime(now.year, now.month);
+    // Allow navigating back at least 3 years before now or earliest transaction
+    DateTime minDate = DateTime(now.year - 3, 1);
+    DateTime maxDate = DateTime(now.year + 1, 12);
 
     for (final tx in allTxs) {
       if (tx.date.isBefore(minDate)) {
@@ -382,18 +400,65 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                             color: canGoBack ? palette.primary : Colors.grey.withValues(alpha: 0.4),
                             onPressed: canGoBack ? () => _previousMonth(minDate) : null,
                           ),
-                          Text(
-                            DateFormat('MMMM yyyy').format(_currentMonth),
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          InkWell(
+                            onTap: () => _pickMonthYear(context, minDate, maxDate),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    DateFormat('MMMM yyyy').format(_currentMonth),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    size: 20,
+                                    color: palette.primary,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right_rounded),
-                            color: canGoForward ? palette.primary : Colors.grey.withValues(alpha: 0.4),
-                            onPressed: canGoForward ? () => _nextMonth(maxDate) : null,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_currentMonth.year != now.year || _currentMonth.month != now.month)
+                                InkWell(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _currentMonth = DateTime(now.year, now.month));
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: palette.primary.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Current',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right_rounded),
+                                color: canGoForward ? palette.primary : Colors.grey.withValues(alpha: 0.4),
+                                onPressed: canGoForward ? () => _nextMonth(maxDate) : null,
+                              ),
+                            ],
                           ),
                         ],
                       ),

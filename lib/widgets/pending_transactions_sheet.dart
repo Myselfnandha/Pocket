@@ -88,14 +88,15 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                       children: [
                         const Text(
                           'Detected Payments',
-                          style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '${pending.length} unconfirmed transactions',
+                          '${pending.length} pending',
                           style: TextStyle(
                             fontSize: 11,
+                            fontWeight: FontWeight.w500,
                             color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                           ),
                           maxLines: 1,
@@ -120,7 +121,7 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                       },
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
                         decoration: BoxDecoration(
                           color: palette.primary.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(10),
@@ -132,12 +133,12 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.done_all_rounded, size: 14, color: palette.primary),
-                            const SizedBox(width: 4),
+                            Icon(Icons.done_all_rounded, size: 13, color: palette.primary),
+                            const SizedBox(width: 3.5),
                             Text(
                               'Approve All',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
                                 color: palette.primary,
                               ),
