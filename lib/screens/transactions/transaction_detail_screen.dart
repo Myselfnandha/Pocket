@@ -49,6 +49,12 @@ class TransactionDetailScreen extends ConsumerWidget {
     final amountColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
     final prefix = isIncome ? '+' : '-';
     final formattedAmount = NumberFormat('#,##0.00').format(currentTx.amount);
+    final showSender = currentTx.senderName != null &&
+        currentTx.senderName!.isNotEmpty &&
+        !_isGenericOrBankIdentifier(currentTx.senderName, currentTx.senderBank, currentTx.appSource);
+    final showReceiver = currentTx.receiverName != null &&
+        currentTx.receiverName!.isNotEmpty &&
+        !_isGenericOrBankIdentifier(currentTx.receiverName, currentTx.senderBank, currentTx.appSource);
 
     return Scaffold(
       appBar: AppBar(
@@ -225,13 +231,6 @@ class TransactionDetailScreen extends ConsumerWidget {
                         isDark: isDark,
                       ),
                     ],
-                    final showSender = currentTx.senderName != null &&
-                        currentTx.senderName!.isNotEmpty &&
-                        !_isGenericOrBankIdentifier(currentTx.senderName, currentTx.senderBank, currentTx.appSource);
-                    final showReceiver = currentTx.receiverName != null &&
-                        currentTx.receiverName!.isNotEmpty &&
-                        !_isGenericOrBankIdentifier(currentTx.receiverName, currentTx.senderBank, currentTx.appSource);
-
                     if (showSender) ...[
                       if (currentTx.senderBank != null || (currentTx.counterpartyLast4 != null && currentTx.counterpartyLast4!.isNotEmpty)) _buildDivider(isDark),
                       _buildDetailRow(
