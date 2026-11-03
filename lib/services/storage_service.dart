@@ -318,6 +318,16 @@ class StorageService {
     await saveSettings(current.copyWith(processedMessageIds: updated));
   }
 
+  Future<void> addProcessedMessageIds(Iterable<String> messageIds) async {
+    final valid = messageIds.where((id) => id.trim().isNotEmpty).toSet();
+    if (valid.isEmpty) return;
+    final current = getSettings();
+    final set = Set<String>.from(current.processedMessageIds)..addAll(valid);
+    if (set.length != current.processedMessageIds.length) {
+      await saveSettings(current.copyWith(processedMessageIds: set.toList()));
+    }
+  }
+
   Future<void> setLastSmsScanTimestamp(int timestamp) async {
     final current = getSettings();
     await saveSettings(current.copyWith(lastSmsScanTimestamp: timestamp));

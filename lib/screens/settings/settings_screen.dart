@@ -15,7 +15,7 @@ import '../../widgets/blurred_dialog_utils.dart';
 import '../../widgets/user_avatar_widget.dart';
 
 class SettingsScreen extends ConsumerWidget {
-  static const String appVersion = 'v1.5.28';
+  static const String appVersion = 'v1.5.33';
   const SettingsScreen({super.key});
 
   @override
@@ -232,10 +232,10 @@ class SettingsScreen extends ConsumerWidget {
           _buildFolderCard(
             context: context,
             isDark: isDark,
-            icon: Icons.cloud_sync_rounded,
+            icon: Icons.storage_rounded,
             iconColor: const Color(0xFFF59E0B),
-            title: 'Data & System',
-            subtitle: 'Full JSON backup, restore, CSV export/import, storage & version',
+            title: 'Data Management',
+            subtitle: 'Local backup, restore, CSV export & encryption management',
             trailingBadge: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -2207,9 +2207,9 @@ class DataSystemSubPage extends ConsumerWidget {
             isDark: isDark,
             children: [
               ListTile(
-                leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.infoBlue),
-                title: const Text('Backup & Data Management', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Full JSON Backup, Restore, CSV Import/Export'),
+                leading: const Icon(Icons.storage_outlined, color: AppColors.infoBlue),
+                title: const Text('Data Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('JSON Backup, Restore & CSV Export (Local Only)'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push('/data-management'),
               ),
@@ -2229,7 +2229,7 @@ class DataSystemSubPage extends ConsumerWidget {
               const ListTile(
                 leading: Icon(Icons.offline_pin_rounded, color: AppColors.primaryGreenLight),
                 title: Text('Privacy Architecture', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('100% on-device local SQLite & secure preferences. Zero telemetry.'),
+                subtitle: Text('100% local AES-256 encryption. No cloud sync. Zero telemetry.'),
               ),
             ],
           ),

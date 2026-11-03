@@ -9,7 +9,6 @@ import 'services/notification_service.dart';
 import 'services/receipt_service.dart';
 import 'services/shared_transaction_handler.dart';
 import 'services/storage_service.dart';
-import 'services/cloud_sync_service.dart';
 import 'services/system_widget_service.dart';
 import 'services/upi_screenshot_parser_service.dart';
 import 'widgets/app_lock_gate.dart';
@@ -21,7 +20,6 @@ void main() async {
 
   final storageService = await StorageService.init();
   await NotificationService().init();
-  await CloudSyncService().init();
 
   // Process any due recurring transactions automatically
   await storageService.processDueRecurringRules();

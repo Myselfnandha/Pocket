@@ -83,12 +83,6 @@ class UserSettingsModel {
   final bool autoSaveSms;
   final bool autoReadSmsEnabled;
 
-  // Hugging Face Space Free Cloud Storage Hub
-  final String? hfSpaceUrl;
-  final String? hfApiKey;
-  final bool hfAutoSyncEnabled;
-  final int? hfLastSyncTimestamp;
-
   // Subscription Detection Dismissals
   final List<String> dismissedSubscriptionCandidates;
 
@@ -144,10 +138,6 @@ class UserSettingsModel {
     this.widgetShowBudgetTag = true,
     this.autoSaveSms = true,
     this.autoReadSmsEnabled = true,
-    this.hfSpaceUrl,
-    this.hfApiKey,
-    this.hfAutoSyncEnabled = false,
-    this.hfLastSyncTimestamp,
     this.dismissedSubscriptionCandidates = const [],
     this.deletedTransactionSignatures = const [],
     this.processedMessageIds = const [],
@@ -223,12 +213,6 @@ class UserSettingsModel {
     bool? widgetShowBudgetTag,
     bool? autoSaveSms,
     bool? autoReadSmsEnabled,
-    String? hfSpaceUrl,
-    bool clearHfSpaceUrl = false,
-    String? hfApiKey,
-    bool clearHfApiKey = false,
-    bool? hfAutoSyncEnabled,
-    int? hfLastSyncTimestamp,
     List<String>? dismissedSubscriptionCandidates,
     List<String>? deletedTransactionSignatures,
     List<String>? processedMessageIds,
@@ -283,10 +267,6 @@ class UserSettingsModel {
       widgetShowBudgetTag: widgetShowBudgetTag ?? this.widgetShowBudgetTag,
       autoSaveSms: autoSaveSms ?? this.autoSaveSms,
       autoReadSmsEnabled: autoReadSmsEnabled ?? this.autoReadSmsEnabled,
-      hfSpaceUrl: clearHfSpaceUrl ? null : (hfSpaceUrl ?? this.hfSpaceUrl),
-      hfApiKey: clearHfApiKey ? null : (hfApiKey ?? this.hfApiKey),
-      hfAutoSyncEnabled: hfAutoSyncEnabled ?? this.hfAutoSyncEnabled,
-      hfLastSyncTimestamp: hfLastSyncTimestamp ?? this.hfLastSyncTimestamp,
       dismissedSubscriptionCandidates: dismissedSubscriptionCandidates ?? this.dismissedSubscriptionCandidates,
       deletedTransactionSignatures: deletedTransactionSignatures ?? this.deletedTransactionSignatures,
       processedMessageIds: processedMessageIds ?? this.processedMessageIds,
@@ -341,10 +321,6 @@ class UserSettingsModel {
         'widgetShowBudgetTag': widgetShowBudgetTag,
         'autoSaveSms': autoSaveSms,
         'autoReadSmsEnabled': autoReadSmsEnabled,
-        'hfSpaceUrl': hfSpaceUrl,
-        'hfApiKey': hfApiKey,
-        'hfAutoSyncEnabled': hfAutoSyncEnabled,
-        'hfLastSyncTimestamp': hfLastSyncTimestamp,
         'dismissedSubscriptionCandidates': dismissedSubscriptionCandidates,
         'deletedTransactionSignatures': deletedTransactionSignatures,
         'processedMessageIds': processedMessageIds,
@@ -400,10 +376,6 @@ class UserSettingsModel {
         widgetShowBudgetTag: json['widgetShowBudgetTag'] as bool? ?? true,
         autoSaveSms: json['autoSaveSms'] as bool? ?? true,
         autoReadSmsEnabled: json['autoReadSmsEnabled'] as bool? ?? true,
-        hfSpaceUrl: json['hfSpaceUrl'] as String?,
-        hfApiKey: json['hfApiKey'] as String?,
-        hfAutoSyncEnabled: json['hfAutoSyncEnabled'] as bool? ?? false,
-        hfLastSyncTimestamp: json['hfLastSyncTimestamp'] as int?,
         dismissedSubscriptionCandidates: (json['dismissedSubscriptionCandidates'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??

@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - '.agents/**'
+      - '.agents-local/**'
+      - '.vscode/**'
+      - '.idea/**'
+      - 'LICENSE'
+      - '.gitignore'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -30,7 +38,7 @@ jobs:
     name: Build & Release Universal APK (Turbo)
     runs-on: ubuntu-latest
     env:
-      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:+UseG1GC -XX:MaxMetaspaceSize=1024m' -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.daemon=false"
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:+UseG1GC -XX:MaxMetaspaceSize=1024m' -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.vfs.watch=false"
 
     steps:
       - name: Fast Shallow Checkout
@@ -66,7 +74,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Cache Android NDK & CMake
+        id: cache-android-ndk
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/27.0.12077973
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: android-ndk-27.0.12077973-cmake-3.22.1
+
       - name: Pre-install Android SDK Tools & NDK
+        if: steps.cache-android-ndk.outputs.cache-hit != 'true'
         run: |
           yes | sdkmanager --licenses || true
           for i in 1 2 3; do
@@ -90,6 +108,14 @@ jobs:
           cache: true
           cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
 
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-cache-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            pub-cache-${{ runner.os }}-
+
       - name: Install Dependencies
         run: flutter pub get
 
@@ -98,11 +124,11 @@ jobs:
         run: |
           echo "### 🔍 Flutter Analyze Output" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          flutter analyze --no-fatal-infos 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
+          flutter analyze --no-fatal-infos --no-pub 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Run Tests
-        run: flutter test test/
+        run: flutter test --concurrency=4 test/
         continue-on-error: true
 
       - name: Configure Production Release Keystore
