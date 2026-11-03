@@ -164,34 +164,22 @@ For this workspace:
 
 def ensure_global_rule():
     """
-    Create or verify the global rule for auto-context in all .agent/ or .agents/ workspaces.
+    Purges legacy global rule for auto-context; rules are strictly workspace-local.
     """
-    os.makedirs(GLOBAL_RULES_DIR, exist_ok=True)
-    legacy_path = os.path.join(GLOBAL_RULES_DIR, 'auto_codebase_context.md')
-    if os.path.exists(legacy_path):
+    legacy_files = ['auto_codebase_context.md', 'codebase_context.md']
+    for lf in legacy_files:
+        p = os.path.join(GLOBAL_RULES_DIR, lf)
+        if os.path.exists(p):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+    if os.path.isdir(GLOBAL_RULES_DIR) and not os.listdir(GLOBAL_RULES_DIR):
         try:
-            os.remove(legacy_path)
+            os.rmdir(GLOBAL_RULES_DIR)
         except OSError:
             pass
-
-    rule_path = os.path.join(GLOBAL_RULES_DIR, 'codebase_context.md')
-    rule_content = """---
-trigger: always_on
----
-
-# Codebase Context Auto-Loader
-
-For any workspace containing a `.agent/` or `.agents/` directory:
-1. Injected `codebase-context-*` KI provides the index and recent patches at conversation start.
-2. Inspect code and directory structures directly via `view_file` and `grep_search`. Read `.agents/codebase_summary.md` for directory overviews.
-3. NEVER spawn background Python analyzer scripts. Access persistent KI and summary natively with zero overhead.
-"""
-
-    with open(rule_path, 'w', encoding='utf-8') as f:
-        f.write(rule_content)
-
-    print(f"Created global rule: {rule_path}")
-    return rule_path
+    return None
 
 
 def remove_ki(project_name):

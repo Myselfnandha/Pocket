@@ -31,7 +31,7 @@ if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
 from summarizer import summarize_file
-from ki_injector import inject_ki, ensure_workspace_rule, ensure_global_rule
+from ki_injector import inject_ki, ensure_workspace_rule
 from db_cache import CodebaseCacheDB, compute_file_hash
 from lockfile_extractor import is_lockfile, extract_lockfile_manifest
 
@@ -418,18 +418,14 @@ def _write_patch_log(patch_path, project_name, changed_files, scan_date):
 
 def auto_sync_framework(target_dir, agent_dir, silent=True):
     """
-    Silently auto-updates workspace .agents/ from global ~/.gemini/config/
-    if the local workspace framework is older than the global installed version.
     Registers the workspace path in ~/.gemini/config/workspaces.json.
+    Framework customization is strictly workspace-local.
     """
     try:
         global_config = os.path.expanduser('~/.gemini/config')
-        if not os.path.isdir(global_config):
-            return
-
         norm_target = os.path.abspath(target_dir)
 
-        # 1. Register workspace in ~/.gemini/config/workspaces.json
+        # Register workspace in ~/.gemini/config/workspaces.json
         workspaces_file = os.path.join(global_config, 'workspaces.json')
         try:
             workspaces = set()
@@ -445,65 +441,6 @@ def auto_sync_framework(target_dir, agent_dir, silent=True):
                     json.dump({'workspaces': sorted(list(workspaces))}, f, indent=2)
         except Exception:
             pass
-
-        # Protect development repository from self-overwrite
-        if os.path.exists(os.path.join(norm_target, 'pack.sh')) and os.path.exists(os.path.join(norm_target, 'bin', 'cli.js')):
-            return
-
-        # 2. Check version
-        global_version_file = os.path.join(global_config, 'VERSION')
-        if not os.path.exists(global_version_file):
-            return
-
-        with open(global_version_file, 'r', encoding='utf-8') as f:
-            global_ver = f.read().strip()
-
-        local_version_file = os.path.join(agent_dir, 'VERSION')
-        local_ver = '0.0.0'
-        if os.path.exists(local_version_file):
-            try:
-                with open(local_version_file, 'r', encoding='utf-8') as f:
-                    local_ver = f.read().strip()
-            except Exception:
-                pass
-
-        if local_ver == global_ver:
-            return
-
-        # 3. Synchronize framework components from global config
-        sync_dirs = ['rules', 'workflows', 'plugins', 'skills', 'scripts']
-        import shutil
-        for d in sync_dirs:
-            src_dir = os.path.join(global_config, d)
-            dest_dir = os.path.join(agent_dir, d)
-            if os.path.isdir(src_dir):
-                if d in ('plugins', 'skills'):
-                    os.makedirs(dest_dir, exist_ok=True)
-                    for p in os.listdir(src_dir):
-                        sp = os.path.join(src_dir, p)
-                        dp = os.path.join(dest_dir, p)
-                        if os.path.isdir(sp):
-                            if os.path.exists(dp):
-                                shutil.rmtree(dp)
-                            shutil.copytree(sp, dp)
-                else:
-                    if os.path.exists(dest_dir):
-                        shutil.rmtree(dest_dir)
-                    shutil.copytree(src_dir, dest_dir)
-
-        # Sync key metadata files
-        for f in ['skills_index.json']:
-            sf = os.path.join(global_config, f)
-            df = os.path.join(agent_dir, f)
-            if os.path.isfile(sf):
-                shutil.copy2(sf, df)
-
-        # Write new local VERSION
-        with open(local_version_file, 'w', encoding='utf-8') as f:
-            f.write(global_ver + '\n')
-
-        if not silent:
-            print(f"[ZeroGravity] Auto-synced {norm_target} from v{local_ver} to v{global_ver}")
     except Exception:
         pass
 
@@ -550,7 +487,7 @@ def check_npm_update_background():
                     cur_ver = open(global_ver_file).read().strip()
                 if npm_ver != cur_ver:
                     subprocess.Popen(
-                        ['npx', '-y', '@nandhaalagesan/zerogravity', 'update', '--global', '-y'],
+                        ['npx', '-y', '@nandhaalagesan/zerogravity', 'update', '-y'],
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                         start_new_session=True
@@ -1030,7 +967,6 @@ def main():
                 check_dir = os.path.dirname(check_dir)
 
             ensure_workspace_rule(workspace_root)
-            ensure_global_rule()
             print("KI injection complete!")
         except Exception as e:
             print(f"Error injecting KI: {e}", file=sys.stderr)

@@ -1,40 +1,40 @@
 # Codebase Context: Pocket
-> Auto-generated on 2026-10-17 22:36:53. 238 files, ~460,429 tokens.
+> Auto-generated on 2026-11-03 13:29:04. 258 files, ~583,515 tokens.
 
 ## Directory Overview
 
-### `./` (13 files)
-- `.gitignore` — Miscellaneous .class (42 lines)
+### `./` (14 files)
+- `.gitignore` — Miscellaneous .class (44 lines)
 - `.metadata` — This file tracks properties of this Flutter project. Used by Flutter tool to assess cap... (40 lines)
 - `LICENSE` — Text file: 17 lines
 - `README.md` — 💳 Pocket — Next-Gen Personal Finance & Wealth Matrix (209 lines)
 - `analysis_options.yaml` — YAML config: include, analyzer, linter
-- `c2c_runner.py` — HTTP client; functions: log, run_cmd, check_url_exists, wait_and_download_apk +8 more
+- `c2c_runner.py` — HTTP client; functions: get_default_device, log, run_cmd, check_url_exists +9 more
 - `implementation_plan.md` — Pocket — Transaction Tracking App (326 lines)
-- `live_c2c_device_test.py` — Tests: 10 test functions/methods
+- `live_c2c_device_test.py` — Tests: 11 test functions/methods
 - `pocket_ui_prompts.md` — Pocket App — UI Generation Prompts (732 lines)
 - `pubspec.lock` — Lockfile manifest: 140 resolved dependencies
 - `pubspec.yaml` — YAML config: name, description, publish_to, version, environment
-- `run_calibrated_c2c.py` — functions: log, run_cmd, tap_xy, key_back +5 more
-- ... and 1 more files
+- `run_calibrated_c2c.py` — functions: get_default_device, log, run_cmd, tap_xy +6 more
+- ... and 2 more files
 
 ### `.github/` (1 files)
 - `.github/workflows/build_apk.yml` — GitHub Actions workflow
 
-### `android/` (54 files)
+### `android/` (60 files)
 - `android/.gitignore` — Remember to never publicly share your keystore. (13 lines)
-- `android/app/build.gradle.kts` — KTS file: 66 lines
+- `android/app/build.gradle.kts` — KTS file: 67 lines
 - `android/app/src/debug/AndroidManifest.xml` — > (7 lines)
-- `android/app/src/main/AndroidManifest.xml` — XML file: 185 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/MainActivity.kt` — KT file: 297 lines
+- `android/app/src/main/AndroidManifest.xml` — XML file: 188 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/AutoLogNotificationHelper.kt` — KT file: 66 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/MainActivity.kt` — KT file: 384 lines
 - `android/app/src/main/kotlin/com/pocket/pocket/NotificationDismissReceiver.kt` — KT file: 11 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketAccessibilityService.kt` — KT file: 127 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketBarWidgetProvider.kt` — KT file: 56 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketCardWidgetProvider.kt` — KT file: 62 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketNotificationListener.kt` — KT file: 181 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketRunwayWidgetProvider.kt` — KT file: 47 lines
-- `android/app/src/main/kotlin/com/pocket/pocket/PocketScreenshotObserver.kt` — KT file: 71 lines
-- ... and 42 more files
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketAccessibilityService.kt` — KT file: 143 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketBarWidgetProvider.kt` — KT file: 175 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketCardWidgetProvider.kt` — KT file: 211 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketNotificationListener.kt` — KT file: 347 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketRunwayWidgetProvider.kt` — KT file: 168 lines
+- ... and 48 more files
 
 ### `assets/` (6 files)
 - `assets/avatars/cosmic_vault.svg` — SVG file: 84 lines
@@ -43,6 +43,12 @@
 - `assets/avatars/solar_wealth.svg` — SVG file: 80 lines
 - `assets/icons/pocket_app_icon.svg` — SVG file: 37 lines
 - `assets/icons/pocket_logo.svg` — SVG file: 14 lines
+
+### `hf_space_sync/` (4 files)
+- `hf_space_sync/Dockerfile` — Dockerfile: FROM python:3.11-slim; exposes 7860
+- `hf_space_sync/README.md` — Pocket Vault Free Cloud Storage (Hugging Face Space) (23 lines)
+- `hf_space_sync/main.py` — API routes, database operations, authentication; classes: PushPayload; functions: verify_auth, health_check, push_vault, pull_vault
+- `hf_space_sync/requirements.txt` — TXT file: 3 lines
 
 ### `integration_test/` (1 files)
 - `integration_test/sms_auto_import_test.dart` — 1 functions
@@ -62,7 +68,7 @@
 - `ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` — XCSETTINGS file: 8 lines
 - ... and 10 more files
 
-### `lib/` (78 files)
+### `lib/` (85 files)
 - `lib/main.dart` — Dart classes: PocketApp, _PocketAppState; 12 functions
 - `lib/models/budget_model.dart` — Dart classes: CategoryBudgetModel; 7 functions
 - `lib/models/category_model.dart` — Dart classes: CategoryModel; 20 functions
@@ -72,10 +78,10 @@
 - `lib/models/pending_transaction_model.dart` — Dart classes: PendingTransactionModel, UniqueKey; 6 functions
 - `lib/models/recurring_model.dart` — Dart classes: RecurringRuleModel; 7 functions
 - `lib/models/settings_model.dart` — Dart classes: UserSettingsModel; 6 functions
-- `lib/models/transaction_model.dart` — Dart classes: TransactionModel; 4 functions
+- `lib/models/transaction_model.dart` — Dart classes: TransactionModel; 5 functions
 - `lib/models/wallet_model.dart` — Dart classes: WalletModel; 7 functions
 - `lib/navigation/app_router.dart` — 6 functions
-- ... and 66 more files
+- ... and 73 more files
 
 ### `linux/` (10 files)
 - `linux/.gitignore` — Text file: 1 lines
@@ -104,7 +110,9 @@
 - `macos/Runner/Base.lproj/MainMenu.xib` — XIB file: 343 lines
 - ... and 9 more files
 
-### `scripts/` (1 files)
+### `scripts/` (3 files)
+- `scripts/examine_screens.py` — functions: get_default_device, log, run_cmd, tap +5 more
+- `scripts/mobile_emulator.sh` — Shell script (env); functions: launch_avd, launch_mirror
 - `scripts/run_e2e_sms_test.py` — Tests: 1 test functions/methods
 
 ### `supabase/` (1 files)
@@ -115,11 +123,11 @@
 - `test/app_test.dart` — 1 functions
 - `test/auto_import_service_test.dart` — 1 functions
 - `test/avatar_test.dart` — 2 functions
-- `test/balance_and_wallet_edit_test.dart` — 1 functions
+- `test/balance_and_wallet_edit_test.dart` — Dart classes: _MockStorageForBackup; 19 functions
 - `test/e2e_flow_test.dart` — 1 functions
 - `test/home_screen_widget_suite_test.dart` — 1 functions
 - `test/pending_transactions_widget_test.dart` — 1 functions
-- `test/sms_auto_read_test.dart` — Dart classes: FakeStorageService; 4 functions
+- `test/sms_auto_read_test.dart` — Dart classes: FakeStorageService; 19 functions
 - `test/upi_screenshot_parser_test.dart` — 1 functions
 - `test/widget_test.dart` — 1 functions
 

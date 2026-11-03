@@ -1,5 +1,109 @@
 # Codebase Patches: Pocket
 
+## 2026-11-03 13:29:04 (3 files changed)
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketNotificationListener.kt` — KT file: 347 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsReceiver.kt` — KT file: 55 lines
+- `lib/providers/pending_transactions_provider.dart` — Dart classes: PendingTransactionsNotifier; 10 functions
+
+## 2026-11-03 12:14:41 (97 files changed)
+- `.github/workflows/build_apk.yml` — GitHub Actions workflow
+- `.gitignore` — Miscellaneous .class (44 lines)
+- `android/app/build.gradle.kts` — KTS file: 67 lines
+- `android/app/src/main/AndroidManifest.xml` — XML file: 188 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/AutoLogNotificationHelper.kt` — KT file: 66 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/MainActivity.kt` — KT file: 384 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketAccessibilityService.kt` — KT file: 143 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketBarWidgetProvider.kt` — KT file: 175 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketCardWidgetProvider.kt` — KT file: 211 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketNotificationListener.kt` — KT file: 309 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketRunwayWidgetProvider.kt` — KT file: 168 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketSmsObserver.kt` — KT file: 79 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/PocketWidgetProvider.kt` — KT file: 209 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/ShareReceiverActivity.kt` — KT file: 447 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsInboxScanner.kt` — KT file: 108 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsParser.kt` — KT file: 294 lines
+- `android/app/src/main/kotlin/com/pocket/pocket/SmsReceiver.kt` — KT file: 46 lines
+- `android/app/src/main/res/drawable/widget_bg_glass_frost.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_bg_midnight_navy.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_bg_oled_black.xml` — XML file: 9 lines
+- `android/app/src/main/res/drawable/widget_toggle_btn_bg.xml` — XML file: 9 lines
+- `android/app/src/main/res/layout/pocket_card_widget_layout.xml` — XML file: 211 lines
+- `android/app/src/main/res/layout/pocket_widget_layout.xml` — XML file: 211 lines
+- `c2c_runner.py` — HTTP client; functions: get_default_device, log, run_cmd, check_url_exists +9 more
+- `hf_space_sync/Dockerfile` — Dockerfile: FROM python:3.11-slim; exposes 7860
+- `hf_space_sync/README.md` — Pocket Vault Free Cloud Storage (Hugging Face Space) (23 lines)
+- `hf_space_sync/main.py` — API routes, database operations, authentication; classes: PushPayload; functions: verify_auth, health_check, push_vault, pull_vault
+- `hf_space_sync/requirements.txt` — TXT file: 3 lines
+- `lib/main.dart` — Dart classes: PocketApp, _PocketAppState; 12 functions
+- `lib/models/category_model.dart` — Dart classes: CategoryModel; 20 functions
+- `lib/models/debt_model.dart` — Dart classes: DebtPaymentModel, DebtModel; 8 functions
+- `lib/models/notification_model.dart` — Dart classes: AppNotificationModel; 4 functions
+- `lib/models/pending_transaction_model.dart` — Dart classes: PendingTransactionModel, UniqueKey; 6 functions
+- `lib/models/recurring_model.dart` — Dart classes: RecurringRuleModel; 7 functions
+- `lib/models/settings_model.dart` — Dart classes: UserSettingsModel; 6 functions
+- `lib/models/transaction_model.dart` — Dart classes: TransactionModel; 5 functions
+- `lib/models/wallet_model.dart` — Dart classes: WalletModel; 7 functions
+- `lib/navigation/app_scaffold.dart` — Dart classes: AppScaffold, _AppScaffoldState; 14 functions
+- `lib/providers/budgets_provider.dart` — Dart classes: CategoryBudgetsNotifier; 4 functions
+- `lib/providers/derived_providers.dart` — Dart classes: MonthlyStats, NetWorthSummary, CategoryComparison; 7 functions
+- `lib/providers/pending_transactions_provider.dart` — Dart classes: PendingTransactionsNotifier; 10 functions
+- `lib/providers/settings_provider.dart` — Dart classes: SettingsNotifier; 59 functions
+- `lib/providers/transactions_provider.dart` — Dart classes: TransactionsNotifier; 6 functions
+- `lib/providers/wallets_provider.dart` — Dart classes: WalletsNotifier; 6 functions
+- `lib/screens/analytics/analytics_screen.dart` — Flutter widgets: _ExportActionCard (Stateless); 137 functions
+- `lib/screens/debts/debts_screen.dart` — Dart classes: DebtsScreen, _DebtsScreenState; 67 functions
+- `lib/screens/home/home_screen.dart` — Dart classes: HomeScreen, _HomeScreenState; 45 functions
+- `lib/screens/onboarding/onboarding_screen.dart` — Dart classes: OnboardingScreen, _OnboardingScreenState; 218 functions
+- `lib/screens/settings/auto_import_studio_screen.dart` — Dart classes: AutoImportStudioScreen, _AutoImportStudioScreenState; 30 functions
+- `lib/screens/settings/data_management_screen.dart` — Dart classes: DataManagementScreen, _DataManagementScreenState; 59 functions
+- `lib/screens/settings/settings_screen.dart` — Dart classes: SettingsScreen, AppearanceSettingsSubPage, AccountsCategoriesSubPage; 139 functions
+- `lib/screens/settings/widgets_customizer_screen.dart` — Dart classes: WidgetsCustomizerScreen, _WidgetsCustomizerScreenState; 111 functions
+- `lib/screens/transactions/add_transaction_screen.dart` — Dart classes: AddTransactionScreen, _AddTransactionScreenState; 80 functions
+- `lib/screens/transactions/edit_transaction_screen.dart` — Dart classes: EditTransactionScreen, _EditTransactionScreenState; 32 functions
+- `lib/screens/transactions/quick_add_dialog_screen.dart` — Flutter widgets: QuickAddDialogScreen (Stateful); 6 functions
+- `lib/screens/transactions/transaction_detail_screen.dart` — Dart classes: TransactionDetailScreen; 59 functions
+- `lib/screens/transactions/transactions_list_screen.dart` — Dart classes: TransactionsListScreen, _TransactionsListScreenState; 38 functions
+- `lib/screens/wallets/wallets_screen.dart` — Dart classes: WalletsScreen, _WalletsScreenState; 237 functions
+- `lib/services/ai_forecasting_service.dart` — Dart classes: DailySpendPoint, MonthSpendForecast, AiForecastingService; 4 functions
+- `lib/services/anomaly_detection_service.dart` — Dart classes: AnomalyResult, AnomalyDetectionService; 3 functions
+- `lib/services/auto_import_service.dart` — Dart classes: AutoImportPermissions, AutoImportService; 25 functions
+- `lib/services/backup_service.dart` — Dart classes: BackupService; 8 functions
+- `lib/services/bank_discovery_service.dart` — Dart classes: DiscoveredBankAccount, BankDiscoveryResult, BankDiscoveryService; 10 functions
+- `lib/services/cloud_sync_service.dart` — Dart classes: GoogleAuthException, CloudSyncService; 14 functions
+- `lib/services/hf_sync_service.dart` — Dart classes: HfSyncResult, HfSyncService; 17 functions
+- `lib/services/nlp_parser_service.dart` — Dart classes: ParsedNlpTransaction, NlpTransactionParser; 5 functions
+- `lib/services/notification_service.dart` — Dart classes: NotificationService; 15 functions
+- `lib/services/security_service.dart` — Dart classes: SecurityService; 2 functions
+- `lib/services/storage_service.dart` — Dart classes: StorageService; 63 functions
+- `lib/services/subscription_detector_service.dart` — Dart classes: SubscriptionCandidate, SubscriptionDetectorService; 2 functions
+- `lib/services/system_widget_service.dart` — Dart classes: SystemWidgetService; 7 functions
+- `lib/services/upi_screenshot_parser_service.dart` — Dart classes: UpiParsedTransaction, UpiScreenshotParserService; 8 functions
+- `lib/theme/app_theme.dart` — Dart classes: AppThemePalette, AppColors, AppTheme; 7 functions
+- `lib/utils/cycle_utils.dart` — Dart classes: CycleUtils; 5 functions
+- `lib/widgets/app_lock_gate.dart` — Dart classes: AppLockGate, _AppLockGateState; 10 functions
+- `lib/widgets/balance_card.dart` — Flutter widgets: _CockpitMetricChip (Stateless); 20 functions
+- `lib/widgets/blurred_dialog_utils.dart` — 2 functions
+- `lib/widgets/financial_health_gauge.dart` — Dart classes: FinancialHealthGauge, _HealthGaugePainter; 19 functions
+- `lib/widgets/inflation_calculator_card.dart` — Dart classes: InflationCalculatorCard, _InflationCalculatorCardState; 23 functions
+- `lib/widgets/pending_transactions_capsule.dart` — Dart classes: PendingTransactionsCapsule; 6 functions
+- `lib/widgets/pending_transactions_sheet.dart` — Dart classes: PendingTransactionsSheet, _PendingTransactionsSheetState; 38 functions
+- `lib/widgets/quick_add_transaction_dialog.dart` — Dart classes: QuickAddTransactionDialog, _QuickAddTransactionDialogState; 36 functions
+- `lib/widgets/sankey_flow_diagram.dart` — Dart classes: SankeyNode, SankeyFlowDiagram, _SankeyFlowDiagramState; 23 functions
+- `lib/widgets/sms_inbox_scanner_sheet.dart` — Dart classes: SmsInboxScannerSheet, _SmsInboxScannerSheetState; 36 functions
+- `lib/widgets/spend_forecast_card.dart` — Dart classes: SpendForecastCard, _ForecastTrajectoryPainter; 23 functions
+- `lib/widgets/subscription_candidate_card.dart` — Dart classes: SubscriptionCandidateCard; 9 functions
+- `lib/widgets/top_capsule_toast.dart` — Flutter widgets: _TopCapsuleToastWidget (Stateful), _BottomCapsuleToastWidget (Stateful); 20 functions
+- `lib/widgets/transaction_tile.dart` — Dart classes: TransactionTile; 6 functions
+- `live_c2c_device_test.py` — Tests: 11 test functions/methods
+- `pubspec.yaml` — YAML config: name, description, publish_to, version, environment
+- `run_calibrated_c2c.py` — functions: get_default_device, log, run_cmd, tap_xy +6 more
+- `scripts/examine_screens.py` — functions: get_default_device, log, run_cmd, tap +5 more
+- `scripts/mobile_emulator.sh` — Shell script (env); functions: launch_avd, launch_mirror
+- `skills-lock.json` — JSON data
+- `test/balance_and_wallet_edit_test.dart` — Dart classes: _MockStorageForBackup; 19 functions
+- `test/sms_auto_read_test.dart` — Dart classes: FakeStorageService; 19 functions
+- `test_all_components_c2c.py` — Tests: 14 test functions/methods
+
 ## 2026-10-17 22:36:53 (238 files changed)
 - `.github/workflows/build_apk.yml` — GitHub Actions workflow
 - `.gitignore` — Miscellaneous .class (42 lines)

@@ -1,5 +1,11 @@
 [
   {
+    "id": "a11y-debugging",
+    "path": "plugins/chrome-devtools-plugin/skills/a11y-debugging",
+    "name": "a11y-debugging",
+    "description": "Uses Chrome DevTools MCP for accessibility (a11y) debugging and auditing based on web.dev guidelines. Use when testing semantic HTML, ARIA labels, focus states, keyboard navigation, tap targets, and color contrast."
+  },
+  {
     "id": "agent-reach",
     "path": "skills-registry/agent-reach",
     "name": "agent-reach",
@@ -66,6 +72,12 @@
     "description": "Test web apps in real Chrome browsers, capture console logs, and profile DOM via DevTools."
   },
   {
+    "id": "chrome-devtools",
+    "path": "plugins/chrome-devtools-plugin/skills/chrome-devtools",
+    "name": "chrome-devtools",
+    "description": "Uses Chrome DevTools via MCP for efficient debugging, troubleshooting and browser automation. Use when debugging web pages, automating browser interactions, analyzing performance, or inspecting network requests. This skill does not apply to `--slim` mode (MCP configuration)."
+  },
+  {
     "id": "ci-cd-and-automation",
     "path": "skills-registry/ci-cd-and-automation",
     "name": "ci-cd-and-automation",
@@ -106,6 +118,18 @@
     "path": "skills-registry/context-engineering",
     "name": "context-engineering",
     "description": "Tune and optimize agent prompt context, rule loading, and session memory."
+  },
+  {
+    "id": "cookie-debugging",
+    "path": "plugins/chrome-devtools-plugin/skills/cookie-debugging",
+    "name": "cookie-debugging",
+    "description": "Uses Chrome DevTools MCP for inspecting, debugging, and testing cookies, session state, authentication issues, and cookie consent compliance. Use when diagnosing 401/403 errors, authentication redirects, session expiration, Cookie/Set-Cookie header issues, cookie banner consent conformance, or third-party cookie/SameSite/Partitioned cookie warnings."
+  },
+  {
+    "id": "debug-optimize-lcp",
+    "path": "plugins/chrome-devtools-plugin/skills/debug-optimize-lcp",
+    "name": "debug-optimize-lcp",
+    "description": "Guides debugging and optimizing Largest Contentful Paint (LCP) using Chrome DevTools MCP tools. Use this skill whenever the user asks about LCP performance, slow page loads, Core Web Vitals optimization, or wants to understand why their page's main content takes too long to appear. Also use when the user mentions \"largest contentful paint\", \"page load speed\", \"CWV\", or wants to improve how fast their hero image or main content renders."
   },
   {
     "id": "debugging-and-error-recovery",
@@ -180,10 +204,16 @@
     "description": "Search, enable, or disable on-demand MCP servers from 12 verified and 2,600+ catalog."
   },
   {
+    "id": "memory-leak-debugging",
+    "path": "plugins/chrome-devtools-plugin/skills/memory-leak-debugging",
+    "name": "memory-leak-debugging",
+    "description": "Diagnoses and resolves memory leaks in JavaScript/Node.js applications. Use when a user reports high memory usage, OOM errors, or wants to capture, compare, or inspect heap snapshots with Chrome DevTools MCP memory tools."
+  },
+  {
     "id": "mistake-immunization",
     "path": "skills-registry/mistake-immunization",
     "name": "mistake-immunization",
-    "description": "Check anti-patterns before acting and record lessons into memory after fixes."
+    "description": "Check patterns.json before acting and record lessons into memory after fixes."
   },
   {
     "id": "observability-and-instrumentation",
@@ -294,6 +324,12 @@
     "description": "Pick the fastest, most token-efficient tool for searching, reading, editing, and running commands."
   },
   {
+    "id": "troubleshooting",
+    "path": "plugins/chrome-devtools-plugin/skills/troubleshooting",
+    "name": "troubleshooting",
+    "description": "Uses Chrome DevTools MCP and documentation to troubleshoot connection and target issues. Trigger this skill when list_pages, new_page, or navigate_page fail, or when the server initialization fails."
+  },
+  {
     "id": "using-agent-skills",
     "path": "skills-registry/using-agent-skills",
     "name": "using-agent-skills",
@@ -309,6 +345,6 @@
     "id": "zerogravity-init",
     "path": "skills/zerogravity-init",
     "name": "zerogravity-init",
-    "description": "Display a compact, single-page quick-access dashboard of all ZeroGravity workflows and skills on session start."
+    "description": "Initialize ZeroGravity: create the single-page walkthrough artifact and display the stacked command matrix."
   }
 ]
