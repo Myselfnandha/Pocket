@@ -42,6 +42,15 @@ class SmsReceiver : BroadcastReceiver() {
                     val txJson = parsed.toJson()
                     if (autoSaveSms) {
                         txJson.put("autoSaveDirect", true)
+                        txJson.put("notificationShown", true)
+                        AutoLogNotificationHelper.showAutoLogNotification(
+                            context = context,
+                            merchant = parsed.merchant,
+                            amount = parsed.amount,
+                            isIncome = parsed.isIncome,
+                            source = "SMS",
+                            last4 = parsed.accountLast4
+                        )
                     }
                     PocketNotificationListener.savePendingTransaction(context, txJson)
                 }

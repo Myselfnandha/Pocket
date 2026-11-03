@@ -61,7 +61,10 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
             (item.rawPayload != null && item.rawPayload!.contains('"autoSaveDirect":true'));
         final isSms = item.detectionSource == 'sms' || item.appSource.contains('SMS');
 
-        if ((isSms || isPaytm || isAutoDirect) && settings.autoSaveSms) {
+        final shouldAutoCommit = isAutoDirect ||
+            ((isSms || isPaytm) && settings.autoSaveSms);
+
+        if (shouldAutoCommit) {
           final matchedWalletId = service.findExplicitMatchingWallet(item, wallets);
           final defaultWallet = wallets.firstWhere((w) => w.isDefault, orElse: () => wallets.firstOrNull ?? defaultWallets.first);
           final effectiveWalletId = matchedWalletId ?? item.suggestedWalletId ?? defaultWallet.id;
@@ -302,9 +305,9 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
     }
     await storage.removeDeletedTransactionSignature(item.signature);
 
-    // If SMS contains fresh available balance, advance wallet snapshot baseline
     final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
-    if (extractedBal != null) {
+    final hasExplicitMatch = _ref.read(autoImportServiceProvider).findExplicitMatchingWallet(item, wallets) != null;
+    if (extractedBal != null && hasExplicitMatch) {
       final targetWallet = wallets.where((w) => w.id == effectiveWalletId).firstOrNull;
       if (targetWallet != null) {
         final isFresher = targetWallet.balanceSnapshotAt == null ||
@@ -366,9 +369,9 @@ class PendingTransactionsNotifier extends StateNotifier<List<PendingTransactionM
           : fallbackWalletId;
       final effectiveCategoryId = item.suggestedCategoryId ?? (item.isIncome ? 'salary' : 'food');
 
-      // Check for available balance in raw payload
       final extractedBal = BankDiscoveryService.extractAvailableBalance(item.rawPayload);
-      if (extractedBal != null) {
+      final hasExplicitMatch = _ref.read(autoImportServiceProvider).findExplicitMatchingWallet(item, wallets) != null;
+      if (extractedBal != null && hasExplicitMatch) {
         final existingFreshest = freshestBalancesPerWallet[effectiveWalletId];
         if (existingFreshest == null || item.date.isAfter(existingFreshest.$2)) {
           freshestBalancesPerWallet[effectiveWalletId] = (extractedBal, item.date);

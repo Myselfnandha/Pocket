@@ -43,13 +43,13 @@ class PocketNotificationListener : NotificationListenerService() {
                 JSONArray()
             }
 
-            // Deduplicate against existing queue items
             val newRef = jsonObject.optString("refId", "")
             val newAmount = jsonObject.optDouble("amount", 0.0)
             val newMerchant = jsonObject.optString("merchant", "").lowercase()
             val newDate = jsonObject.optLong("date", 0L)
 
             var isDuplicate = false
+            var wasEnriched = false
             for (i in 0 until array.length()) {
                 val existing = array.getJSONObject(i)
                 val exRef = existing.optString("refId", "")
@@ -58,7 +58,6 @@ class PocketNotificationListener : NotificationListenerService() {
                 val exDate = existing.optLong("date", 0L)
 
                 if (newRef.isNotEmpty() && exRef.isNotEmpty() && newRef == exRef) {
-                    // Two-way enrichment: attach screenshot image, bank details, or richer merchant name
                     val newImg = jsonObject.optString("imagePath", "")
                     if (newImg.isNotEmpty() && existing.optString("imagePath", "").isEmpty()) {
                         existing.put("imagePath", newImg)
@@ -70,6 +69,9 @@ class PocketNotificationListener : NotificationListenerService() {
                     if (jsonObject.optBoolean("autoSaveDirect", false)) {
                         existing.put("autoSaveDirect", true)
                     }
+                    if (jsonObject.optBoolean("notificationShown", false)) {
+                        existing.put("notificationShown", true)
+                    }
                     val exMerch = existing.optString("merchant", "")
                     val newMerch = jsonObject.optString("merchant", "")
                     if ((exMerch.contains("Payment") || exMerch.contains("Alert") || exMerch == "UPI Payment") &&
@@ -77,19 +79,47 @@ class PocketNotificationListener : NotificationListenerService() {
                         existing.put("merchant", newMerch)
                     }
                     isDuplicate = true
+                    wasEnriched = true
                     break
                 }
+
+                val isTitleMatch = newMerchant.isNotEmpty() && (
+                    newMerchant == exMerchant ||
+                    newMerchant.contains(exMerchant) ||
+                    exMerchant.contains(newMerchant) ||
+                    isGenericMerchant(newMerchant) ||
+                    isGenericMerchant(exMerchant)
+                )
+
                 if (Math.abs(newAmount - exAmount) < 0.01 &&
-                    newMerchant.isNotEmpty() && newMerchant == exMerchant &&
-                    Math.abs(newDate - exDate) <= 60000
+                    isTitleMatch &&
+                    Math.abs(newDate - exDate) <= 180000
                 ) {
+                    val newImg = jsonObject.optString("imagePath", "")
+                    if (newImg.isNotEmpty() && existing.optString("imagePath", "").isEmpty()) {
+                        existing.put("imagePath", newImg)
+                    }
+                    if (jsonObject.optBoolean("autoSaveDirect", false)) {
+                        existing.put("autoSaveDirect", true)
+                    }
+                    if (jsonObject.optBoolean("notificationShown", false)) {
+                        existing.put("notificationShown", true)
+                    }
+                    val exMerch = existing.optString("merchant", "")
+                    val newMerch = jsonObject.optString("merchant", "")
+                    if (isGenericMerchant(exMerch) && newMerch.isNotEmpty() && !isGenericMerchant(newMerch)) {
+                        existing.put("merchant", newMerch)
+                    }
                     isDuplicate = true
+                    wasEnriched = true
                     break
                 }
             }
 
             if (!isDuplicate) {
                 array.put(jsonObject)
+                prefs.edit().putString(KEY_PENDING_TX, array.toString()).apply()
+            } else if (wasEnriched) {
                 prefs.edit().putString(KEY_PENDING_TX, array.toString()).apply()
             }
         }
@@ -192,6 +222,17 @@ class PocketNotificationListener : NotificationListenerService() {
                 .trim()
                 .take(30)
                 .ifEmpty { "Payment" }
+        }
+
+        private fun isGenericMerchant(name: String): Boolean {
+            val lower = name.lowercase().trim()
+            return lower.isEmpty() ||
+                    lower == "payment" ||
+                    lower == "upi payment" ||
+                    lower == "payment alert" ||
+                    lower == "bank alert" ||
+                    lower == "alert" ||
+                    lower == "transfer"
         }
     }
 
