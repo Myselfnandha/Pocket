@@ -38,9 +38,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   String? _selectedCurrencyCode = 'INR';
 
   // Theme preferences
-  AppThemeMode _selectedThemeMode = AppThemeMode.autoTime;
-  ManualThemeStyle _selectedThemeStyle = ManualThemeStyle.pureBlack;
-  bool _isPureBlack = true;
+  final AppThemeMode _selectedThemeMode = AppThemeMode.autoTime;
+  final ManualThemeStyle _selectedThemeStyle = ManualThemeStyle.pureBlack;
+  final bool _isPureBlack = true;
 
   // Budget Rollover
   bool _isBudgetRolloverEnabled = true;
@@ -134,27 +134,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     _phoneController.dispose();
     _currencySearchController.dispose();
     super.dispose();
-  }
-
-  void _applyThemeRealtime({
-    AppThemeMode? mode,
-    ManualThemeStyle? style,
-    bool? pureBlack,
-  }) {
-    setState(() {
-      if (mode != null) _selectedThemeMode = mode;
-      if (style != null) _selectedThemeStyle = style;
-      if (pureBlack != null) _isPureBlack = pureBlack;
-    });
-
-    final currentSettings = ref.read(settingsProvider);
-    ref.read(settingsProvider.notifier).updateSettings(
-          currentSettings.copyWith(
-            themeMode: _selectedThemeMode,
-            manualThemeStyle: _selectedThemeStyle,
-            isPureBlackEnabled: _isPureBlack,
-          ),
-        );
   }
 
   void _nextPage() {
@@ -713,24 +692,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
               hintText: '98765 43210',
-              prefixIcon: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.phone_outlined, color: AppColors.primaryGreenLight, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '+91',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              prefixIcon: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _showCountryCodePicker(isDark),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.phone_outlined, color: AppColors.primaryGreenLight, size: 20),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$_selectedCountryFlag $_selectedCountryCode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(width: 1, height: 18, color: Colors.grey.withValues(alpha: 0.3)),
-                  ],
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down, size: 18, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                      const SizedBox(width: 4),
+                      Container(width: 1, height: 18, color: Colors.grey.withValues(alpha: 0.3)),
+                    ],
+                  ),
                 ),
               ),
               filled: true,
@@ -885,7 +870,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           shrinkWrap: true,
                           padding: const EdgeInsets.only(bottom: 8),
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) => Divider(
+                          separatorBuilder: (_, _) => Divider(
                             height: 1,
                             color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                           ),
@@ -1303,7 +1288,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                       : ListView.separated(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           itemCount: visibleList.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (context, i) {
                             final tx = visibleList[i];
                             final isSelected = tempSelected.contains(tx.id);
@@ -1505,10 +1490,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
         (acc) => acc.accountLast4 == w.accountNumber && acc.bankName == w.name,
       );
     }).toList();
-
-    final allDiscoveredAdded = _discoveredBankAccounts.isNotEmpty &&
-        _discoveredBankAccounts.every((acc) =>
-            _onboardingWallets.any((w) => w.accountNumber == acc.accountLast4 && w.name == acc.bankName));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

@@ -272,6 +272,18 @@ class AutoImportService {
     String? senderBank,
     String? detectionSource,
   }) {
+    // 0. Check for existing merchant-specific category in the database
+    final cleanMerchant = _cleanCategoryName(merchant);
+    if (cleanMerchant.length >= 3 && !_isGenericMerchant(cleanMerchant)) {
+      final merchantLower = cleanMerchant.toLowerCase();
+      final targetCatId = 'cat_${merchantLower.replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
+      for (final c in categories) {
+        if (c.name.toLowerCase() == merchantLower || c.id == targetCatId) {
+          return c.id;
+        }
+      }
+    }
+
     final pred = UpiScreenshotParserService.predictCategory(
       merchant,
       rawPayload,
@@ -291,24 +303,27 @@ class AutoImportService {
     };
     final targetId = aliasMap[normalized] ?? normalized;
 
-    // 1. First try matching categories matching transaction type by ID
-    for (final c in categories) {
-      if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
-          (c.id == targetId || c.id == normalized || c.id == pred)) {
-        return c.id;
-      }
-    }
+    final isSpecificMatch = targetId != 'other_exp' && targetId != 'other_inc';
 
-    // 2. Next try matching category name matching transaction type
-    for (final c in categories) {
-      if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
-          (c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized))) {
-        return c.id;
+    // 1. First try matching categories matching transaction type by ID for specific predictions
+    if (isSpecificMatch) {
+      for (final c in categories) {
+        if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
+            (c.id == targetId || c.id == normalized || c.id == pred)) {
+          return c.id;
+        }
+      }
+
+      // 2. Next try matching category name matching transaction type
+      for (final c in categories) {
+        if ((isIncome ? c.type == TransactionType.income : c.type == TransactionType.expense) &&
+            (c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized))) {
+          return c.id;
+        }
       }
     }
 
     // 3. Match against merchant name directly in existing categories
-    final cleanMerchant = _cleanCategoryName(merchant);
     for (final c in categories) {
       if (c.name.toLowerCase() == cleanMerchant.toLowerCase() ||
           c.name.toLowerCase().contains(cleanMerchant.toLowerCase()) ||
@@ -320,10 +335,12 @@ class AutoImportService {
     }
 
     // 4. Fallback search across all categories by ID or Name
-    for (final c in categories) {
-      if (c.id == targetId || c.id == normalized || c.id == pred ||
-          c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized)) {
-        return c.id;
+    if (isSpecificMatch) {
+      for (final c in categories) {
+        if (c.id == targetId || c.id == normalized || c.id == pred ||
+            c.name.toLowerCase().contains(targetId) || c.name.toLowerCase().contains(normalized)) {
+          return c.id;
+        }
       }
     }
 
@@ -351,6 +368,10 @@ class AutoImportService {
     }
 
     // 6. Direction-aware defaults
+    if (categories.any((c) => c.id == targetId)) {
+      return targetId;
+    }
+
     if (isIncome) {
       final incomeCats = categories.where((c) => c.type == TransactionType.income).toList();
       return incomeCats.isNotEmpty ? incomeCats.first.id : 'salary';
@@ -375,7 +396,7 @@ class AutoImportService {
 
   static String _cleanCategoryName(String raw) {
     var cleaned = raw
-        .replaceAll(RegExp(r'(?i)\b(ltd|pvt|limited|india|store|pos|ecom|vpa|bank|a/c|acct)\b'), '')
+        .replaceAll(RegExp(r'\b(ltd|pvt|limited|india|store|pos|ecom|vpa|bank|a/c|acct)\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'[^a-zA-Z0-9\s&-]'), '')
         .trim();
     if (cleaned.isEmpty) return 'Other';
@@ -494,11 +515,14 @@ class AutoImportService {
       return true;
     }
 
-    // 1. Exact signature match against active transactions
-    final itemSig = item.signature;
-    for (final tx in saved) {
-      if (tx.signature == itemSig) {
-        return true;
+    // 1. Exact signature match against active transactions (evaluated when refId or counterpartyLast4 exists)
+    if ((item.refId != null && item.refId!.isNotEmpty) ||
+        (item.counterpartyLast4 != null && item.counterpartyLast4!.isNotEmpty)) {
+      final itemSig = item.signature;
+      for (final tx in saved) {
+        if (tx.signature == itemSig) {
+          return true;
+        }
       }
     }
 

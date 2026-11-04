@@ -79,13 +79,13 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('1 Detected Payment'), findsOneWidget);
     expect(find.text('Google Pay'), findsOneWidget);
+    expect(find.textContaining('Swiggy'), findsOneWidget);
     expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
 
     // Tap quick-approve button
-    await tester.tap(find.byIcon(Icons.check_circle_outline_rounded));
+    await tester.tap(find.byIcon(Icons.check_circle_rounded));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
@@ -146,7 +146,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Detected Payments'), findsOneWidget);
-    expect(find.text('2 unconfirmed transactions'), findsOneWidget);
+    expect(find.text('2 pending'), findsOneWidget);
     expect(find.text('Zomato'), findsOneWidget);
     expect(find.text('Uber Auto'), findsOneWidget);
     expect(find.text('Approve All'), findsOneWidget);
@@ -162,7 +162,7 @@ void main() {
 
     // Now 1 item remaining
     expect(container.read(pendingTransactionsProvider).length, 1);
-    expect(find.text('1 unconfirmed transactions'), findsOneWidget);
+    expect(find.text('1 pending'), findsOneWidget);
 
     // Tap Approve All for remaining item
     await tester.tap(find.text('Approve All'));

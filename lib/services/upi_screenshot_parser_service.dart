@@ -313,12 +313,19 @@ class UpiScreenshotParserService {
     return false;
   }
 
+  /// Normalizes and cleans extracted merchant candidate names by stripping noise tokens and trailing clauses.
   static String cleanMerchantCandidate(String candidate) {
-    return candidate.split(RegExp(r'[\r\n]+')).firstOrNull?.trim()
-            .replaceAll(RegExp(r'@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi|@axl', caseSensitive: false), '')
-            .replaceAll(RegExp(r'\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe|banking name|upi id)\b', caseSensitive: false), '')
-            .replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '')
-            .trim() ?? '';
+    // Extract first line and strip trailing clauses (dates, reference numbers, or transaction metadata)
+    var cleaned = candidate.split(RegExp(r'[\r\n]+')).firstOrNull?.trim() ?? '';
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\s+\b(?:on|dated|ref|ref:?|via|using|at|txn|trans)\b.*$', caseSensitive: false),
+      '',
+    );
+    return cleaned
+        .replaceAll(RegExp(r'@ok[a-z]+|@okhdfcbank|@axisbank|@ybl|@ibl|@paytm|@upi|@axl', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(completed|successful|paid|to|ref|no|verified merchant|google pay|phonepe|banking name|upi id)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '')
+        .trim();
   }
 
   static bool isTechnicalKeyword(String word) {
@@ -368,32 +375,32 @@ class UpiScreenshotParserService {
       }
     }
 
-    // 2. UPI VPA Handles (@handle)
-    if (RegExp(r'@(?:swiggy|zomato|rebel|freshmenu|eatsure|faasos)\b').hasMatch(combined)) {
+    // 2. UPI VPA Handles (matches both user@bank and @user formats)
+    if (RegExp(r'(?:^|[\s@])(?:swiggy|zomato|rebel|freshmenu|eatsure|faasos)(?:@|\b)').hasMatch(combined)) {
       return 'cat_food';
     }
-    if (RegExp(r'@(?:blinkit|zepto|bigbasket|instamart|dmart)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:blinkit|zepto|bigbasket|instamart|dmart)(?:@|\b)').hasMatch(combined)) {
       return 'cat_groceries';
     }
-    if (RegExp(r'@(?:uber|ola|rapido|fastag|iocl|hpcl|bpcl)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:uber|ola|rapido|fastag|iocl|hpcl|bpcl)(?:@|\b)').hasMatch(combined)) {
       return 'cat_transport';
     }
-    if (RegExp(r'@(?:irctc|makemytrip|goibibo|yatra|cleartrip|indigo)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:irctc|makemytrip|goibibo|yatra|cleartrip|indigo)(?:@|\b)').hasMatch(combined)) {
       return 'cat_travel';
     }
-    if (RegExp(r'@(?:amazonpay|flipkart|myntra|ajio|meesho|nykaa)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:amazonpay|flipkart|myntra|ajio|meesho|nykaa)(?:@|\b)').hasMatch(combined)) {
       return 'cat_shopping';
     }
-    if (RegExp(r'@(?:netflix|spotify|bookmyshow|disney|hotstar|apple)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:netflix|spotify|bookmyshow|disney|hotstar|apple)(?:@|\b)').hasMatch(combined)) {
       return 'cat_entertainment';
     }
-    if (RegExp(r'@(?:bescom|tneb|tatapower|airtel|jio|cred)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:bescom|tneb|tatapower|airtel|jio|cred)(?:@|\b)').hasMatch(combined)) {
       return 'cat_bills';
     }
-    if (RegExp(r'@(?:apollo|medplus|pharmeasy|cultfit)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:apollo|medplus|pharmeasy|cultfit)(?:@|\b)').hasMatch(combined)) {
       return 'cat_health';
     }
-    if (RegExp(r'@(?:zerodha|groww|upstox|angelbroking)\b').hasMatch(combined)) {
+    if (RegExp(r'(?:^|[\s@])(?:zerodha|groww|upstox|angelbroking|angelone)(?:@|\b)').hasMatch(combined)) {
       return 'cat_investments';
     }
 
@@ -447,8 +454,14 @@ class UpiScreenshotParserService {
       return 'cat_travel';
     }
 
+    // Investments & Wealth
+    if (RegExp(r'\b(zerodha|groww|upstox|angelbroking|angelone|kuvera|smallcase|kite|mutual fund|sip|stock|shares|investment|funds add|securities|nse|bse)\b')
+        .hasMatch(combined)) {
+      return 'cat_investments';
+    }
+
     // Shopping & E-Commerce
-    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|shopping|cloth|apparel|retail|mall|zara|h&m|uniqlo|max fashion|trends|westside|pantaloons|reliance digital|croma|vijay sales|decathlon|lenskart|titan|tanishq|shoes|footwear|electronics|tata cliq|snapdeal)\b')
+    if (RegExp(r'\b(amazon|flipkart|myntra|ajio|meesho|nykaa|shopping|cloth|apparel|retail|mall|zara|h&m|uniqlo|max fashion|trends|westside|pantaloons|reliance digital|croma|vijay sales|lenskart|titan|tanishq|shoes|footwear|electronics|tata cliq|snapdeal)\b')
         .hasMatch(combined)) {
       return 'cat_shopping';
     }

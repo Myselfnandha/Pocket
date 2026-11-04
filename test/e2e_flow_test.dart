@@ -10,14 +10,12 @@ import 'package:pocket/models/debt_model.dart';
 import 'package:pocket/models/goal_model.dart';
 import 'package:pocket/models/notification_model.dart';
 import 'package:pocket/models/recurring_model.dart';
-import 'package:pocket/models/settings_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/providers/app_providers.dart';
 import 'package:pocket/services/ai_forecasting_service.dart';
 import 'package:pocket/services/anomaly_detection_service.dart';
 import 'package:pocket/services/backup_service.dart';
-import 'package:pocket/services/cloud_sync_service.dart';
 import 'package:pocket/services/financial_health_service.dart';
 import 'package:pocket/services/inflation_service.dart';
 import 'package:pocket/services/learning_suggest_service.dart';
@@ -114,23 +112,11 @@ void main() {
       await tester.enterText(nameField, 'Alex Morgan');
       await tester.pump();
 
-      // Advance to Theme & Display
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Theme & Display'), findsOneWidget);
-
-      // Verify Real-time theme toggle
-      await tester.tap(find.text('Dark Theme'));
-      await tester.pump();
-      expect(container.read(settingsProvider).themeMode, equals(AppThemeMode.manual));
-      expect(container.read(settingsProvider).manualThemeStyle, equals(ManualThemeStyle.dark));
-
       // Advance to Wallet Setup
       await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Wallet Setup'), findsOneWidget);
+      expect(find.text('Account & Wallet Setup'), findsOneWidget);
 
       // Add a Bank Account
       await tester.tap(find.text('+ Bank'));
@@ -523,21 +509,7 @@ void main() {
       expect(storage.getTransactions().length, equals(1));
       expect(storage.getTransactions().first.title, equals('Cloud Backup Target'));
 
-      // 4. Test CloudSyncService manual token setting
-      final cloudService = CloudSyncService();
-      await cloudService.setManualAccessToken(
-        token: 'ya29.test_token_oauth_dummy',
-        email: 'developer.pocket@gmail.com',
-      );
-      expect(cloudService.isSignedIn, isTrue);
-      expect(cloudService.userEmail, equals('developer.pocket@gmail.com'));
-      final authHeaders = await cloudService.getAuthHeaders();
-      expect(authHeaders['Authorization'], equals('Bearer ya29.test_token_oauth_dummy'));
-
-      await cloudService.signOut();
-      expect(cloudService.isSignedIn, isFalse);
-
-      // 5. Notifications & Widget Sync verification
+      // 4. Notifications & Widget Sync verification
       final notif = AppNotificationModel(
         id: 'n-1',
         title: 'Daily Summary',
@@ -687,8 +659,8 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('Data & Cloud Sync'), findsOneWidget);
-      expect(find.text('Cloud Database Sync'), findsOneWidget);
+      expect(find.text('Data Management'), findsOneWidget);
+      expect(find.text('Export JSON Backup'), findsOneWidget);
     });
   });
 }

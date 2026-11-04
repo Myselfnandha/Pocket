@@ -5,6 +5,7 @@ import 'package:pocket/models/settings_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/services/auto_import_service.dart';
+import 'package:pocket/services/bank_discovery_service.dart';
 import 'package:pocket/services/storage_service.dart';
 
 import 'package:pocket/services/upi_screenshot_parser_service.dart';
@@ -94,7 +95,24 @@ class FakeStorageService extends Fake implements StorageService {
   bool isTransactionDeleted(String signature) => false;
 
   @override
-  bool isMessageProcessed(String messageId) => false;
+  bool isMessageProcessed(String messageId) => settings.processedMessageIds.contains(messageId);
+
+  List<String> getProcessedMessageIds() => settings.processedMessageIds;
+
+  @override
+  Future<void> addProcessedMessageId(String messageId) async {
+    if (messageId.trim().isEmpty) return;
+    if (settings.processedMessageIds.contains(messageId)) return;
+    settings = settings.copyWith(processedMessageIds: [...settings.processedMessageIds, messageId]);
+  }
+
+  @override
+  Future<void> addProcessedMessageIds(Iterable<String> ids) async {
+    final valid = ids.where((id) => id.trim().isNotEmpty).toSet();
+    if (valid.isEmpty) return;
+    final set = Set<String>.from(settings.processedMessageIds)..addAll(valid);
+    settings = settings.copyWith(processedMessageIds: set.toList());
+  }
 
   @override
   bool hasAskedToAddMissedAccount(String accountKey) => askedMissedAccounts.contains(accountKey);
@@ -380,22 +398,22 @@ void main() {
       final service = AutoImportService(storage);
 
       // 1. DLT Sender Headers
-      expect(service.predictCategory('Bill Pay', 'Recharge done', appSource: 'AX-JIOINF'), 'utilities');
-      expect(service.predictCategory('Credit Card', 'Bill payment received', appSource: 'VK-CRED'), 'utilities');
-      expect(service.predictCategory('Order Placed', 'Shares bought', appSource: 'BP-ZERODH'), 'investments');
-      expect(service.predictCategory('Ticket Booked', 'Booking confirmed', appSource: 'VM-IRCTC'), 'travel');
-      expect(service.predictCategory('Food Delivery', 'Order confirmed', appSource: 'AD-ZOMATO'), 'food');
-      expect(service.predictCategory('Quick Commerce', 'Delivered in 10 mins', appSource: 'BZ-BLINKT'), 'groceries');
-      expect(service.predictCategory('Shopping Order', 'Order dispatched', appSource: 'BW-AMAZON'), 'shopping');
-      expect(service.predictCategory('Movie Tickets', 'Seats confirmed', appSource: 'VK-BMSHOW'), 'entertainment');
-      expect(service.predictCategory('Pharmacy', 'Medicine ordered', appSource: 'BZ-APOLLO'), 'health');
+      expect(service.predictCategory('Bill Pay', 'Recharge done', storage.getCategories(), appSource: 'AX-JIOINF'), 'utilities');
+      expect(service.predictCategory('Credit Card', 'Bill payment received', storage.getCategories(), appSource: 'VK-CRED'), 'utilities');
+      expect(service.predictCategory('Order Placed', 'Shares bought', storage.getCategories(), appSource: 'BP-ZERODH'), 'investments');
+      expect(service.predictCategory('Ticket Booked', 'Booking confirmed', storage.getCategories(), appSource: 'VM-IRCTC'), 'travel');
+      expect(service.predictCategory('Food Delivery', 'Order confirmed', storage.getCategories(), appSource: 'AD-ZOMATO'), 'food');
+      expect(service.predictCategory('Quick Commerce', 'Delivered in 10 mins', storage.getCategories(), appSource: 'BZ-BLINKT'), 'groceries');
+      expect(service.predictCategory('Shopping Order', 'Order dispatched', storage.getCategories(), appSource: 'BW-AMAZON'), 'shopping');
+      expect(service.predictCategory('Movie Tickets', 'Seats confirmed', storage.getCategories(), appSource: 'VK-BMSHOW'), 'entertainment');
+      expect(service.predictCategory('Pharmacy', 'Medicine ordered', storage.getCategories(), appSource: 'BZ-APOLLO'), 'health');
 
       // 2. UPI VPA handles
-      expect(service.predictCategory('UPI Transaction', 'Paid to swiggy@okaxis for lunch'), 'food');
-      expect(service.predictCategory('UPI Transaction', 'Paid to irctc@hdfcbank for ticket'), 'travel');
-      expect(service.predictCategory('UPI Transaction', 'Paid to zerodha@icici for funds add'), 'investments');
-      expect(service.predictCategory('UPI Transaction', 'Paid to bescom@sbi for electricity'), 'utilities');
-      expect(service.predictCategory('UPI Transaction', 'Paid to blinkit@yesbank for grocery'), 'groceries');
+      expect(service.predictCategory('UPI Transaction', 'Paid to swiggy@okaxis for lunch', storage.getCategories()), 'food');
+      expect(service.predictCategory('UPI Transaction', 'Paid to irctc@hdfcbank for ticket', storage.getCategories()), 'travel');
+      expect(service.predictCategory('UPI Transaction', 'Paid to zerodha@icici for funds add', storage.getCategories()), 'investments');
+      expect(service.predictCategory('UPI Transaction', 'Paid to bescom@sbi for electricity', storage.getCategories()), 'utilities');
+      expect(service.predictCategory('UPI Transaction', 'Paid to blinkit@yesbank for grocery', storage.getCategories()), 'groceries');
     });
 
     test('PendingTransactionModel serializes and deserializes autoSaveDirect properly', () {
@@ -647,7 +665,7 @@ void main() {
 
       // Discovered bank accounts & live balances
       final discoveredAccounts = [
-        const DiscoveredBankAccount(
+        DiscoveredBankAccount(
           id: 'discovered_hdfc_1234',
           bankName: 'HDFC Bank',
           accountLast4: '1234',

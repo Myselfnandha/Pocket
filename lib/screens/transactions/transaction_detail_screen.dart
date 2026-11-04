@@ -1031,7 +1031,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: wallets.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final w = wallets[index];
                       final isSelected = w.id == tx.walletId;

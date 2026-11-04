@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
-import '../../services/system_widget_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/top_capsule_toast.dart';
 
@@ -199,60 +197,66 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // JSON Export
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: palette.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: palette.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.file_download_outlined, color: palette.primary),
                     ),
-                    child: Icon(Icons.file_download_outlined, color: palette.primary),
+                    title: const Text('Export JSON Backup', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text('Complete encrypted database snapshot'),
+                    trailing: _isExporting
+                        ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(palette.primary)))
+                        : Icon(Icons.arrow_forward_ios_rounded, size: 14, color: palette.primary),
+                    onTap: _isExporting ? null : () => _exportJsonBackup(backupService, palette),
                   ),
-                  title: const Text('Export JSON Backup', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('Complete encrypted database snapshot'),
-                  trailing: _isExporting
-                      ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(palette.primary)))
-                      : Icon(Icons.arrow_forward_ios_rounded, size: 14, color: palette.primary),
-                  onTap: _isExporting ? null : () => _exportJsonBackup(backupService, palette),
                 ),
                 const Divider(height: 1),
-                // CSV Export
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00BCD4).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00BCD4).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.table_chart_outlined, color: Color(0xFF00BCD4)),
                     ),
-                    child: const Icon(Icons.table_chart_outlined, color: Color(0xFF00BCD4)),
+                    title: const Text('Export CSV Transactions', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text('Spreadsheet-compatible format'),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: const Color(0xFF00BCD4)),
+                    onTap: () => _exportCsvTransactions(backupService),
                   ),
-                  title: const Text('Export CSV Transactions', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('Spreadsheet-compatible format'),
-                  trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: const Color(0xFF00BCD4)),
-                  onTap: () => _exportCsvTransactions(backupService),
                 ),
                 const Divider(height: 1),
-                // PDF Report
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF5252).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5252).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFFFF5252)),
                     ),
-                    child: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFFFF5252)),
+                    title: const Text('Generate PDF Report', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text('Full year-to-date financial summary'),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: const Color(0xFFFF5252)),
+                    onTap: () => _generatePdfReport(backupService),
                   ),
-                  title: const Text('Generate PDF Report', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('Full year-to-date financial summary'),
-                  trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: const Color(0xFFFF5252)),
-                  onTap: () => _generatePdfReport(backupService),
                 ),
               ],
             ),
@@ -273,21 +277,24 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: palette.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: palette.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.file_upload_outlined, color: palette.primary),
                     ),
-                    child: Icon(Icons.file_upload_outlined, color: palette.primary),
+                    title: const Text('Restore from JSON', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text('Upload encrypted backup file'),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: palette.primary),
+                    onTap: () => _restoreFromJson(backupService),
                   ),
-                  title: const Text('Restore from JSON', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('Upload encrypted backup file'),
-                  trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: palette.primary),
-                  onTap: () => _restoreFromJson(backupService),
                 ),
               ],
             ),
@@ -384,7 +391,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✓ JSON backup exported',
+          message: '✓ JSON backup exported',
           duration: const Duration(seconds: 2),
         );
       }
@@ -392,7 +399,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✗ Export failed: ${e.toString()}',
+          message: '✗ Export failed: ${e.toString()}',
           duration: const Duration(seconds: 3),
         );
       }
@@ -409,7 +416,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✓ CSV transactions exported',
+          message: '✓ CSV transactions exported',
           duration: const Duration(seconds: 2),
         );
       }
@@ -417,7 +424,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✗ Export failed: ${e.toString()}',
+          message: '✗ Export failed: ${e.toString()}',
           duration: const Duration(seconds: 3),
         );
       }
@@ -430,7 +437,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✓ PDF report generated',
+          message: '✓ PDF report generated',
           duration: const Duration(seconds: 2),
         );
       }
@@ -438,7 +445,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✗ Report generation failed: ${e.toString()}',
+          message: '✗ Report generation failed: ${e.toString()}',
           duration: const Duration(seconds: 3),
         );
       }
@@ -458,13 +465,12 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           if (mounted) {
             TopCapsuleToast.show(
               context,
-              '✓ Database restored from backup',
+              message: '✓ Database restored from backup',
               duration: const Duration(seconds: 2),
             );
-            // Refresh all providers after restore
-            ref.refresh(transactionsProvider);
-            ref.refresh(walletsProvider);
-            ref.refresh(categoriesProvider);
+            ref.invalidate(transactionsProvider);
+            ref.invalidate(walletsProvider);
+            ref.invalidate(categoriesProvider);
           }
         }
       }
@@ -472,7 +478,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (mounted) {
         TopCapsuleToast.show(
           context,
-          '✗ Restore failed: ${e.toString()}',
+          message: '✗ Restore failed: ${e.toString()}',
           duration: const Duration(seconds: 3),
         );
       }

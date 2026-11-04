@@ -37,7 +37,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.text('Total Balance'), findsOneWidget);
+    expect(find.text('TOTAL NET POSITION'), findsOneWidget);
     expect(find.text('Income'), findsOneWidget);
     expect(find.text('Expense'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
@@ -95,8 +95,8 @@ void main() {
     expect(find.text('- Expense'), findsOneWidget);
     expect(find.text('+ Income'), findsOneWidget);
     expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
-    expect(find.text('Quick Save'), findsOneWidget);
-    expect(find.text('More Details'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Details'), findsOneWidget);
 
     // Enter amount directly in autofocus TextField
     await tester.enterText(find.byType(TextField).first, '150');

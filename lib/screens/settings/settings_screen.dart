@@ -22,15 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
-    final wallets = ref.watch(walletsWithBalancesProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final defaultWallet = wallets.where((w) => w.id == settings.defaultWalletId).firstOrNull ??
-        wallets.where((w) => w.isDefault).firstOrNull ??
-        (wallets.isNotEmpty ? wallets.first : null);
-    final defaultWalletName = defaultWallet != null
-        ? '${defaultWallet.icon} ${defaultWallet.name}'
-        : 'First Active Account';
 
     return Scaffold(
       appBar: AppBar(
@@ -2041,6 +2033,14 @@ class AccountsCategoriesSubPage extends ConsumerWidget {
                 subtitle: Text(settings.transactionEntryMode == 'detailed' ? 'Detailed Form (Full View)' : 'Quick Mode (Compact Popup)'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => s._showTransactionEntryModePicker(context, ref, settings),
+              ),
+              Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
+              ListTile(
+                leading: const Icon(Icons.bolt_rounded, color: AppColors.accentCyan),
+                title: const Text('Default Quick Add Type', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(settings.defaultQuickAddType == 'income' ? 'Income' : 'Expense'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => s._showDefaultQuickAddPicker(context, ref, settings),
               ),
             ],
           ),

@@ -293,6 +293,8 @@ void main() {
       final wallet = WalletModel(
         id: 'w_test',
         name: 'IndusInd Bank',
+        icon: '🏦',
+        colorValue: 0xFF2196F3,
         initialBalance: 9500.0,
         currentBalance: 9500.0,
         balanceSnapshotAt: snapshotDate,
@@ -311,6 +313,8 @@ void main() {
       final wallet = WalletModel(
         id: 'w_test',
         name: 'IndusInd Bank',
+        icon: '🏦',
+        colorValue: 0xFF2196F3,
         initialBalance: 9500.0,
         currentBalance: 9500.0,
         balanceSnapshotAt: snapshotDate,

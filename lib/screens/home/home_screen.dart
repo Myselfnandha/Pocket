@@ -7,12 +7,10 @@ import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/balance_card.dart';
 import '../../widgets/transaction_tile.dart';
-import '../../widgets/nlp_quick_add_modal.dart';
 import '../../widgets/user_avatar_widget.dart';
 import '../../widgets/waving_hand_emoji.dart';
 import '../../widgets/pending_transactions_capsule.dart';
 import '../../widgets/subscription_candidate_card.dart';
-import '../../widgets/sms_inbox_scanner_sheet.dart';
 import '../../widgets/top_capsule_toast.dart';
 import '../../services/notification_service.dart';
 

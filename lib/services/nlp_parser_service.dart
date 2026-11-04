@@ -1,4 +1,3 @@
-import 'dart:core' show RegExp;
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import '../models/wallet_model.dart';

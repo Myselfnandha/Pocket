@@ -33,7 +33,6 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     final totalBalance = ref.watch(totalBalanceProvider);
     final settings = ref.watch(settingsProvider);
     final goals = ref.watch(goalsProvider);
-    final totalSavedInGoals = ref.watch(totalSavedInGoalsProvider);
     final palette = ref.watch(activePaletteProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -840,7 +839,6 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          final palette = ref.watch(activePaletteProvider);
 
           return Dialog(
             backgroundColor: Colors.transparent,
@@ -1651,14 +1649,16 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       final deleted = await ref.read(walletsProvider.notifier).deleteWallet(wallet.id);
-                      Navigator.pop(ctx);
-                      TopCapsuleToast.show(
-                        context,
-                        message: deleted
-                            ? 'Deleted "${wallet.displayName}"'
-                            : 'This wallet still has transactions and cannot be deleted.',
-                        isSuccess: deleted,
-                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        TopCapsuleToast.show(
+                          context,
+                          message: deleted
+                              ? 'Deleted "${wallet.displayName}"'
+                              : 'This wallet still has transactions and cannot be deleted.',
+                          isSuccess: deleted,
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.expenseRed,
@@ -2684,421 +2684,6 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
   }
 
   // ==========================================
-  // --- LOANS & DEBT SECTION ---
-  // ==========================================
-
-  Widget _buildLoansSection(
-    BuildContext context,
-    WidgetRef ref,
-    List<WalletModel> loanWallets,
-    List<TransactionModel> allTxs,
-    UserSettingsModel settings,
-    AppThemePalette palette,
-    bool isDark,
-  ) {
-    final totalLoanDebt = loanWallets.fold(0.0, (sum, w) => sum + w.currentBalance);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. Loans Header / Summary Banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1708) : const Color(0xFFFFFBEB),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.amber.withValues(alpha: isDark ? 0.4 : 0.35),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.amber.withValues(alpha: isDark ? 0.1 : 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Text('📜', style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'LOAN & DEBT PORTFOLIO',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                          color: isDark ? Colors.amber.shade300 : Colors.amber.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${loanWallets.length} Active Loans',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total Outstanding Due',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _isBalanceVisible ? settings.formatCurrency(totalLoanDebt) : '••••••••',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
-                        ),
-                      ),
-                    ],
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddWalletDialog(context, ref, settings.currencySymbol, initialType: WalletType.loan),
-                    icon: const Icon(Icons.add_rounded, size: 16, color: Colors.black),
-                    label: const Text(
-                      '+ Add Loan',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Isolated from liquid cash to avoid distorting available spend balance. Track dues, EMIs, and repayments with ease.',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.white54 : Colors.black45,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // 2. Loan Cards
-        if (loanWallets.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-              ),
-            ),
-            child: Column(
-              children: [
-                const Text('🛡️', style: TextStyle(fontSize: 36)),
-                const SizedBox(height: 12),
-                Text(
-                  'No Active Loans Detected',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Bank loan accounts (IndusInd Gold Loan, HDBFS, personal/vehicle loans) detected from SMS will automatically appear here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => _showAddWalletDialog(context, ref, settings.currencySymbol, initialType: WalletType.loan),
-                  icon: const Icon(Icons.add_rounded, size: 16, color: Colors.amber),
-                  label: const Text('Add Loan Manually', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.amber)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.amber),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...loanWallets.map((loan) {
-            final loanTxs = allTxs.where((tx) => tx.walletId == loan.id).take(3).toList();
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF191C24) : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: Colors.amber.withValues(alpha: isDark ? 0.35 : 0.25),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Row: Institution Icon + Name + Number + Loan Badge + More Menu
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          loan.icon.isNotEmpty ? loan.icon : '📜',
-                          style: const TextStyle(fontSize: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    loan.name,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDark ? Colors.white : Colors.black87,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: Colors.amber.withValues(alpha: 0.35), width: 0.8),
-                                  ),
-                                  child: const Text(
-                                    'LOAN',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.amber,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              loan.accountNumber != null && loan.accountNumber!.isNotEmpty
-                                  ? 'A/c •••• ${loan.accountNumber}'
-                                  : 'Loan Account',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white60 : Colors.black54,
-                                fontFamily: 'monospace',
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert_rounded, color: isDark ? Colors.white60 : Colors.black54),
-                        onSelected: (val) {
-                          if (val == 'edit') {
-                            _showEditWalletModal(context, ref, loan, settings.currencySymbol);
-                          } else if (val == 'delete') {
-                            _confirmDeleteWallet(context, ref, loan);
-                          }
-                        },
-                        itemBuilder: (ctx) => [
-                          const PopupMenuItem(value: 'edit', child: Text('Edit Loan Details')),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete Loan Account', style: TextStyle(color: Colors.redAccent)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(
-                    height: 1,
-                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Middle Row: Overdue Balance
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'CURRENT OUTSTANDING DUE',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: isDark ? Colors.white54 : Colors.black45,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _isBalanceVisible ? settings.formatCurrency(loan.currentBalance) : '••••••••',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Pay EMI Button
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          final regularWallets = ref.read(walletsProvider).where((w) => w.type != WalletType.loan).toList();
-                          _showTransferDialog(
-                            context,
-                            ref,
-                            ref.read(walletsProvider),
-                            settings.currencySymbol,
-                            initialFromWalletId: regularWallets.isNotEmpty ? regularWallets.first.id : null,
-                            initialToWalletId: loan.id,
-                          );
-                        },
-                        icon: const Icon(Icons.payment_rounded, size: 15, color: Colors.black),
-                        label: const Text(
-                          'Pay EMI / Settle',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.black),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Recent Loan Activity snippet
-                  if (loanTxs.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      'Recent Loan Activity',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white60 : Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    ...loanTxs.map((tx) {
-                      final isCredit = tx.type == TransactionType.income;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                                  size: 13,
-                                  color: isCredit ? AppColors.incomeGreen : AppColors.expenseRed,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  tx.title.isNotEmpty ? tx.title : 'Payment',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? Colors.white70 : Colors.black87,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              '${isCredit ? '-' : '+'}${settings.formatCurrency(tx.amount)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isCredit ? AppColors.incomeGreen : AppColors.expenseRed,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ],
-              ),
-            );
-          }),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  // ==========================================
   // --- OPTION 1: THE VAULT EXECUTIVE CARD ---
   // ==========================================
 
@@ -3510,32 +3095,25 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    String networkBadge = 'BANK';
     IconData networkIcon = Icons.account_balance_rounded;
 
     switch (wallet.walletType) {
       case WalletType.creditCard:
-        networkBadge = 'VISA';
         networkIcon = Icons.credit_card_rounded;
         break;
       case WalletType.upi:
-        networkBadge = 'UPI';
         networkIcon = Icons.qr_code_rounded;
         break;
       case WalletType.bank:
-        networkBadge = 'BANK';
         networkIcon = Icons.account_balance_rounded;
         break;
       case WalletType.cash:
-        networkBadge = 'CASH';
         networkIcon = Icons.payments_rounded;
         break;
       case WalletType.savings:
-        networkBadge = 'SAVINGS';
         networkIcon = Icons.savings_rounded;
         break;
       case WalletType.loan:
-        networkBadge = 'LOAN';
         networkIcon = Icons.receipt_long_rounded;
         break;
     }
@@ -4421,7 +3999,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                         icon: const Icon(Icons.copy_rounded, size: 17),
                         label: const Text('Copy Details'),
                         onPressed: () {
-                          final details = '${wallet.displayName}\nBalance: ${settings.formatCurrency(wallet.currentBalance)}${wallet.accountNumber != null ? "\nAccount: " + wallet.accountNumber! : ""}';
+                          final details = '${wallet.displayName}\nBalance: ${settings.formatCurrency(wallet.currentBalance)}${wallet.accountNumber != null ? "\nAccount: ${wallet.accountNumber}" : ""}';
                           Clipboard.setData(ClipboardData(text: details));
                           Navigator.pop(ctx);
                           TopCapsuleToast.show(context, message: 'Account information copied to clipboard', isSuccess: true);

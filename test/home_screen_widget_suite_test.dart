@@ -7,13 +7,13 @@ void main() {
   group('Home Screen Widget Suite Tests', () {
     test('UserSettingsModel widget settings defaults and copyWith', () {
       const settings = UserSettingsModel();
-      expect(settings.widgetPrivacyMode, false);
+      expect(settings.widgetPrivacyMode, true);
       expect(settings.widgetSelectedWalletId, isNull);
       expect(settings.widgetSecondaryAction, 'scan');
 
       // Toggle privacy mode
-      final withPrivacy = settings.copyWith(widgetPrivacyMode: true);
-      expect(withPrivacy.widgetPrivacyMode, true);
+      final withPrivacy = settings.copyWith(widgetPrivacyMode: false);
+      expect(withPrivacy.widgetPrivacyMode, false);
 
       // Select specific wallet and secondary action
       final withWallet = withPrivacy.copyWith(
@@ -26,7 +26,7 @@ void main() {
       // Clear wallet selection
       final clearedWallet = withWallet.copyWith(clearWidgetSelectedWalletId: true);
       expect(clearedWallet.widgetSelectedWalletId, isNull);
-      expect(clearedWallet.widgetPrivacyMode, true);
+      expect(clearedWallet.widgetPrivacyMode, false);
     });
 
     test('UserSettingsModel JSON serialization roundtrip for widget configs', () {
