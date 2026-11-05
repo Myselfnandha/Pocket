@@ -604,22 +604,35 @@ class _TransactionsListScreenState
                                       ),
                                   ],
                                 ),
-                                Text(
-                                  dayNet > 0
-                                      ? '+${settings.formatCurrency(dayNet)}'
-                                      : (dayNet < 0
-                                          ? '-${settings.formatCurrency(dayNet.abs())}'
-                                          : settings.formatCurrency(0.0)),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: dayNet > 0
-                                        ? AppColors.incomeGreen
+                                // Day Net Cash Flow Badge with clear label
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: (dayNet > 0
+                                            ? AppColors.incomeGreen
+                                            : (dayNet < 0
+                                                ? AppColors.expenseRed
+                                                : (isDark ? Colors.white24 : Colors.black12)))
+                                        .withValues(alpha: isDark ? 0.15 : 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    dayNet > 0
+                                        ? 'Net +${settings.formatCurrency(dayNet)}'
                                         : (dayNet < 0
-                                            ? AppColors.expenseRed
-                                            : (isDark
-                                                ? AppColors.darkTextSecondary
-                                                : AppColors.lightTextSecondary)),
+                                            ? 'Net -${settings.formatCurrency(dayNet.abs())}'
+                                            : 'Net ${settings.formatCurrency(0.0)}'),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: dayNet > 0
+                                          ? AppColors.incomeGreen
+                                          : (dayNet < 0
+                                              ? AppColors.expenseRed
+                                              : (isDark
+                                                  ? AppColors.darkTextSecondary
+                                                  : AppColors.lightTextSecondary)),
+                                    ),
                                   ),
                                 ),
                               ],

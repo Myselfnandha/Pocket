@@ -46,7 +46,8 @@ class TransactionTile extends ConsumerWidget {
 
     final isIncome = transaction.type == TransactionType.income;
     final amountColor = isIncome ? AppColors.incomeGreen : AppColors.expenseRed;
-    final prefix = showSignPrefix ? (isIncome ? '+' : '-') : '';
+    // Show '+' for income when sign prefix is requested; expenses are cleanly displayed in red without an awkward negative sign
+    final prefix = showSignPrefix && isIncome ? '+' : '';
     final formattedAmount = settings.formatCurrency(transaction.amount, includeSymbol: false);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;

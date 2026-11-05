@@ -317,7 +317,7 @@ class _BalanceCardState extends ConsumerState<BalanceCard> {
                     label: 'Expense',
                     amount: monthlyStats.totalExpense <= 0
                         ? settings.formatCompact(0.0)
-                        : '-${settings.formatCompact(monthlyStats.totalExpense)}',
+                        : settings.formatCompact(monthlyStats.totalExpense),
                     icon: Icons.arrow_upward_rounded,
                     accentColor: AppColors.expenseRed,
                     isDark: isDark,

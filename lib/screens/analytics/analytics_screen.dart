@@ -785,7 +785,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  totalBudgetLimit > 0 ? 'Budget Left' : 'Safe to Spend',
+                                  totalBudgetLimit > 0
+                                      ? (remainingBudget >= 0 ? 'Budget Left' : 'Over Budget')
+                                      : (remainingBudget >= 0 ? 'Net Cash Flow' : 'Net Deficit'),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -796,7 +798,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${remainingBudget >= 0 ? '+' : ''}${settings.formatCurrency(remainingBudget)}',
+                              settings.formatCurrency(remainingBudget.abs()),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -911,9 +913,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    totalIncome <= 0
-                        ? settings.formatCurrency(0.0)
-                        : '+${settings.formatCurrency(totalIncome)}',
+                    settings.formatCurrency(totalIncome),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -976,9 +976,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    totalExpense <= 0
-                        ? settings.formatCurrency(0.0)
-                        : '-${settings.formatCurrency(totalExpense)}',
+                    settings.formatCurrency(totalExpense),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
