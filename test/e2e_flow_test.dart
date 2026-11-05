@@ -48,10 +48,6 @@ void main() {
 
     setUp(() async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/google_sign_in'), (MethodCall call) async {
-        return null;
-      });
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(const MethodChannel('home_widget'), (MethodCall call) async {
         return true;
       });

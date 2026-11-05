@@ -12,6 +12,8 @@ class SmsReceiver : BroadcastReceiver() {
             var timestamp = System.currentTimeMillis()
             
             if (intent.action == "com.pocket.pocket.TEST_SMS") {
+                // Restrict test broadcast injection strictly to debug builds
+                if (!BuildConfig.DEBUG) return
                 val sender = intent.getStringExtra("sender") ?: "TESTBANK"
                 val body = intent.getStringExtra("body") ?: ""
                 messagesList.add(Pair(sender, body))
