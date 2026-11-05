@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'models/category_model.dart';
 import 'navigation/app_router.dart';
 import 'providers/app_providers.dart';
@@ -242,6 +243,8 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: _router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => AppLockGate(child: child ?? const SizedBox.shrink()),
     );
   }

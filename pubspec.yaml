@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
@@ -40,6 +42,7 @@ dependencies:
   shared_preferences: ^2.3.5
   uuid: ^4.5.1
   path_provider: ^2.1.5
+  path: ^1.9.1
   share_plus: ^10.1.4
   csv: ^6.0.0
   pdf: ^3.11.2
@@ -56,6 +59,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  checks: ^0.3.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -78,10 +84,7 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+  generate: true
   uses-material-design: true
 
   assets:

@@ -48,7 +48,7 @@ class _PendingTransactionsSheetState extends ConsumerState<PendingTransactionsSh
       child: Container(
         constraints: BoxConstraints(
           maxWidth: 480,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
         ),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF191920) : Colors.white,

@@ -133,34 +133,26 @@ class TransactionModel {
       };
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    final rawAmt = json['amount'];
-    double parsedAmount = 0.0;
-    if (rawAmt is num) {
-      parsedAmount = rawAmt.toDouble();
-    } else if (rawAmt is String) {
-      parsedAmount = double.tryParse(rawAmt.replaceAll(',', '').trim()) ?? 0.0;
-    }
+    // Parse polymorphic amount representations using Dart 3 pattern matching
+    final double parsedAmount = switch (json['amount']) {
+      final num n => n.toDouble(),
+      final String s => double.tryParse(s.replaceAll(',', '').trim()) ?? 0.0,
+      _ => 0.0,
+    };
     final cleanAmount = ((parsedAmount.abs() * 100).round() / 100.0);
 
-    final rawDate = json['date'];
-    final DateTime parsedDate;
-    if (rawDate is String) {
-      parsedDate = DateTime.tryParse(rawDate) ?? DateTime.now();
-    } else if (rawDate is int) {
-      parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate);
-    } else {
-      parsedDate = DateTime.now();
-    }
+    // Resolve date with switch expression supporting ISO8601 strings and epoch timestamps
+    final DateTime parsedDate = switch (json['date']) {
+      final String s => DateTime.tryParse(s) ?? DateTime.now(),
+      final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+      _ => DateTime.now(),
+    };
 
-    final rawCreated = json['createdAt'];
-    final DateTime parsedCreated;
-    if (rawCreated is String) {
-      parsedCreated = DateTime.tryParse(rawCreated) ?? parsedDate;
-    } else if (rawCreated is int) {
-      parsedCreated = DateTime.fromMillisecondsSinceEpoch(rawCreated);
-    } else {
-      parsedCreated = parsedDate;
-    }
+    final DateTime parsedCreated = switch (json['createdAt']) {
+      final String s => DateTime.tryParse(s) ?? parsedDate,
+      final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+      _ => parsedDate,
+    };
 
     return TransactionModel(
       id: json['id'] as String? ?? 'tx_${DateTime.now().microsecondsSinceEpoch}',

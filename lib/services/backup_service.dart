@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:csv/csv.dart';
@@ -56,7 +57,7 @@ class BackupService {
     final jsonStr = exportJsonBackupString();
     final tempDir = await getTemporaryDirectory();
     final fileName = 'Pocket_Backup_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.json';
-    final file = File('${tempDir.path}/$fileName');
+    final file = File(p.join(tempDir.path, fileName));
     await file.writeAsString(jsonStr);
 
     return file;
@@ -109,7 +110,7 @@ class BackupService {
     final csvStr = exportTransactionsCsvString();
     final tempDir = await getTemporaryDirectory();
     final fileName = 'Pocket_Transactions_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
-    final file = File('${tempDir.path}/$fileName');
+    final file = File(p.join(tempDir.path, fileName));
     await file.writeAsString(csvStr);
 
     return file;

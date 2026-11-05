@@ -166,7 +166,7 @@ class _TopCapsuleToastWidgetState extends State<_TopCapsuleToastWidget>
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
+    final topPadding = MediaQuery.paddingOf(context).top;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Positioned(

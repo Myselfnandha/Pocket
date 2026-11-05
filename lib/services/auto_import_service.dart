@@ -10,12 +10,21 @@ import 'storage_service.dart';
 import 'upi_screenshot_parser_service.dart';
 import 'bank_discovery_service.dart';
 
+/// Represents the grant state of platform background auto-import listeners.
 class AutoImportPermissions {
+  /// Whether the native Android notification listener service is enabled.
   final bool isNotificationListenerEnabled;
+
+  /// Whether the accessibility service is granted for interactive screen parsing.
   final bool isAccessibilityEnabled;
+
+  /// Whether the storage screenshot observer is actively running.
   final bool isScreenshotWatcherActive;
+
+  /// Whether the SMS broadcast receiver is enabled.
   final bool isSmsListenerEnabled;
 
+  /// Creates a snapshot of auto-import permission statuses.
   const AutoImportPermissions({
     this.isNotificationListenerEnabled = false,
     this.isAccessibilityEnabled = false,
@@ -23,10 +32,16 @@ class AutoImportPermissions {
     this.isSmsListenerEnabled = false,
   });
 
+  /// Whether any background listener or observer is currently active.
   bool get hasAnyActive =>
       isNotificationListenerEnabled || isAccessibilityEnabled || isScreenshotWatcherActive || isSmsListenerEnabled;
 }
 
+/// Orchestrates automated import of financial transactions from device sources.
+///
+/// Coordinates platform channel communication with Android background receivers
+/// (SMS, notification listener, accessibility events, and screenshots) and maps
+/// raw payloads to [PendingTransactionModel] or direct [TransactionModel] entries.
 class AutoImportService {
   static const MethodChannel _channel = MethodChannel('com.pocket.pocket/auto_import');
   final StorageService _storage;
@@ -117,6 +132,8 @@ class AutoImportService {
   }
 
   /// Scans the device SMS inbox for bank transactions within [daysLookback] days (0 = all).
+  ///
+  /// {@example /example/auto_import_example.dart#scan_and_drain}
   Future<List<PendingTransactionModel>> scanSmsInbox({int daysLookback = 30}) async {
     try {
       final raw = await _channel.invokeMethod<String>('scanSmsInbox', {'days': daysLookback});

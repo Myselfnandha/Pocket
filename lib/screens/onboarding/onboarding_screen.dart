@@ -947,7 +947,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.65,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.65,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1127,7 +1127,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
               visibleList.every((tx) => tempSelected.contains(tx.id));
 
           return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
+            height: MediaQuery.sizeOf(context).height * 0.85,
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -2768,7 +2768,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             left: 20,
             right: 20,
             top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
           ),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -3053,7 +3053,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             left: 20,
             right: 20,
             top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
           ),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E1E) : Colors.white,

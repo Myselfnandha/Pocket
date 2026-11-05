@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:csv/csv.dart';
@@ -2109,7 +2110,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final csvData = const ListToCsvConverter().convert(rows);
     final tempDir = await getTemporaryDirectory();
     final fileName = 'Pocket_Ledger_${DateFormat('yyyy_MM').format(_currentMonth)}.csv';
-    final file = File('${tempDir.path}/$fileName');
+    final file = File(p.join(tempDir.path, fileName));
     await file.writeAsString(csvData);
 
     await Share.shareXFiles(

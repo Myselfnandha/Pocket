@@ -38,15 +38,12 @@ class UpiParsedTransaction {
     final id = (json['id'] as String?)?.trim();
     final autoSaveDirect = json['auto_save_direct'] == true || json['autoSaveDirect'] == true;
 
-    double? parsedAmount;
-    final amtVal = json['amount'];
-    if (amtVal != null) {
-      if (amtVal is num) {
-        parsedAmount = amtVal.toDouble();
-      } else if (amtVal is String) {
-        parsedAmount = double.tryParse(amtVal.replaceAll(',', '').trim());
-      }
-    }
+    // Extract amount using Dart 3 pattern matching across polymorphic JSON representations
+    double? parsedAmount = switch (json['amount']) {
+      final num n => n.toDouble(),
+      final String s => double.tryParse(s.replaceAll(',', '').trim()),
+      _ => null,
+    };
 
     final rawText = (json['raw_text'] as String?)?.trim();
 

@@ -1027,7 +1027,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                 const Text('Select Wallet / Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 14),
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
+                  constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.45),
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: wallets.length,

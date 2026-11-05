@@ -1,0 +1,27 @@
+{
+  "@@locale": "en",
+  "appTitle": "Pocket",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "totalNetPosition": "TOTAL NET POSITION",
+  "@totalNetPosition": {
+    "description": "Header for total balance calculation"
+  },
+  "quickAdd": "Quick Add",
+  "@quickAdd": {
+    "description": "Action label for creating a new transaction"
+  },
+  "analytics": "Analytics",
+  "@analytics": {
+    "description": "Navigation label for analytics tab"
+  },
+  "wallets": "Wallets",
+  "@wallets": {
+    "description": "Navigation label for wallets tab"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Navigation label for settings tab"
+  }
+}

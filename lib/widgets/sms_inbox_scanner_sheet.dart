@@ -168,7 +168,7 @@ class _SmsInboxScannerSheetState extends ConsumerState<SmsInboxScannerSheet> {
     final settings = ref.watch(settingsProvider);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
+      height: MediaQuery.sizeOf(context).height * 0.88,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF16161E) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
