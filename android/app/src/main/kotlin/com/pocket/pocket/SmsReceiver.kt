@@ -13,7 +13,8 @@ class SmsReceiver : BroadcastReceiver() {
             
             if (intent.action == "com.pocket.pocket.TEST_SMS") {
                 // Restrict test broadcast injection strictly to debug builds
-                if (!BuildConfig.DEBUG) return
+                val isDebug = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                if (!isDebug) return
                 val sender = intent.getStringExtra("sender") ?: "TESTBANK"
                 val body = intent.getStringExtra("body") ?: ""
                 messagesList.add(Pair(sender, body))
