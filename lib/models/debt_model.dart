@@ -119,15 +119,17 @@ class DebtModel {
     String? note,
     String? walletId,
   }) {
+    final cleanPayment = (paymentAmount.abs() * 100).round() / 100.0;
     final payment = DebtPaymentModel(
       id: const Uuid().v4(),
-      amount: paymentAmount,
+      amount: cleanPayment,
       date: DateTime.now(),
       note: note,
       walletId: walletId,
     );
 
-    final newRemaining = (remainingAmount - paymentAmount).clamp(0.0, totalAmount);
+    final roundedRemaining = ((remainingAmount - cleanPayment) * 100).round() / 100.0;
+    final newRemaining = roundedRemaining.clamp(0.0, totalAmount);
     return copyWith(
       remainingAmount: newRemaining,
       isSettled: newRemaining <= 0,

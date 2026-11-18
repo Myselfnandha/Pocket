@@ -264,6 +264,66 @@ void main() {
       expect(retrievedTxs.first.type, TransactionType.income);
       expect(retrievedTxs.first.note, 'Verified tamper-evident cryptographic storage');
     });
+
+    test('Master Key Loss Protection: StorageService.init fails closed when encrypted data exists but key is absent', () async {
+      SharedPreferences.setMockInitialValues({
+        'pocket_transactions': 'enc:v2:forgediv:forgedciphertext:forgedmac',
+      });
+      FlutterSecureStorage.setMockInitialValues({}); // Empty secure storage (lost key)
+
+      final customPrefs = await SharedPreferences.getInstance();
+      const customSecureStorage = FlutterSecureStorage();
+
+      // Expect StateError when attempting to re-initialize with missing key while encrypted data exists
+      expect(
+        () async => await StorageService.init(prefs: customPrefs, secureStorage: customSecureStorage),
+        throwsA(isA<StateError>()),
+        reason: 'StorageService must refuse to generate a new key when encrypted data exists, preventing permanent data loss',
+      );
+    });
+
+    test('Corrupted Encrypted Record Quarantine: Corrupted record is preserved in backup key and not destroyed on subsequent save', () async {
+      const corruptedCiphertext = 'enc:v2:aW52YWxpZGl2:dGFtcGVyZWQ=:ZmFrZW1hYw==';
+      SharedPreferences.setMockInitialValues({
+        'pocket_transactions': corruptedCiphertext,
+      });
+      FlutterSecureStorage.setMockInitialValues({
+        'pocket_storage_aes_key_v1': base64.encode(List<int>.generate(32, (i) => i + 1)),
+      });
+
+      final customPrefs = await SharedPreferences.getInstance();
+      const customSecureStorage = FlutterSecureStorage();
+      final storage = await StorageService.init(prefs: customPrefs, secureStorage: customSecureStorage);
+
+      // 1. Reading corrupted transactions returns empty list and flags key as corrupted
+      final txs = storage.getTransactions();
+      expect(txs.isEmpty, isTrue);
+      expect(storage.isKeyCorrupted('pocket_transactions'), isTrue);
+      expect(storage.getQuarantinedBackup('pocket_transactions'), corruptedCiphertext);
+
+      // 2. Saving a new transaction does not wipe the quarantined backup
+      final validTx = TransactionModel(
+        id: 'tx_safe_001',
+        title: 'New Valid Transaction',
+        amount: 250.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        walletId: 'w_cash',
+        date: DateTime.now(),
+        createdAt: DateTime.now(),
+      );
+      await storage.saveTransactions([validTx]);
+
+      // Verify the quarantined backup still exists in SharedPreferences
+      final preservedBackup = customPrefs.getString('pocket_transactions_corrupted_backup');
+      expect(preservedBackup, corruptedCiphertext,
+          reason: 'Raw corrupted ciphertext must be preserved in backup key for forensic recovery');
+
+      // Verify the new transaction was saved and can be read back cleanly
+      final afterSaveTxs = storage.getTransactions();
+      expect(afterSaveTxs.length, 1);
+      expect(afterSaveTxs.first.title, 'New Valid Transaction');
+    });
   });
 }
 

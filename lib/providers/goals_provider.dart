@@ -52,9 +52,12 @@ class GoalsNotifier extends StateNotifier<List<GoalModel>> {
     required String walletId,
     String? note,
   }) async {
+    final cleanAmount = (amount.abs() * 100).round() / 100.0;
+    if (cleanAmount <= 0) return;
+
     final goal = state.firstWhere((g) => g.id == goalId);
     final updated = goal.copyWith(
-      currentSavedAmount: goal.currentSavedAmount + amount,
+      currentSavedAmount: ((goal.currentSavedAmount + cleanAmount) * 100).round() / 100.0,
     );
 
     state = [
@@ -66,7 +69,7 @@ class GoalsNotifier extends StateNotifier<List<GoalModel>> {
     // Record saving transaction as deduction from wallet
     await _ref.read(transactionsProvider.notifier).addTransaction(
           title: 'Deposit to ${goal.title}',
-          amount: amount,
+          amount: cleanAmount,
           type: TransactionType.expense,
           categoryId: 'savings',
           walletId: walletId,
@@ -81,8 +84,17 @@ class GoalsNotifier extends StateNotifier<List<GoalModel>> {
     required String walletId,
     String? note,
   }) async {
+    final cleanAmount = (amount.abs() * 100).round() / 100.0;
+    if (cleanAmount <= 0) return;
+
     final goal = state.firstWhere((g) => g.id == goalId);
-    final updatedAmount = (goal.currentSavedAmount - amount).clamp(0.0, double.infinity);
+    // Financial invariant: cannot withdraw more than currently saved in this goal
+    final effectiveDeduction = cleanAmount > goal.currentSavedAmount
+        ? goal.currentSavedAmount
+        : cleanAmount;
+    if (effectiveDeduction <= 0) return;
+
+    final updatedAmount = ((goal.currentSavedAmount - effectiveDeduction) * 100).round() / 100.0;
     final updated = goal.copyWith(currentSavedAmount: updatedAmount);
 
     state = [
@@ -91,10 +103,10 @@ class GoalsNotifier extends StateNotifier<List<GoalModel>> {
     ];
     await _storage.saveGoals(state);
 
-    // Record withdrawal transaction as credit into wallet
+    // Record withdrawal transaction as credit into wallet matching the exact deducted amount
     await _ref.read(transactionsProvider.notifier).addTransaction(
           title: 'Withdrawal from ${goal.title}',
-          amount: amount,
+          amount: effectiveDeduction,
           type: TransactionType.income,
           categoryId: 'savings',
           walletId: walletId,

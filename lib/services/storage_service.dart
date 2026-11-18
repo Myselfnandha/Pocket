@@ -48,6 +48,14 @@ class StorageService {
   List<GoalModel>? _cachedGoals;
   List<PendingTransactionModel>? _cachedPendingTransactions;
 
+  // Corrupted record quarantine tracking
+  final Set<String> _quarantinedCorruptedKeys = {};
+
+  bool isKeyCorrupted(String key) => _quarantinedCorruptedKeys.contains(key);
+  String? getQuarantinedBackup(String key) => _prefs.getString('${key}_corrupted_backup');
+  bool get hasCorruptedRecords => _quarantinedCorruptedKeys.isNotEmpty;
+  Set<String> get corruptedKeys => Set.unmodifiable(_quarantinedCorruptedKeys);
+
   StorageService(
     this._prefs, [
     FlutterSecureStorage? secureStorage,
@@ -55,6 +63,28 @@ class StorageService {
     this._hmacKey,
     this._legacyEncrypter,
   ]);
+
+  static bool _hasEncryptedData(SharedPreferences prefs) {
+    const keys = [
+      _kTransactions,
+      _kCategories,
+      _kWallets,
+      _kSettings,
+      _kRecurringRules,
+      _kNotifications,
+      _kDebts,
+      _kBudgets,
+      _kGoals,
+      _kPendingTransactions,
+    ];
+    for (final key in keys) {
+      final val = prefs.getString(key);
+      if (val != null && val.startsWith('enc:')) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   static Future<StorageService> init({
     SharedPreferences? prefs,
@@ -77,6 +107,12 @@ class StorageService {
         keyBase64 = effectivePrefs.getString('pocket_storage_aes_key_v1_backup');
       }
       if (keyBase64 == null || keyBase64.isEmpty) {
+        if (_hasEncryptedData(effectivePrefs)) {
+          throw StateError(
+            'Master encryption key missing from Keystore while encrypted data exists in storage. '
+            'Refusing to generate a new key to avoid irreversible data loss.',
+          );
+        }
         final newKey = enc.Key.fromSecureRandom(32);
         keyBase64 = newKey.base64;
         await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
@@ -124,7 +160,7 @@ class StorageService {
 
   List<PendingTransactionModel> getPendingTransactions() {
     if (_cachedPendingTransactions != null) return _cachedPendingTransactions!;
-    final raw = _decryptString(_prefs.getString(_kPendingTransactions));
+    final raw = _readAndVerify(_kPendingTransactions);
     if (raw == null) return _cachedPendingTransactions = [];
     try {
       final List<dynamic> decoded = jsonDecode(raw);
@@ -138,9 +174,9 @@ class StorageService {
 
   Future<void> savePendingTransactions(List<PendingTransactionModel> items) async {
     _cachedPendingTransactions = List.unmodifiable(items);
-    await _prefs.setString(
+    await _persistEncrypted(
       _kPendingTransactions,
-      _encryptString(jsonEncode(items.map((e) => e.toJson()).toList())),
+      jsonEncode(items.map((e) => e.toJson()).toList()),
     );
   }
 
@@ -229,6 +265,31 @@ class StorageService {
     return ciphertext;
   }
 
+  String? _readAndVerify(String key) {
+    final raw = _prefs.getString(key);
+    if (raw == null) return null;
+
+    final decrypted = _decryptString(raw);
+    if (decrypted == null && raw.startsWith('enc:')) {
+      final backupKey = '${key}_corrupted_backup';
+      _prefs.setString(backupKey, raw);
+      _quarantinedCorruptedKeys.add(key);
+      debugPrint('CRITICAL: Encrypted record for key "$key" failed authentication/decryption. Quarantined to "$backupKey".');
+      return null;
+    }
+    return decrypted;
+  }
+
+  Future<void> _persistEncrypted(String key, String plaintext) async {
+    final existingRaw = _prefs.getString(key);
+    if (existingRaw != null && existingRaw.startsWith('enc:') && _quarantinedCorruptedKeys.contains(key)) {
+      await _prefs.setString('${key}_corrupted_backup', existingRaw);
+    }
+    final ciphertext = _encryptString(plaintext);
+    await _prefs.setString(key, ciphertext);
+    _quarantinedCorruptedKeys.remove(key);
+  }
+
   @visibleForTesting
   String encryptForTest(String plaintext) => _encryptString(plaintext);
 
@@ -265,7 +326,7 @@ class StorageService {
 
   List<TransactionModel> getTransactions() {
     if (_cachedTransactions != null) return _cachedTransactions!;
-    final raw = _decryptString(_prefs.getString(_kTransactions));
+    final raw = _readAndVerify(_kTransactions);
     if (raw == null) {
       _cachedTransactions = [];
       return _cachedTransactions!;
@@ -286,14 +347,14 @@ class StorageService {
     final sorted = List<TransactionModel>.from(list)..sort((a, b) => b.date.compareTo(a.date));
     _cachedTransactions = List.unmodifiable(sorted);
     final raw = jsonEncode(sorted.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kTransactions, _encryptString(raw));
+    await _persistEncrypted(_kTransactions, raw);
   }
 
   // --- Categories ---
 
   List<CategoryModel> getCategories() {
     if (_cachedCategories != null) return _cachedCategories!;
-    final raw = _decryptString(_prefs.getString(_kCategories));
+    final raw = _readAndVerify(_kCategories);
     if (raw == null) {
       _cachedCategories = defaultCategories;
       return _cachedCategories!;
@@ -311,14 +372,14 @@ class StorageService {
   Future<void> saveCategories(List<CategoryModel> list) async {
     _cachedCategories = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kCategories, _encryptString(raw));
+    await _persistEncrypted(_kCategories, raw);
   }
 
   // --- Wallets ---
 
   List<WalletModel> getWallets() {
     if (_cachedWallets != null) return _cachedWallets!;
-    final raw = _decryptString(_prefs.getString(_kWallets));
+    final raw = _readAndVerify(_kWallets);
     if (raw == null) {
       _cachedWallets = defaultWallets;
       return _cachedWallets!;
@@ -336,13 +397,13 @@ class StorageService {
   Future<void> saveWallets(List<WalletModel> list) async {
     _cachedWallets = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kWallets, _encryptString(raw));
+    await _persistEncrypted(_kWallets, raw);
   }
 
   UserSettingsModel getSettings() {
     if (_cachedSettings != null) return _cachedSettings!;
     UserSettingsModel settings = const UserSettingsModel();
-    final raw = _decryptString(_prefs.getString(_kSettings));
+    final raw = _readAndVerify(_kSettings);
     if (raw != null) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(raw);
@@ -364,7 +425,7 @@ class StorageService {
     _cachedSettings = settings;
     await _prefs.setBool(_kIsOnboardedFastFlag, settings.isOnboarded);
     final raw = jsonEncode(settings.toJson());
-    await _prefs.setString(_kSettings, _encryptString(raw));
+    await _persistEncrypted(_kSettings, raw);
   }
 
   bool isTransactionDeleted(String signature) {
@@ -433,7 +494,7 @@ class StorageService {
 
   List<RecurringRuleModel> getRecurringRules() {
     if (_cachedRecurringRules != null) return _cachedRecurringRules!;
-    final raw = _decryptString(_prefs.getString(_kRecurringRules));
+    final raw = _readAndVerify(_kRecurringRules);
     if (raw == null) {
       _cachedRecurringRules = [];
       return _cachedRecurringRules!;
@@ -451,14 +512,14 @@ class StorageService {
   Future<void> saveRecurringRules(List<RecurringRuleModel> list) async {
     _cachedRecurringRules = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kRecurringRules, _encryptString(raw));
+    await _persistEncrypted(_kRecurringRules, raw);
   }
 
   // --- In-App Notifications ---
 
   List<AppNotificationModel> getNotifications() {
     if (_cachedNotifications != null) return _cachedNotifications!;
-    final raw = _decryptString(_prefs.getString(_kNotifications));
+    final raw = _readAndVerify(_kNotifications);
     if (raw == null) {
       _cachedNotifications = [];
       return _cachedNotifications!;
@@ -476,7 +537,7 @@ class StorageService {
   Future<void> saveNotifications(List<AppNotificationModel> list) async {
     _cachedNotifications = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kNotifications, _encryptString(raw));
+    await _persistEncrypted(_kNotifications, raw);
   }
 
   Future<void> addNotification(AppNotificationModel notification) async {
@@ -533,7 +594,7 @@ class StorageService {
 
   List<DebtModel> getDebts() {
     if (_cachedDebts != null) return _cachedDebts!;
-    final raw = _decryptString(_prefs.getString(_kDebts));
+    final raw = _readAndVerify(_kDebts);
     if (raw == null) {
       _cachedDebts = [];
       return _cachedDebts!;
@@ -551,14 +612,14 @@ class StorageService {
   Future<void> saveDebts(List<DebtModel> list) async {
     _cachedDebts = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kDebts, _encryptString(raw));
+    await _persistEncrypted(_kDebts, raw);
   }
 
   // --- Category Budgets ---
 
   List<CategoryBudgetModel> getCategoryBudgets() {
     if (_cachedBudgets != null) return _cachedBudgets!;
-    final raw = _decryptString(_prefs.getString(_kBudgets));
+    final raw = _readAndVerify(_kBudgets);
     if (raw == null) {
       _cachedBudgets = [];
       return _cachedBudgets!;
@@ -576,14 +637,14 @@ class StorageService {
   Future<void> saveCategoryBudgets(List<CategoryBudgetModel> list) async {
     _cachedBudgets = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kBudgets, _encryptString(raw));
+    await _persistEncrypted(_kBudgets, raw);
   }
 
   // --- Savings Goals ---
 
   List<GoalModel> getGoals() {
     if (_cachedGoals != null) return _cachedGoals!;
-    final raw = _decryptString(_prefs.getString(_kGoals));
+    final raw = _readAndVerify(_kGoals);
     if (raw == null) {
       _cachedGoals = [];
       return _cachedGoals!;
@@ -601,7 +662,7 @@ class StorageService {
   Future<void> saveGoals(List<GoalModel> list) async {
     _cachedGoals = List.unmodifiable(list);
     final raw = jsonEncode(list.map((e) => e.toJson()).toList());
-    await _prefs.setString(_kGoals, _encryptString(raw));
+    await _persistEncrypted(_kGoals, raw);
   }
 
   // --- Startup Automated Recurring Engine ---

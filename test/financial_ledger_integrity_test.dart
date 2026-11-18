@@ -511,6 +511,13 @@ void main() {
       final updatedGoal = container.read(goalsProvider).first;
       expect(updatedGoal.currentSavedAmount, 0.0,
           reason: 'Goal withdrawals must clamp to 0.0 and never become negative');
+
+      final recordedTx = container.read(transactionsProvider).first;
+      expect(recordedTx.amount, 500.0,
+          reason: 'Recorded transaction amount must match the actual clamped deduction of 500.0, not the requested 1000.0');
+      final clampWallet = container.read(walletsWithBalancesProvider).firstWhere((w) => w.id == 'w_clamp');
+      expect(clampWallet.currentBalance, 1500.0,
+          reason: 'Wallet balance must increase by exact clamped goal withdrawal (+500), preventing unbacked phantom money');
     });
 
     test('Invariant 8: Recurring rule execution idempotency prevents duplication after restart', () async {
@@ -585,6 +592,75 @@ void main() {
       expect(restoredWallets.length, 1);
       expect(restoredWallets.first.id, 'w_hdfc');
       expect(restoredWallets.first.name, 'HDFC Corporate');
+    });
+
+    test('Invariant 11: Double-entry atomic transfer persists both legs with shared refId and exact balance symmetry', () async {
+      final initialWallets = [
+        const WalletModel(
+          id: 'w_source',
+          name: 'Primary Checking',
+          icon: 'account_balance',
+          colorValue: 0xFF2196F3,
+          walletType: WalletType.bank,
+          initialBalance: 10000.0,
+          currentBalance: 10000.0,
+          isDefault: true,
+        ),
+        const WalletModel(
+          id: 'w_dest',
+          name: 'Savings Vault',
+          icon: 'savings',
+          colorValue: 0xFF4CAF50,
+          walletType: WalletType.savings,
+          initialBalance: 5000.0,
+          currentBalance: 5000.0,
+        ),
+      ];
+      await storage.saveWallets(initialWallets);
+      await container.read(walletsProvider.notifier).refreshFromDisk();
+
+      final now = DateTime.now();
+      final txs = await container.read(transactionsProvider.notifier).addDoubleEntryTransfer(
+            fromWalletId: 'w_source',
+            toWalletId: 'w_dest',
+            fromWalletName: 'Primary Checking',
+            toWalletName: 'Savings Vault',
+            amount: 3500.0,
+            date: now,
+            note: 'Emergency Reserve Funding',
+          );
+
+      expect(txs.length, 2);
+      final debit = txs.firstWhere((t) => t.type == TransactionType.expense);
+      final credit = txs.firstWhere((t) => t.type == TransactionType.income);
+
+      // Verify cryptographic/referential link
+      expect(debit.refId, isNotNull);
+      expect(credit.refId, isNotNull);
+      expect(debit.refId, credit.refId, reason: 'Both transfer legs must share the exact same transfer refId');
+
+      // Verify amounts and wallets
+      expect(debit.amount, 3500.0);
+      expect(credit.amount, 3500.0);
+      expect(debit.walletId, 'w_source');
+      expect(credit.walletId, 'w_dest');
+      expect(debit.categoryId, 'cat_transfer');
+      expect(credit.categoryId, 'cat_transfer');
+
+      // Verify balances
+      final wallets = container.read(walletsWithBalancesProvider);
+      final source = wallets.firstWhere((w) => w.id == 'w_source');
+      final dest = wallets.firstWhere((w) => w.id == 'w_dest');
+      expect(source.currentBalance, 6500.0);
+      expect(dest.currentBalance, 8500.0);
+
+      final totalNetWorth = wallets.fold(0.0, (sum, w) => sum + w.currentBalance);
+      expect(totalNetWorth, 15000.0, reason: 'Internal fund transfer must preserve total net worth');
+
+      // Verify persistence from disk
+      final diskTxs = storage.getTransactions();
+      expect(diskTxs.any((t) => t.id == debit.id), isTrue);
+      expect(diskTxs.any((t) => t.id == credit.id), isTrue);
     });
   });
 }

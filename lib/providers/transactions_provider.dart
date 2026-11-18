@@ -70,6 +70,58 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
     return newTx;
   }
 
+  /// Atomically records a double-entry ledger transfer between two wallets.
+  /// Both legs (debit from source, credit to destination) share a unique `refId`
+  /// and are persisted in a single all-or-nothing storage write.
+  Future<List<TransactionModel>> addDoubleEntryTransfer({
+    required String fromWalletId,
+    required String toWalletId,
+    required String fromWalletName,
+    required String toWalletName,
+    required double amount,
+    required DateTime date,
+    String? note,
+  }) async {
+    final cleanAmount = (amount.abs() * 100).round() / 100.0;
+    if (cleanAmount <= 0) return [];
+
+    final transferRef = const Uuid().v4();
+    final effectiveNote = (note != null && note.trim().isNotEmpty)
+        ? note.trim()
+        : 'Internal Fund Transfer';
+
+    final debitTx = TransactionModel(
+      id: const Uuid().v4(),
+      title: 'Transfer to $toWalletName',
+      amount: cleanAmount,
+      type: TransactionType.expense,
+      categoryId: 'cat_transfer',
+      walletId: fromWalletId,
+      date: date,
+      note: effectiveNote,
+      refId: transferRef,
+      createdAt: DateTime.now(),
+    );
+
+    final creditTx = TransactionModel(
+      id: const Uuid().v4(),
+      title: 'Transfer from $fromWalletName',
+      amount: cleanAmount,
+      type: TransactionType.income,
+      categoryId: 'cat_transfer',
+      walletId: toWalletId,
+      date: date,
+      note: effectiveNote,
+      refId: transferRef,
+      createdAt: DateTime.now(),
+    );
+
+    state = [debitTx, creditTx, ...state];
+    await _storage.saveTransactions(state);
+    unawaited(SystemWidgetService.syncFromStorage(_storage));
+    return [debitTx, creditTx];
+  }
+
   Future<void> updateTransaction(TransactionModel tx) async {
     final cleanAmount = (tx.amount.abs() * 100).round() / 100.0;
     final cleanTx = tx.amount != cleanAmount ? tx.copyWith(amount: cleanAmount) : tx;

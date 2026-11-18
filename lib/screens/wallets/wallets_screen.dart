@@ -2221,7 +2221,7 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           final amount = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
                           if (amount <= 0) {
                             TopCapsuleToast.show(
@@ -2238,32 +2238,24 @@ class _WalletsScreenState extends ConsumerState<WalletsScreen> {
                           final now = DateTime.now();
                           final note = noteCtrl.text.trim();
 
-                          ref.read(transactionsProvider.notifier).addTransaction(
-                            title: 'Transfer to ${toWallet.displayName}',
+                          await ref.read(transactionsProvider.notifier).addDoubleEntryTransfer(
+                            fromWalletId: fromWallet.id,
+                            toWalletId: toWallet.id,
+                            fromWalletName: fromWallet.displayName,
+                            toWalletName: toWallet.displayName,
                             amount: amount,
-                            type: TransactionType.expense,
-                            categoryId: 'cat_transfer',
-                            walletId: fromWallet.id,
                             date: now,
                             note: note.isNotEmpty ? note : 'Internal Fund Transfer',
                           );
 
-                          ref.read(transactionsProvider.notifier).addTransaction(
-                            title: 'Transfer from ${fromWallet.displayName}',
-                            amount: amount,
-                            type: TransactionType.income,
-                            categoryId: 'cat_transfer',
-                            walletId: toWallet.id,
-                            date: now,
-                            note: note.isNotEmpty ? note : 'Internal Fund Transfer',
-                          );
-
-                          Navigator.pop(ctx);
-                          TopCapsuleToast.show(
-                            context,
-                            message: 'Transferred $currencySymbol${amount.toStringAsFixed(2)}',
-                            isSuccess: true,
-                          );
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            TopCapsuleToast.show(
+                              context,
+                              message: 'Transferred $currencySymbol${amount.toStringAsFixed(2)}',
+                              isSuccess: true,
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: palette.primary,

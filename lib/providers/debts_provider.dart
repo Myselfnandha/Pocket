@@ -73,9 +73,12 @@ class DebtsNotifier extends StateNotifier<List<DebtModel>> {
     String? walletId,
     bool updateWallet = true,
   }) async {
+    final cleanAmount = (amount.abs() * 100).round() / 100.0;
+    if (cleanAmount <= 0) return;
+
     final debt = state.firstWhere((d) => d.id == debtId);
     final updatedDebt = debt.recordPayment(
-      paymentAmount: amount,
+      paymentAmount: cleanAmount,
       note: note,
       walletId: walletId,
     );
@@ -93,7 +96,7 @@ class DebtsNotifier extends StateNotifier<List<DebtModel>> {
     if (updateWallet && walletId != null) {
       await _ref.read(transactionsProvider.notifier).addTransaction(
             title: debt.type == DebtType.lent ? 'Repayment from ${debt.personName}' : 'Repaid to ${debt.personName}',
-            amount: amount,
+            amount: cleanAmount,
             type: debt.type == DebtType.lent ? TransactionType.income : TransactionType.expense,
             categoryId: 'other',
             walletId: walletId,
