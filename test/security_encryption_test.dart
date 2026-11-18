@@ -121,6 +121,40 @@ void main() {
       expect(storage.decryptForTest('enc:v1:malformed'), isNull);
     });
 
+    test('Downgrade Attack Resistance: tampering v2 payload into v1 format fails decryption safely', () async {
+      final storage = await StorageService.init(prefs: prefs, secureStorage: secureStorage);
+      const plaintext = 'Critical Account Number: 1234-5678-9012';
+      final v2Ciphertext = storage.encryptForTest(plaintext);
+
+      final parts = v2Ciphertext.split(':');
+      expect(parts.length, 5);
+
+      // Attacker attempts downgrade attack by forging a v1 record from v2 ciphertext
+      final downgradedV1Payload = 'enc:v1:${parts[2]}:${parts[3]}';
+      final decrypted = storage.decryptForTest(downgradedV1Payload);
+
+      // Decryption must fail because K_enc != MasterKey
+      expect(decrypted, isNull, reason: 'Subkey separation must prevent ciphertext downgrade attacks');
+    });
+
+    test('Cryptographic Edge Cases: extra components, missing tags, and invalid Base64 are rejected', () async {
+      final storage = await StorageService.init(prefs: prefs, secureStorage: secureStorage);
+      final valid = storage.encryptForTest('Valid Plaintext');
+      final parts = valid.split(':');
+
+      // 1. Missing authentication tag (length = 4)
+      final missingTag = 'enc:v2:${parts[2]}:${parts[3]}';
+      expect(storage.decryptForTest(missingTag), isNull);
+
+      // 2. Extra components (length = 6)
+      final extraComponent = '$valid:malicious_extra_field';
+      expect(storage.decryptForTest(extraComponent), isNull);
+
+      // 3. Invalid Base64 in components
+      final invalidBase64 = 'enc:v2:???not_b64???:???not_b64???:???not_b64???';
+      expect(storage.decryptForTest(invalidBase64), isNull);
+    });
+
     test('Key Isolation: data encrypted under Key A cannot be decrypted by Key B', () async {
       final storageA = await StorageService.init(prefs: prefs, secureStorage: secureStorage);
       final ciphertextA = storageA.encryptForTest('Confidential Data');
