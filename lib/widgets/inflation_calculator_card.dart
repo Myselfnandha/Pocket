@@ -136,17 +136,22 @@ class _InflationCalculatorCardState extends ConsumerState<InflationCalculatorCar
                 flex: 2,
                 child: DropdownButtonFormField<int>(
                   initialValue: _pastYear,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: 'Base Year',
                     filled: true,
                     isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     fillColor: isDark ? const Color(0xFF1F1F1F) : const Color(0xFFF5F5F5),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   ),
                   items: availableYears.reversed.map((y) {
                     return DropdownMenuItem(
                       value: y,
-                      child: Text(y == currentYear ? '$y (Now)' : '$y'),
+                      child: Text(
+                        y == currentYear ? '$y (Now)' : '$y',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (y) {

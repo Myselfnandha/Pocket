@@ -263,14 +263,17 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                             color: _isPeeking ? AppColors.primaryGreenLight : (isDark ? Colors.white60 : Colors.black54),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            _isPeeking
-                                ? 'Peeking real balance (${settings.widgetPeekDurationSeconds}s timer)'
-                                : 'Tap masked dots (••••••) above to test peek reveal',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: _isPeeking ? FontWeight.w700 : FontWeight.w500,
-                              color: _isPeeking ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
+                          Flexible(
+                            child: Text(
+                              _isPeeking
+                                  ? 'Peeking real balance (${settings.widgetPeekDurationSeconds}s timer)'
+                                  : 'Tap masked dots (••••••) above to test peek reveal',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: _isPeeking ? FontWeight.w700 : FontWeight.w500,
+                                color: _isPeeking ? AppColors.primaryGreenLight : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -359,13 +362,13 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
           const SizedBox(height: 10),
 
           // Master Enable / Disable Widget Customization Card
-          Container(
-            decoration: BoxDecoration(
-              color: settings.isWidgetCustomizationEnabled
-                  ? (isDark ? const Color(0xFF132218) : const Color(0xFFE8F5E9))
-                  : (isDark ? AppColors.darkSurface : AppColors.lightSurface),
+          Material(
+            color: settings.isWidgetCustomizationEnabled
+                ? (isDark ? const Color(0xFF132218) : const Color(0xFFE8F5E9))
+                : (isDark ? AppColors.darkSurface : AppColors.lightSurface),
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
+              side: BorderSide(
                 color: settings.isWidgetCustomizationEnabled
                     ? AppColors.primaryGreenLight.withValues(alpha: 0.5)
                     : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
@@ -457,11 +460,11 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
                 children: [
                   // 1. Account & Identification Card
                   _buildModuleHeader('ACCOUNT & IDENTIFICATION', isDark),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  Material(
+                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                       ),
                     ),
@@ -550,11 +553,11 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
 
                   // 2. Balance & Privacy Mode Card
                   _buildModuleHeader('BALANCE & PRIVACY REVEAL', isDark),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  Material(
+                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                       ),
                     ),
@@ -648,11 +651,11 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
 
                   // 3. Spend Metrics & Budget Runway Card
                   _buildModuleHeader('SPEND METRICS & RUNWAY', isDark),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  Material(
+                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                       ),
                     ),
@@ -741,11 +744,11 @@ class _WidgetsCustomizerScreenState extends ConsumerState<WidgetsCustomizerScree
 
                   // 4. Appearance & Action HUD Card
                   _buildModuleHeader('THEME & ACTION HUD', isDark),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  Material(
+                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                       ),
                     ),

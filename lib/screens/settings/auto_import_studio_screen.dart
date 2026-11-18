@@ -310,7 +310,13 @@ class _AutoImportStudioScreenState extends ConsumerState<AutoImportStudioScreen>
               children: [
                 Row(
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

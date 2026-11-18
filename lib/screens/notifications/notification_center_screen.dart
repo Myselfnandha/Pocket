@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/notification_model.dart';
 import '../../providers/app_providers.dart';
@@ -76,7 +77,28 @@ class NotificationCenterScreen extends ConsumerWidget {
                 final notif = notifs[index];
 
                 return InkWell(
-                  onTap: () => ref.read(notificationsProvider.notifier).markAsRead(notif.id),
+                  onTap: () {
+                    ref.read(notificationsProvider.notifier).markAsRead(notif.id);
+                    switch (notif.type) {
+                      case NotificationType.budgetNearLimit:
+                      case NotificationType.budgetExceeded:
+                        context.push('/budgets');
+                        break;
+                      case NotificationType.recurringDue:
+                      case NotificationType.recurringCreated:
+                        context.push('/recurring-rules');
+                        break;
+                      case NotificationType.monthlySummary:
+                        context.push('/analytics');
+                        break;
+                      case NotificationType.autoLogged:
+                        context.push('/transactions');
+                        break;
+                      case NotificationType.dailyReminder:
+                      case NotificationType.system:
+                        break;
+                    }
+                  },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(14),

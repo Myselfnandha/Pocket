@@ -125,7 +125,7 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
     }
 
     // 3. Budgets Deep Link
-    if (uri.host == 'budget' || uri.path.contains('budget')) {
+    if (uri.host == 'budget' || uri.host == 'budgets' || uri.path.contains('budget')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         executeWithContext((ctx) {
           ctx.go('/budgets');
@@ -134,7 +134,67 @@ class _PocketAppState extends ConsumerState<PocketApp> with WidgetsBindingObserv
       return;
     }
 
-    // 4. Quick Add Dialog Launch
+    // 4. Debts Deep Link
+    if (uri.host == 'debts' || uri.path.contains('debts')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/debts');
+        });
+      });
+      return;
+    }
+
+    // 5. Wallets Deep Link
+    if (uri.host == 'wallets' || uri.path.contains('wallets')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/wallets');
+        });
+      });
+      return;
+    }
+
+    // 6. Analytics Deep Link
+    if (uri.host == 'analytics' || uri.path.contains('analytics')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/analytics');
+        });
+      });
+      return;
+    }
+
+    // 7. Recurring Rules Deep Link
+    if (uri.host == 'recurring' || uri.path.contains('recurring')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/recurring-rules');
+        });
+      });
+      return;
+    }
+
+    // 8. Notifications Deep Link
+    if (uri.host == 'notifications' || uri.path.contains('notifications')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/notifications');
+        });
+      });
+      return;
+    }
+
+    // 9. Transactions Deep Link
+    if (uri.host == 'transactions' || uri.path.contains('transactions')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        executeWithContext((ctx) {
+          ctx.go('/transactions');
+        });
+      });
+      return;
+    }
+
+    // 10. Quick Add Dialog Launch
     if (uri.host == 'quick-add' || uri.path == '/quick-add' || uri.path == 'quick-add') {
       if (QuickAddTransactionDialog.isOpen) return;
 

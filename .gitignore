@@ -38,6 +38,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/build/
+.kotlin/
 *.jks
 !android/app/pocket-release-key.jks
 *.keystore

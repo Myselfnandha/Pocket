@@ -15,7 +15,7 @@ import '../../widgets/blurred_dialog_utils.dart';
 import '../../widgets/user_avatar_widget.dart';
 
 class SettingsScreen extends ConsumerWidget {
-  static const String appVersion = 'v1.5.33';
+  static const String appVersion = 'v1.5.34';
   const SettingsScreen({super.key});
 
   @override

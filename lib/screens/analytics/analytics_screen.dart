@@ -24,7 +24,8 @@ import '../../widgets/blurred_dialog_utils.dart';
 import '../../widgets/top_capsule_toast.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
-  const AnalyticsScreen({super.key});
+  final int initialTabIndex;
+  const AnalyticsScreen({super.key, this.initialTabIndex = 0});
 
   @override
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
@@ -38,12 +39,25 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
 
     // Keep month selector bar sticky and visible during scroll
+  }
+
+  @override
+  void didUpdateWidget(AnalyticsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex != widget.initialTabIndex &&
+        _tabController.index != widget.initialTabIndex.clamp(0, 2)) {
+      _tabController.animateTo(widget.initialTabIndex.clamp(0, 2));
+    }
   }
 
   @override

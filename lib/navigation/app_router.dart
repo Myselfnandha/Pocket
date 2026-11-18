@@ -5,6 +5,7 @@ import '../models/category_model.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/transactions/transactions_list_screen.dart';
 import '../screens/transactions/add_transaction_screen.dart';
+import '../screens/transactions/edit_transaction_screen.dart';
 import '../screens/transactions/transaction_detail_screen.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/wallets/wallets_screen.dart';
@@ -143,6 +144,31 @@ GoRouter createRouter(bool isOnboarded) {
         },
       ),
 
+      // Budgets (Dedicated Route / Deep Link Target)
+      GoRoute(
+        path: '/budgets',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AnalyticsScreen(initialTabIndex: 2),
+      ),
+      GoRoute(
+        path: '/budget',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const AnalyticsScreen(initialTabIndex: 2),
+      ),
+
+      // Edit Transaction (Dedicated Screen)
+      GoRoute(
+        path: '/edit-transaction',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is TransactionModel) {
+            return EditTransactionScreen(transaction: extra);
+          }
+          return const HomeScreen();
+        },
+      ),
+
       // 4-Tab Navigation Shell: Home, Analytics, Wallets, Settings
       StatefulShellRoute(
         builder: (context, state, navigationShell) {
@@ -170,7 +196,16 @@ GoRouter createRouter(bool isOnboarded) {
             routes: [
               GoRoute(
                 path: '/analytics',
-                builder: (context, state) => const AnalyticsScreen(),
+                builder: (context, state) {
+                  final tabParam = state.uri.queryParameters['tab'];
+                  int tabIndex = 0;
+                  if (tabParam == 'budget' || tabParam == 'budgets' || tabParam == '2') {
+                    tabIndex = 2;
+                  } else if (tabParam == 'cashflow' || tabParam == 'trends' || tabParam == '1') {
+                    tabIndex = 1;
+                  }
+                  return AnalyticsScreen(initialTabIndex: tabIndex);
+                },
               ),
             ],
           ),
