@@ -17,13 +17,13 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version Name (e.g. 1.2.7)'
+        description: 'Version Name (e.g. 1.5.34)'
         required: false
-        default: '1.2.7'
+        default: '1.5.34'
       build_number:
-        description: 'Build Number (e.g. 37)'
+        description: 'Build Number (e.g. 165)'
         required: false
-        default: '37'
+        default: '165'
 
 concurrency:
   group: pocket-release-pipeline
@@ -82,9 +82,19 @@ jobs:
       - name: Set up Flutter Environment (Cached)
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
+          flutter-version: '3.47.9'
           cache: true
-          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+
+      - name: Verify Flutter Toolchain
+        shell: bash
+        run: |
+          flutter --version
+          ACTUAL_VERSION=$(flutter --version --machine | python3 -c "import json,sys; print(json.load(sys.stdin)['frameworkVersion'])")
+          if [ "$ACTUAL_VERSION" != "3.47.9" ]; then
+            echo "Expected Flutter 3.47.9, received $ACTUAL_VERSION"
+            exit 1
+          fi
 
       - name: Cache Pub Dependencies
         uses: actions/cache@v4
