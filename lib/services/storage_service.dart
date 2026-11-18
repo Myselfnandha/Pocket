@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -31,6 +33,8 @@ class StorageService {
 
   final SharedPreferences _prefs;
   final enc.Encrypter? _encrypter;
+  final List<int>? _hmacKey;
+  final enc.Encrypter? _legacyEncrypter;
 
   // In-Memory Fast Caching Layer (O(1) memory lookup)
   List<TransactionModel>? _cachedTransactions;
@@ -44,7 +48,13 @@ class StorageService {
   List<GoalModel>? _cachedGoals;
   List<PendingTransactionModel>? _cachedPendingTransactions;
 
-  StorageService(this._prefs, [FlutterSecureStorage? secureStorage, this._encrypter]);
+  StorageService(
+    this._prefs, [
+    FlutterSecureStorage? secureStorage,
+    this._encrypter,
+    this._hmacKey,
+    this._legacyEncrypter,
+  ]);
 
   static Future<StorageService> init({
     SharedPreferences? prefs,
@@ -58,6 +68,8 @@ class StorageService {
         );
 
     enc.Encrypter? encrypter;
+    enc.Encrypter? legacyEncrypter;
+    List<int>? hmacKey;
     try {
       String? keyBase64 = await effectiveSecureStorage.read(key: _kEncryptionKeyName);
       if (keyBase64 == null || keyBase64.isEmpty) {
@@ -72,13 +84,21 @@ class StorageService {
         await effectiveSecureStorage.write(key: _kEncryptionKeyName, value: keyBase64);
       }
       await effectivePrefs.remove('pocket_storage_aes_key_v1_backup');
-      final key = enc.Key.fromBase64(keyBase64);
-      encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+      final masterKeyBytes = base64.decode(keyBase64);
+
+      // Key derivation for Authenticated Encryption (Encrypt-then-MAC with HMAC-SHA256):
+      // 1. Encryption Key (32 bytes AES-256)
+      final encKeyBytes = Hmac(sha256, masterKeyBytes).convert(utf8.encode('pocket_aes_enc_v2')).bytes;
+      // 2. Authentication MAC Key (32 bytes HMAC-SHA256)
+      hmacKey = Hmac(sha256, masterKeyBytes).convert(utf8.encode('pocket_hmac_auth_v2')).bytes;
+
+      encrypter = enc.Encrypter(enc.AES(enc.Key(Uint8List.fromList(encKeyBytes)), mode: enc.AESMode.cbc));
+      legacyEncrypter = enc.Encrypter(enc.AES(enc.Key(Uint8List.fromList(masterKeyBytes)), mode: enc.AESMode.cbc));
     } catch (e) {
       throw StateError('Secure storage initialization failed; refusing to store financial data in plaintext: $e');
     }
 
-    final service = StorageService(effectivePrefs, effectiveSecureStorage, encrypter);
+    final service = StorageService(effectivePrefs, effectiveSecureStorage, encrypter, hmacKey, legacyEncrypter);
     await service._migratePlaintextToEncrypted();
     await service._seedInitialDataIfNeeded();
     return service;
@@ -126,13 +146,25 @@ class StorageService {
 
   // --- Encryption Helpers ---
 
+  static bool _constantTimeEquals(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    int result = 0;
+    for (int i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+    return result == 0;
+  }
+
   String _encryptString(String plaintext) {
     final encrypter = _encrypter;
-    if (encrypter == null) return plaintext;
+    final hmacKey = _hmacKey;
+    if (encrypter == null || hmacKey == null) return plaintext;
     try {
       final iv = enc.IV.fromSecureRandom(16);
       final encrypted = encrypter.encrypt(plaintext, iv: iv);
-      return 'enc:v1:${iv.base64}:${encrypted.base64}';
+      final authenticatedPayload = 'enc:v2:${iv.base64}:${encrypted.base64}';
+      final mac = Hmac(sha256, hmacKey).convert(utf8.encode(authenticatedPayload)).bytes;
+      return '$authenticatedPayload:${base64.encode(mac)}';
     } catch (e) {
       throw StateError('Financial data encryption failed: $e');
     }
@@ -140,20 +172,62 @@ class StorageService {
 
   String? _decryptString(String? ciphertext) {
     if (ciphertext == null) return null;
-    if (!ciphertext.startsWith('enc:v1:')) return ciphertext; // Legacy plaintext fallback
-    final encrypter = _encrypter;
-    if (encrypter == null) return null;
-    try {
-      final parts = ciphertext.split(':');
-      if (parts.length != 4) return null;
-      final iv = enc.IV.fromBase64(parts[2]);
-      final encrypted = enc.Encrypted.fromBase64(parts[3]);
-      return encrypter.decrypt(encrypted, iv: iv);
-    } catch (e) {
-      debugPrint('Decryption error: $e');
-      return null;
+
+    // v2: Authenticated Encrypt-then-MAC (HMAC-SHA256)
+    if (ciphertext.startsWith('enc:v2:')) {
+      final encrypter = _encrypter;
+      final hmacKey = _hmacKey;
+      if (encrypter == null || hmacKey == null) return null;
+      try {
+        final parts = ciphertext.split(':');
+        if (parts.length != 5) return null;
+        final ivBase64 = parts[2];
+        final encryptedBase64 = parts[3];
+        final macBase64 = parts[4];
+
+        final payloadToAuthenticate = 'enc:v2:$ivBase64:$encryptedBase64';
+        final expectedMac = Hmac(sha256, hmacKey).convert(utf8.encode(payloadToAuthenticate)).bytes;
+        final actualMac = base64.decode(macBase64);
+
+        if (!_constantTimeEquals(expectedMac, actualMac)) {
+          debugPrint('Security Warning: Ciphertext MAC authentication failed - data tampering detected.');
+          return null;
+        }
+
+        final iv = enc.IV.fromBase64(ivBase64);
+        final encrypted = enc.Encrypted.fromBase64(encryptedBase64);
+        return encrypter.decrypt(encrypted, iv: iv);
+      } catch (e) {
+        debugPrint('Authenticated decryption error: $e');
+        return null;
+      }
     }
+
+    // v1: Legacy AES-256-CBC without MAC (backward compatibility)
+    if (ciphertext.startsWith('enc:v1:')) {
+      final legacyEncrypter = _legacyEncrypter ?? _encrypter;
+      if (legacyEncrypter == null) return null;
+      try {
+        final parts = ciphertext.split(':');
+        if (parts.length != 4) return null;
+        final iv = enc.IV.fromBase64(parts[2]);
+        final encrypted = enc.Encrypted.fromBase64(parts[3]);
+        return legacyEncrypter.decrypt(encrypted, iv: iv);
+      } catch (e) {
+        debugPrint('Legacy decryption error: $e');
+        return null;
+      }
+    }
+
+    // Legacy plaintext fallback
+    return ciphertext;
   }
+
+  @visibleForTesting
+  String encryptForTest(String plaintext) => _encryptString(plaintext);
+
+  @visibleForTesting
+  String? decryptForTest(String? ciphertext) => _decryptString(ciphertext);
 
   Future<void> _migratePlaintextToEncrypted() async {
     const keys = [
@@ -171,9 +245,12 @@ class StorageService {
 
     for (final key in keys) {
       final raw = _prefs.getString(key);
-      if (raw != null && !raw.startsWith('enc:v1:')) {
-        final encrypted = _encryptString(raw);
-        await _prefs.setString(key, encrypted);
+      if (raw != null && !raw.startsWith('enc:v2:')) {
+        final decrypted = _decryptString(raw);
+        if (decrypted != null) {
+          final encrypted = _encryptString(decrypted);
+          await _prefs.setString(key, encrypted);
+        }
       }
     }
   }

@@ -280,9 +280,9 @@ void main() {
       final migratedWallets = reloadedStorage.getWallets();
       expect(migratedWallets.any((w) => w.id == 'cash'), isTrue);
 
-      // Verify the raw string in SharedPreferences has been upgraded to encrypted
+      // Verify the raw string in SharedPreferences has been upgraded to authenticated encrypted
       final migratedRaw = prefs.getString('pocket_wallets');
-      expect(migratedRaw != null && migratedRaw.startsWith('enc:v1:'), isTrue);
+      expect(migratedRaw != null && migratedRaw.startsWith('enc:v2:'), isTrue);
     });
 
     test('Savings Goals calculation, progress, and persistence works properly', () async {
