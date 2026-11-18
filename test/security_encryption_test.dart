@@ -113,6 +113,14 @@ void main() {
       expect(storage.decryptForTest('enc:v2:::'), isNull);
     });
 
+    test('Fallback & Downgrade Protection: malformed enc: prefixes never fall back to plaintext', () async {
+      final storage = await StorageService.init(prefs: prefs, secureStorage: secureStorage);
+      expect(storage.decryptForTest('enc:v3:fake_payload'), isNull);
+      expect(storage.decryptForTest('enc:corrupted_blob'), isNull);
+      expect(storage.decryptForTest('enc:'), isNull);
+      expect(storage.decryptForTest('enc:v1:malformed'), isNull);
+    });
+
     test('Key Isolation: data encrypted under Key A cannot be decrypted by Key B', () async {
       final storageA = await StorageService.init(prefs: prefs, secureStorage: secureStorage);
       final ciphertextA = storageA.encryptForTest('Confidential Data');

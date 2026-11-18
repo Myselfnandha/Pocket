@@ -219,6 +219,12 @@ class StorageService {
       }
     }
 
+    // Reject any unrecognized or malformed 'enc:*' prefix without falling back to plaintext
+    if (ciphertext.startsWith('enc:')) {
+      debugPrint('Security Alert: Unrecognized or corrupted encrypted payload prefix: rejecting fallback.');
+      return null;
+    }
+
     // Legacy plaintext fallback
     return ciphertext;
   }

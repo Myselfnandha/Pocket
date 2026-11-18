@@ -7,6 +7,7 @@ import 'package:pocket/models/wallet_model.dart';
 import 'package:pocket/models/transaction_model.dart';
 import 'package:pocket/models/debt_model.dart';
 import 'package:pocket/models/budget_model.dart';
+import 'package:pocket/models/recurring_model.dart';
 import 'package:pocket/providers/core_providers.dart';
 import 'package:pocket/providers/transactions_provider.dart';
 import 'package:pocket/providers/wallets_provider.dart';
@@ -461,6 +462,129 @@ void main() {
       final wallets = container.read(walletsWithBalancesProvider);
       expect(wallets.first.currentBalance, 1.50,
           reason: 'Derived balances must round to exact 2 decimal places');
+    });
+
+    test('Invariants 5 & 6: Debt overpayment and Goal over-withdrawal clamping', () async {
+      // 1. Debt overpayment handling: remaining debt cannot become negative
+      final debt = DebtModel(
+        id: 'd_clamp',
+        personName: 'Charlie',
+        totalAmount: 5000.0,
+        remainingAmount: 2000.0,
+        type: DebtType.lent,
+        createdAt: DateTime.now(),
+      );
+      // Attempt paying 3,000 against a 2,000 remaining debt
+      final settledDebt = debt.recordPayment(paymentAmount: 3000.0);
+      expect(settledDebt.remainingAmount, 0.0);
+      expect(settledDebt.isSettled, isTrue);
+
+      // 2. Goal withdrawal clamping: saved amount cannot become negative
+      final initialWallets = [
+        const WalletModel(
+          id: 'w_clamp',
+          name: 'Clamp Wallet',
+          icon: 'account_balance',
+          colorValue: 0xFF2196F3,
+          walletType: WalletType.bank,
+          initialBalance: 1000.0,
+          currentBalance: 1000.0,
+          isDefault: true,
+        ),
+      ];
+      await storage.saveWallets(initialWallets);
+      await container.read(walletsProvider.notifier).refreshFromDisk();
+
+      await container.read(goalsProvider.notifier).addGoal(
+            title: 'Vacation',
+            targetAmount: 10000.0,
+            currentSavedAmount: 500.0,
+            walletId: 'w_clamp',
+          );
+      final goals = container.read(goalsProvider);
+      // Attempt withdrawing 1,000 from a 500 saved balance
+      await container.read(goalsProvider.notifier).withdrawFromGoal(
+            goalId: goals.first.id,
+            amount: 1000.0,
+            walletId: 'w_clamp',
+          );
+      final updatedGoal = container.read(goalsProvider).first;
+      expect(updatedGoal.currentSavedAmount, 0.0,
+          reason: 'Goal withdrawals must clamp to 0.0 and never become negative');
+    });
+
+    test('Invariant 8: Recurring rule execution idempotency prevents duplication after restart', () async {
+      final now = DateTime.now();
+      final rule = RecurringRuleModel(
+        id: 'rec_rent',
+        title: 'Apartment Rent',
+        amount: 25000.0,
+        type: TransactionType.expense,
+        categoryId: 'rent',
+        walletId: 'w_default',
+        frequency: RecurringFrequency.monthly,
+        dueDay: 1,
+        nextDueDate: now.subtract(const Duration(days: 1)), // Due yesterday
+        createdAt: now.subtract(const Duration(days: 35)),
+      );
+
+      await storage.saveRecurringRules([rule]);
+
+      // First run: processes the due rule
+      final processedFirst = await storage.processDueRecurringRules();
+      expect(processedFirst, 1);
+      final txsAfterFirst = storage.getTransactions();
+      expect(txsAfterFirst.length, 1);
+      expect(txsAfterFirst.first.title, 'Apartment Rent');
+
+      // Second run (simulating immediate app restart): rule nextDueDate is now in future, 0 processed
+      final processedSecond = await storage.processDueRecurringRules();
+      expect(processedSecond, 0);
+      final txsAfterSecond = storage.getTransactions();
+      expect(txsAfterSecond.length, 1,
+          reason: 'Recurring rules must advance nextDueDate and not duplicate on restarts');
+    });
+
+    test('Invariant 10: Backup restoration produces identical financial ledger state', () async {
+      final initialTx = TransactionModel(
+        id: 'tx_backup_001',
+        title: 'Salary Credit',
+        amount: 120000.0,
+        type: TransactionType.income,
+        categoryId: 'salary',
+        walletId: 'w_hdfc',
+        date: DateTime(2026, 11, 1),
+        createdAt: DateTime.now(),
+      );
+
+      final initialWallet = const WalletModel(
+        id: 'w_hdfc',
+        name: 'HDFC Corporate',
+        icon: 'account_balance',
+        colorValue: 0xFF2196F3,
+        walletType: WalletType.bank,
+        initialBalance: 50000.0,
+        currentBalance: 50000.0,
+        isDefault: true,
+      );
+
+      final backupData = {
+        'transactions': [initialTx.toJson()],
+        'wallets': [initialWallet.toJson()],
+      };
+
+      await storage.restoreDatabase(backupData);
+
+      final restoredTxs = storage.getTransactions();
+      final restoredWallets = storage.getWallets();
+
+      expect(restoredTxs.length, 1);
+      expect(restoredTxs.first.id, 'tx_backup_001');
+      expect(restoredTxs.first.amount, 120000.0);
+
+      expect(restoredWallets.length, 1);
+      expect(restoredWallets.first.id, 'w_hdfc');
+      expect(restoredWallets.first.name, 'HDFC Corporate');
     });
   });
 }
